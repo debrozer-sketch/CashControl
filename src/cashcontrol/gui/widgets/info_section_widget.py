@@ -1,0 +1,206 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
+from PySide6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout, QWidget
+
+from cashcontrol.core.aliases.alias_manager import get_alias_manager
+from cashcontrol.core.info.info_manager import CollectionStatus, InfoField
+from cashcontrol.gui.theme_helper import color as _tc
+
+if TYPE_CHECKING:
+    from cashcontrol.core.info.info_manager import InfoSection
+
+
+class InfoGroupWidget(QFrame):
+    """A group box widget that displays a named group of info fields.
+
+    Matches the visual style of cashcontrol2: bold title, key-value rows,
+    no emoji icons. Supports progressive field addition and alias links.
+    """
+
+    def __init__(self, title: str, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._title_text = title
+        self._fields: list[InfoField] = []
+
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(8, 6, 8, 8)
+        self._layout.setSpacing(4)
+
+        self._title = QLabel(f"<b>{title}</b>")
+        self._title.setTextFormat(Qt.TextFormat.RichText)
+        self._title.setStyleSheet(f"font-size: 12px; color: {_tc('text_primary')};")
+        self._layout.addWidget(self._title)
+
+        self._body = QLabel()
+        self._body.setTextFormat(Qt.TextFormat.RichText)
+        self._body.setWordWrap(True)
+        self._body.setStyleSheet(
+            f"font-size: 11px; color: {_tc('text_secondary')}; padding-left: 12px;"
+        )
+        self._body.linkActivated.connect(self._on_link_activated)
+        self._layout.addWidget(self._body)
+
+        self.show_loading()
+
+    def show_loading(self) -> None:
+        self._body.setText("<i>Загрузка...</i>")
+        self.setStyleSheet("")
+
+    def show_timeout(self) -> None:
+        self._body.setText("<i>Таймаут</i>")
+        self.setStyleSheet("")
+
+    def show_error(self, error: str | None = None) -> None:
+        text = f"<i>{error or 'Ошибка'}</i>"
+        self._body.setText(text)
+        self.setStyleSheet("")
+
+    def update_data(self, section: InfoSection) -> None:
+        """Update this group from a single section (legacy compatibility)."""
+        if section.status == CollectionStatus.LOADING:
+            self.show_loading()
+            return
+        if section.status == CollectionStatus.TIMEOUT:
+            self.show_timeout()
+            return
+        if section.status == CollectionStatus.ERROR:
+            self.show_error(section.error)
+            return
+        if section.status == CollectionStatus.SKIPPED:
+            return
+
+        fields = section.fields
+        if not fields:
+            fields = [
+                _simple_field(k, v)
+                for k, v in section.data.items()
+                if not k.endswith("_error")
+                and not k.endswith("_skipped")
+                and not k.endswith("_raw")
+                and v is not None
+                and v != ""
+            ]
+
+        if fields:
+            self.add_items(fields)
+
+    def add_items(self, fields: list[InfoField]) -> None:
+        """Append multiple InfoFields to this group and refresh display."""
+        self._fields.extend(fields)
+        self._render_body()
+
+    def add_field(self, label: str, value: str, alias_key: str | None = None) -> None:
+        """Append a single field with optional alias support."""
+        field = InfoField(
+            key=label.lower().replace(" ", "_"),
+            label=label,
+            value=value,
+            alias_key=alias_key,
+        )
+        self._fields.append(field)
+        self._render_body()
+
+    def _render_body(self) -> None:
+        lines: list[str] = []
+        for f in self._fields:
+            has_alias = f.alias_key is not None
+            displayed = (
+                get_alias_manager().resolve(f.alias_key, fallback=f.value)
+                if has_alias
+                else f.value
+            )
+            if has_alias:
+                lines.append(
+                    f'<b>{f.label}:</b> <a href="alias:{f.alias_key}" '
+                    f'style="color:{_tc("text_link")};text-decoration:none;">{displayed}</a>'
+                )
+            else:
+                lines.append(f"<b>{f.label}:</b> {displayed}")
+
+        self._body.setText("<br>".join(lines) if lines else "<i>Нет данных</i>")
+
+        self._body.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextBrowserInteraction
+            if any(f.alias_key for f in self._fields)
+            else Qt.TextInteractionFlag.NoTextInteraction
+        )
+
+        self.setStyleSheet("")
+
+    def _on_link_activated(self, link: str) -> None:
+        if not link.startswith("alias:"):
+            return
+        alias_key = link[len("alias:") :]
+        field = next((f for f in self._fields if f.alias_key == alias_key), None)
+        if field is None:
+            return
+
+        am = get_alias_manager()
+        menu = QMenu(self)
+
+        action_edit = menu.addAction(
+            "Изменить название" if am.has_alias(alias_key) else "Добавить в справочник"
+        )
+
+        action_reset = None
+        if am.has_alias(alias_key):
+            action_reset = menu.addAction("Сбросить к умолчанию")
+
+        menu.addSeparator()
+        action_key = menu.addAction(f"Ключ: {alias_key}")
+        action_key.setEnabled(False)
+
+        action = menu.exec(QCursor.pos())
+
+        if action == action_edit:
+            self._open_alias_editor(field)
+        elif action_reset and action == action_reset:
+            self._reset_alias(field)
+
+    def _open_alias_editor(self, field: InfoField) -> None:
+        from cashcontrol.gui.dialogs.alias_editor import AliasEditorDialog
+
+        dlg = AliasEditorDialog(
+            alias_key=field.alias_key or "",
+            current_value=field.value,
+            parent=self,
+        )
+        if dlg.exec() == AliasEditorDialog.DialogCode.Accepted:
+            am = get_alias_manager()
+            new_name = am.resolve(field.alias_key or "", fallback=field.value)
+            self._update_field_display(field, new_name)
+
+    def _reset_alias(self, field: InfoField) -> None:
+        from PySide6.QtWidgets import QMessageBox
+
+        reply = QMessageBox.question(
+            self,
+            "Сброс алиаса",
+            "Сбросить название к значению из встроенного справочника?",
+        )
+        if reply == QMessageBox.StandardButton.Yes and field.alias_key:
+            get_alias_manager().delete_alias(field.alias_key)
+            self._update_field_display(field, field.value)
+
+    def _update_field_display(self, field: InfoField, new_value: str) -> None:
+        text = self._body.text()
+        old_display = (
+            get_alias_manager().resolve(field.alias_key or "", fallback=field.value)
+            if field.alias_key
+            else field.value
+        )
+        text = text.replace(str(old_display), str(new_value))
+        self._body.setText(text)
+
+
+def _simple_field(key: str, value: Any) -> InfoField:
+    return InfoField(
+        key=key,
+        label=key.replace("_", " ").title(),
+        value=str(value),
+    )

@@ -1,0 +1,45 @@
+# CashControl2 — Anchored Summary
+
+## Stage 11 — Update system
+- `cc-updater/main.go`: Go binary that reads `index.json` from network share, compares SHA-256 hashes, copies changed files, supports hot (in-place) and cold (on next restart) updates
+- `update_client.py`: Rewritten as QObject with Qt signals (`check_finished`, `update_finished`), accepts `ConfigManager`, uses `network_path` from settings, runs checks on startup + periodic timer
+- Import: `from cashcontrol.infrastructure.update_client import UpdateClient`
+
+## Stage 12 — VNC improvements
+- `VNCSettings.quality`: low (jpeg=30)/medium (jpeg=70)/high (jpeg=95) with Hextile encoding
+- VNC connection dialog: quality slider, updated `VNCWidget` constructor
+- `VncRunner.start()` accepts `quality` override per-connection
+
+## Stage 13 — Initial Setup Wizard
+- `SetupWizard` (QWizard): 5 pages — Welcome → SSH Connection → Test → Summary → Finish
+- Validates SSH credentials on Test page, writes config.yml on Finish
+- `config_manager.py`: `SETUP_REQUIRED` flag, defaults to True on fresh config
+- `main.py`: checks `cfg.SETUP_REQUIRED` at startup, launches wizard if True, `asyncio.ensure_future(create_task)`
+
+## Stage 14 — Build system
+- `build.bat`: builds cc-updater.exe, runs Inno Setup compiler
+- `setup.iss`: single output `.exe`, desktop shortcut, runs CashControl2.exe after install
+
+## Stage N — Alias system
+- `AliasManager`: YAML reader, `get_alias(field_type, session_type, key)`, `reload()`
+- `InfoField`: dataclass (ip, hostname, field_type, key, label, value, timestamp, status)
+- `InfoSection` / `InfoSectionWidget`: section per session with label+value+status per field
+- Integrated into `main.py` -> `InfoPanelWidget`
+- `actions_registry.py`: `is_port_busy`, `is_port_open`, `kill_port`
+- `alias_editor.py`: dialog for viewing/editing alias files
+- `hot_reload_manager.py`: watches alias directory, auto-reloads YAML
+- `settings.py`: ConfigManager for settings.yml
+
+## Bug fixes applied
+- `actions_registry.py`: removed dead `register_action()`, unused imports
+- `wizard.py`: `apply_settings()` → `_apply_settings()`
+- `update_client.py`: QObject base class + Qt signals instead of bare asyncio
+- `main.py`: removed `_startup_update_check` → fix uses `result.hot_files`, `result.new_version`
+- `main.py`: deleted `_ensure_config()` wrapper, direct `cfg.network_path` access
+- Deleted `settings_wrapper.py`, `update_settings_wrapper.py`
+- All circular imports fixed via `TYPE_CHECKING` guards
+- `config_manager.py`: `_apply()` now `apply()`, all references updated
+- Ruff lint full pass: 325→91→94 remaining (all pre-existing style/naming conventions)
+
+## Current state
+All modules import cleanly. No dangling references to deleted files/classes. Mypy types not yet validated.

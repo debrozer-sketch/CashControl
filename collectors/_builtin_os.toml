@@ -1,0 +1,25 @@
+[collector]
+name       = "os"
+label      = "Operating System"
+group      = "system"
+icon       = ""
+cash_types = ["pos", "touch", "sco", "sco3"]
+order      = 1
+
+[[fields]]
+key      = "hostname"
+label    = "Hostname"
+command  = "hostname"
+fallback = "unknown"
+
+[[fields]]
+key      = "kernel"
+label    = "Kernel"
+command  = "uname -r"
+fallback = "unknown"
+
+[[fields]]
+key      = "uptime"
+label    = "Uptime"
+command  = "uptime -p 2>/dev/null || uptime | sed 's/.*up //' | sed 's/,.*//'"
+fallback = "unknown"

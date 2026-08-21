@@ -1,0 +1,13 @@
+[collector]
+name       = "loymax"
+label      = "Loymax"
+group      = "other"
+icon       = ""
+cash_types = ["pos", "touch", "sco", "sco3"]
+order      = 2
+
+[[fields]]
+key      = "loymax_login"
+label    = "Login"
+command  = "grep -oP '(?<=loymax\\.login=)\\S+' /home/tc/storage/crystal-cash/config/plugins/loymax.properties 2>/dev/null || echo ''"
+fallback = "not found"

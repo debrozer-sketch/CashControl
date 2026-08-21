@@ -1,0 +1,12 @@
+[command]
+name = "reboot_cash"
+description = "Reboot entire cash register system"
+category = "builtin"
+cash_types = ["pos", "touch", "sco", "sco3"]
+requires_confirmation = true
+timeout = 10
+show_output = false
+
+[[steps]]
+label = "Reboot"
+command = "cash reboot"

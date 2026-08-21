@@ -1,0 +1,13 @@
+[collector]
+name       = "dns"
+label      = "DNS"
+group      = "other"
+icon       = ""
+cash_types = ["pos", "touch", "sco", "sco3"]
+order      = 1
+
+[[fields]]
+key      = "dns_servers"
+label    = "DNS Servers"
+command  = "grep nameserver /etc/resolv.conf | awk '{print $2}' | tr '\\n' ' '"
+fallback = "not configured"

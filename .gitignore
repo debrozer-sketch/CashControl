@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+
+# Runtime data (keystore, passwords, sessions — never commit)
+data/
+logs/
+
+# Bundled binaries and their configs
+soft/*.exe
+soft/*.ini
+soft/*.RND
+soft/Sessions/
+soft/SshHostKeys/
+soft/Proxies/
+soft/reinstall/
+
+# Recovery bycatch / local artifacts
+Old_backup/
+Ready/
+modules/
+dev/
+.ruff_cache/
+*.log
+launch_err.txt
+launch_out.txt
+
+# OS
+Thumbs.db
+.DS_Store
+_recovered_src/

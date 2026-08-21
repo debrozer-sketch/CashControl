@@ -1,0 +1,94 @@
+[project]
+name = "cashcontrol"
+version = "3.0.0"
+description = "Desktop application for remote POS terminal management"
+requires-python = ">=3.12,<3.14"
+authors = [
+    { name = "CashControl Team" }
+]
+
+dependencies = [
+    # GUI
+    "PySide6>=6.7,<6.9",
+    "qasync>=0.27",
+    "PySide6-Fluent-Widgets>=1.7",
+    # Core / Network
+    "asyncssh>=2.17",
+    "asyncpg>=0.30",
+    # Data / Config
+    "pydantic>=2.9",
+    "sqlalchemy[asyncio]>=2.0",
+    # Security
+    "cryptography>=43",
+    "psycopg2-binary>=2.9",
+    # Logging
+    "loguru>=0.7",
+    # VNC pixel conversion
+    "numpy>=1.26",
+    # ISO reading
+    "pycdlib>=1.14",
+    # Safe XML parsing
+    "defusedxml>=0.7",
+    # Windows-specific
+    "pywin32>=306; sys_platform == 'win32'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24,<1",
+    "pytest-qt>=4.4",
+    "ruff>=0.7",
+    "nuitka>=2.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cashcontrol"]
+
+# ── Ruff ──────────────────────────────────────────────
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "SIM",  # flake8-simplify
+    "TCH",  # flake8-type-checking
+    "RUF",  # ruff-specific
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "RUF001", # ambiguous char — legitimate Cyrillic in Russian UI
+    "RUF002", # ambiguous char in docstring — legitimate Cyrillic
+    "RUF003", # ambiguous char in comment — legitimate Cyrillic
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["cashcontrol"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+# ── Pytest ────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+# ── Project scripts ───────────────────────────────────
+[project.scripts]
+cashcontrol = "cashcontrol.main:main"

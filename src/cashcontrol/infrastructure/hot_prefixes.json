@@ -1,0 +1,21 @@
+{
+    "hot_package_prefixes": [
+        "cashcontrol.gui.toolbar",
+        "cashcontrol.gui.vnc_preview",
+        "cashcontrol.gui.db_viewer_widget",
+        "cashcontrol.gui.dialogs.command_editor",
+        "cashcontrol.gui.dialogs.mover_editor_dialog",
+        "cashcontrol.gui.dialogs.mover_dialog",
+        "cashcontrol.gui.dialogs.reinstall_dialog",
+        "cashcontrol.gui.dialogs.reinstall_progress_dialog",
+        "cashcontrol.gui.dialogs.mover_progress_dialog",
+        "cashcontrol.gui.dialogs.command_result_dialog",
+        "cashcontrol.gui.dialogs.logs_viewer",
+        "cashcontrol.gui.dialogs.help_dialog",
+        "cashcontrol.gui.dialogs.alias_editor",
+        "cashcontrol.gui.dialogs.add_cash_dialog",
+        "cashcontrol.gui.dialogs.settings",
+        "cashcontrol.gui.widgets"
+    ],
+    "hot_fs_prefixes": ["commands/", "styles/", "modules/"]
+}

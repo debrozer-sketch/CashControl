@@ -1,0 +1,12 @@
+[command]
+name = "restart_cash"
+description = "Restart SetRetail cash software"
+category = "builtin"
+cash_types = ["pos", "touch", "sco", "sco3"]
+requires_confirmation = false
+timeout = 60
+show_output = false
+
+[[steps]]
+label = "Restart cash"
+command = "cash restart"

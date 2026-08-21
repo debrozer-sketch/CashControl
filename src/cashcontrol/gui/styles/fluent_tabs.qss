@@ -1,0 +1,46 @@
+/* Better tab separation for qfluentwidgets TabBar */
+
+/* Tab container */
+TabBar {
+    background-color: #f0f0f0;
+    border-bottom: 1px solid #c0c0c0;
+}
+
+/* Individual tabs */
+TabBar::tab {
+    background-color: #e0e0e0;
+    border: 1px solid #b0b0b0;
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    padding: 6px 16px;
+    margin-right: 2px;
+    margin-top: 2px;
+}
+
+/* Selected tab */
+TabBar::tab:selected {
+    background-color: #ffffff;
+    border: 2px solid #0078d4;
+    border-bottom: none;
+    margin-top: 0px;
+    padding: 7px 17px;
+    font-weight: bold;
+}
+
+/* Hover state */
+TabBar::tab:hover:!selected {
+    background-color: #d0d0d0;
+    border-color: #909090;
+}
+
+/* Add button area */
+TabBar::add-button {
+    border: 1px solid #b0b0b0;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+TabBar::add-button:hover {
+    background-color: #d0d0d0;
+}

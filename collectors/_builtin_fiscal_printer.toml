@@ -1,0 +1,19 @@
+[collector]
+name       = "fiscal_printer"
+label      = "Fiscal Printer"
+group      = "equipment"
+icon       = ""
+cash_types = ["pos", "touch"]
+order      = 10
+
+[[fields]]
+key      = "fr_port"
+label    = "Port"
+command  = "grep -oP '(?<=physical_port=)\\S+' /home/tc/storage/comproxy/ComProxy.ini 2>/dev/null || echo ''"
+fallback = "not defined"
+
+[[fields]]
+key      = "fr_driver"
+label    = "Driver Version"
+command  = "cat /etc/fr/driver_version 2>/dev/null || echo ''"
+fallback = "unknown"
