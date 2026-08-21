@@ -1,6 +1,6 @@
 [project]
 name = "cashcontrol"
-version = "3.1.0"
+version = "3.2.0"
 description = "Desktop application for remote POS terminal management"
 requires-python = ">=3.12,<3.14"
 authors = [
