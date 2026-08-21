@@ -225,6 +225,9 @@ class TabManager(QWidget):
         self._tab_bar.set_active(ip)
         self._stack.setCurrentWidget(session_widget)
 
+        # Автоподключение и сбор информации сразу при открытии вкладки
+        session_widget.start_connecting()
+
         self._update_state()
         self._session_mgr.save_sessions()
         audit_log(action_type="connection", action_name="tab_open", target=ip, result="success")
