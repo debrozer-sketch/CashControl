@@ -83,6 +83,10 @@ class CommandLoader:
                 outputs = []
                 for step in _steps:
                     cmd = step.get("command", "")
+                    # Шаг может объявить, что обрыв соединения после отправки
+                    # команды — ожидаемое поведение (reboot и т.п.)
+                    ignore_dc = (step.get("ignore_disconnect", False)
+                                 or meta.get("ignore_disconnect", False))
                     try:
                         result = await session.ssh.execute(cmd, timeout=_timeout)
                         outputs.append(f"$ {cmd}")
@@ -91,6 +95,11 @@ class CommandLoader:
                         if result.stderr:
                             outputs.append(result.stderr.strip())
                     except Exception as e:
+                        if ignore_dc:
+                            outputs.append(f"$ {cmd}")
+                            outputs.append(
+                                "Соединение закрыто кассой — команда отправлена")
+                            continue
                         return {
                             "success": False,
                             "message": f"Command '{_name}' failed at step '{step.get('label', '')}': {e}",

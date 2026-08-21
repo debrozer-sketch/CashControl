@@ -28,6 +28,23 @@ command = "sudo systemctl restart sr10"
 | `show_output` | no (default: true) | Show result dialog |
 | `requires_confirmation` | no (default: false) | Ask before execution |
 
+### Step fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `label` | no | Step name shown in error messages |
+| `command` | yes | Shell command to execute |
+| `ignore_disconnect` | no (default: false) | Treat SSH drop right after sending as success (for `reboot`, `poweroff` etc.) |
+
+Example:
+
+```toml
+[[steps]]
+label = "Reboot"
+command = "cash reboot"
+ignore_disconnect = true
+```
+
 ## Python (commands with logic)
 
 ```python

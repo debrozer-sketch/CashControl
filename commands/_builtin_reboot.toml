@@ -10,3 +10,5 @@ show_output = false
 [[steps]]
 label = "Reboot"
 command = "cash reboot"
+# Касса рвёт SSH-сессию сразу после получения команды — это норма
+ignore_disconnect = true
