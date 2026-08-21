@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
         toolbar_hotkeys = {
             "Ctrl+S": "_on_ssh",
             "Ctrl+W": "_on_winscp",
+            "Ctrl+D": "_on_postgres",
             "Ctrl+R": "_on_restart_pos",
             "Ctrl+Shift+R": "_on_reboot_terminal",
             "F5": "_on_refresh_info",
