@@ -108,13 +108,13 @@ class MainWindow(QMainWindow):
         sc_new_tab = QShortcut(QKeySequence("Ctrl+T"), self)
         sc_new_tab.activated.connect(self._tab_manager.open_add_tab_dialog)
 
-        # Горячие клавиши быстрого запуска инструментов тулбара
-        hotkeys = {
+        # Горячие клавиши быстрого запуска инструментов.
+        # QKeySequence привязывается по коду клавиши — работает на любой раскладке.
+        toolbar_hotkeys = {
+            "Ctrl+S": "_on_ssh",
+            "Ctrl+W": "_on_winscp",
             "Ctrl+R": "_on_restart_pos",
             "Ctrl+Shift+R": "_on_reboot_terminal",
-            "F2": "_on_vnc",
-            "F3": "_on_ssh",
-            "F4": "_on_winscp",
             "F5": "_on_refresh_info",
             "F6": "_on_postgres",
             "F7": "_on_keyboard",
@@ -122,9 +122,14 @@ class MainWindow(QMainWindow):
             "F9": "_on_reinstall",
             "F10": "_on_mover",
         }
-        for seq, handler in hotkeys.items():
+        for seq, handler in toolbar_hotkeys.items():
             sc = QShortcut(QKeySequence(seq), self)
             sc.activated.connect(getattr(self._tab_manager.cash_toolbar, handler))
+
+        sc_vnc = QShortcut(QKeySequence("Ctrl+V"), self)
+        sc_vnc.activated.connect(self._hotkey_vnc_embedded)
+        sc_vnc_ext = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
+        sc_vnc_ext.activated.connect(self._hotkey_vnc_external)
 
         self._status_bar = CashStatusBar(self)
         right_layout.addWidget(self._status_bar)
@@ -168,6 +173,27 @@ class MainWindow(QMainWindow):
             self.set_status(f"Активная касса: {ip}")
         else:
             self.set_status("Готово")
+
+    # ── VNC hotkeys ──────────────────────────────────────────────────────
+
+    def _active_session_widget(self):
+        return self._tab_manager.get_active_session()
+
+    def _hotkey_vnc_embedded(self) -> None:
+        """Ctrl+V — подключить встроенный VNC-просмотр активной кассы."""
+        sw = self._active_session_widget()
+        if sw is None:
+            self.set_status("Нет активной вкладки кассы")
+            return
+        sw.connect_vnc()
+
+    def _hotkey_vnc_external(self) -> None:
+        """Ctrl+Shift+V — открыть внешнее VNC-приложение для активной кассы."""
+        sw = self._active_session_widget()
+        if sw is None:
+            self.set_status("Нет активной вкладки кассы")
+            return
+        sw.open_vnc_external()
 
     def _restore_geometry(self) -> None:
         settings = QSettings(__app_name__, __app_name__)
