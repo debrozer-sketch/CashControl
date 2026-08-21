@@ -22,6 +22,11 @@ from PySide6.QtWidgets import (
 )
 
 from cashcontrol.gui.dialogs.help_content import _TREE
+from cashcontrol.gui.dialogs.help_css import (
+    get_panel_bg,
+    get_scroll_bg,
+    get_tree_stylesheet,
+)
 
 
 class HelpDialog(QDialog):
@@ -29,7 +34,9 @@ class HelpDialog(QDialog):
 
     def __init__(self, parent=None) -> None:
         super().__init__(None)
-        self.setWindowTitle("Справочник CashControl v2")
+        from cashcontrol import __version__
+
+        self.setWindowTitle(f"Справочник CashControl v{__version__}")
         self.setMinimumSize(980, 680)
         self.resize(1100, 740)
         self.setWindowFlags(
@@ -59,12 +66,7 @@ class HelpDialog(QDialog):
 
         left = QWidget()
         left.setFixedWidth(230)
-        try:
-            from qfluentwidgets import isDarkTheme
-            _dark = isDarkTheme()
-        except Exception:
-            _dark = False
-        left.setStyleSheet("background: #1e2a3a;" if _dark else "background: #F0F4FA;")
+        left.setStyleSheet(f"background: {get_panel_bg()};")
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(0)
@@ -81,47 +83,7 @@ class HelpDialog(QDialog):
         self._tree.setHeaderHidden(True)
         self._tree.setRootIsDecorated(True)
         self._tree.setIndentation(16)
-        if _dark:
-            self._tree.setStyleSheet("""
-                QTreeWidget {
-                    background: #1e2a3a;
-                    color: #e0e0e0;
-                    border: none;
-                    font-size: 13px;
-                    outline: none;
-                }
-                QTreeWidget::item {
-                    padding: 5px 8px;
-                    border-radius: 4px;
-                }
-                QTreeWidget::item:selected {
-                    background: #0277bd;
-                    color: white;
-                }
-                QTreeWidget::item:hover:!selected {
-                    background: #1a3a5a;
-                }
-            """)
-        else:
-            self._tree.setStyleSheet("""
-                QTreeWidget {
-                    background: #F0F4FA;
-                    border: none;
-                    font-size: 13px;
-                    outline: none;
-                }
-                QTreeWidget::item {
-                    padding: 5px 8px;
-                    border-radius: 4px;
-                }
-                QTreeWidget::item:selected {
-                    background: #1565C0;
-                    color: white;
-                }
-                QTreeWidget::item:hover:!selected {
-                    background: #D8E4F5;
-                }
-            """)
+        self._tree.setStyleSheet(get_tree_stylesheet())
         self._tree.currentItemChanged.connect(
             lambda cur, _prev: self._show_page(cur) if cur else None
         )
@@ -136,7 +98,7 @@ class HelpDialog(QDialog):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(scroll.Shape.NoFrame)
-        scroll.setStyleSheet("background: #1e1e1e;" if _dark else "background: white;")
+        scroll.setStyleSheet(f"background: {get_scroll_bg()};")
 
         self._content_w = QLabel()
         self._content_w.setAlignment(
