@@ -238,77 +238,79 @@ class CashSessionWidget(QWidget):
         if self._connect_task and not self._connect_task.done():
             self._connect_task.cancel()
 
-        async def _do_connect():
-            try:
-                self._session = CashSession(self._ip)
-                success = await self._session.connect(connect_db=False)
-
-                if asyncio.current_task() and asyncio.current_task().cancelled():
-                    return
-
-                if not success:
-                    self.connection_state_changed.emit(self._ip, "timeout")
-                    msg = self._session.error_message or "Не удалось подключиться"
-                    self.loading_label.setText(msg)
-                    self._show_reconnect_button(msg)
-                    return
-
-                self.loading_label.setText("SSH подключено")
-                self._reconnect_btn_shown = False
-                self.connection_state_changed.emit(self._ip, "ok")
-                self._vnc_widget.set_session(self._session)
-
-                from cashcontrol.core.info.collectors.cash_type import (
-                    CashTypeCollector,
-                )
-
-                type_data = await CashTypeCollector().collect(self._session)
-                cash_type = type_data.get("cash_type", "unknown")
-
-                if cash_type == "sco3":
-                    self._session.setup_db(database="sco_v3")
-                    try:
-                        await self._session.db.connect()
-                        self._session.db_connected = True
-                        logger.info(f"DB connected to {self._ip} (db=sco_v3)")
-                        try:
-                            get_notification_manager().notify(
-                                f"БД: {self._ip}: Подключено к sco_v3",
-                                level="success",
-                            )
-                        except RuntimeError:
-                            pass
-                    except Exception as db_err:
-                        logger.warning(
-                            f"DB connection failed for {self._ip}: {db_err}"
-                        )
-                        err_short = str(db_err).split("\n")[0][:100]
-                        with contextlib.suppress(RuntimeError):
-                            get_notification_manager().notify(
-                                f"БД: {self._ip}: {err_short or 'Ошибка подключения'}",
-                                level="warning",
-                            )
-
-                await self.load_info()
-
-            except asyncio.CancelledError:
-                logger.debug(f"Connect task cancelled for {self._ip}")
-            except Exception as e:
-                self.connection_state_changed.emit(self._ip, "timeout")
-                msg = f"Ошибка: {e}"
-                self.loading_label.setText(msg)
-                logger.error(f"Tab connection error for {self._ip}: {e}")
-                try:
-                    get_notification_manager().notify(
-                        f"Ошибка подключения к {self._ip}: {str(e)[:120]}",
-                        level="error",
-                    )
-                except RuntimeError:
-                    pass
-                self._show_reconnect_button(msg)
-
-        self._connect_task = asyncio.ensure_future(_do_connect())
+        self._connect_task = asyncio.ensure_future(self.connect_coro())
         return self._connect_task
+
+    async def connect_coro(self) -> None:
+        """Full connect + info-load sequence. Awaitable — supports wave limiting."""
+        try:
+            self._session = CashSession(self._ip)
+            success = await self._session.connect(connect_db=False)
+
+            task = asyncio.current_task()
+            if task and task.cancelled():
+                return
+
+            if not success:
+                self.connection_state_changed.emit(self._ip, "timeout")
+                msg = self._session.error_message or "Не удалось подключиться"
+                self.loading_label.setText(msg)
+                self._show_reconnect_button(msg)
+                return
+
+            self.loading_label.setText("SSH подключено")
+            self._reconnect_btn_shown = False
+            self.connection_state_changed.emit(self._ip, "ok")
+            self._vnc_widget.set_session(self._session)
+
+            from cashcontrol.core.info.collectors.cash_type import (
+                CashTypeCollector,
+            )
+
+            type_data = await CashTypeCollector().collect(self._session)
+            cash_type = type_data.get("cash_type", "unknown")
+
+            if cash_type == "sco3":
+                self._session.setup_db(database="sco_v3")
+                try:
+                    await self._session.db.connect()
+                    self._session.db_connected = True
+                    logger.info(f"DB connected to {self._ip} (db=sco_v3)")
+                    try:
+                        get_notification_manager().notify(
+                            f"БД: {self._ip}: Подключено к sco_v3",
+                            level="success",
+                        )
+                    except RuntimeError:
+                        pass
+                except Exception as db_err:
+                    logger.warning(
+                        f"DB connection failed for {self._ip}: {db_err}"
+                    )
+                    err_short = str(db_err).split("\n")[0][:100]
+                    with contextlib.suppress(RuntimeError):
+                        get_notification_manager().notify(
+                            f"БД: {self._ip}: {err_short or 'Ошибка подключения'}",
+                            level="warning",
+                        )
+
+            await self.load_info()
+
+        except asyncio.CancelledError:
+            logger.debug(f"Connect task cancelled for {self._ip}")
+        except Exception as e:
+            self.connection_state_changed.emit(self._ip, "timeout")
+            msg = f"Ошибка: {e}"
+            self.loading_label.setText(msg)
+            logger.error(f"Tab connection error for {self._ip}: {e}")
+            try:
+                get_notification_manager().notify(
+                    f"Ошибка подключения к {self._ip}: {str(e)[:120]}",
+                    level="error",
+                )
+            except RuntimeError:
+                pass
+            self._show_reconnect_button(msg)
 
     # ── Info loading ────────────────────────────────────────────────────────
 

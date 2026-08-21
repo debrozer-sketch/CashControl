@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 # ── Cash types ────────────────────────────────────────────────────────────
@@ -11,6 +12,7 @@ REINSTALL_CASH_TYPES = ("pos", "touch", "sco3")
 
 # ── Environment ───────────────────────────────────────────────────────────
 
+@lru_cache(maxsize=1)
 def _is_production() -> bool:
     """True when running from a compiled (Nuitka/frozen) build."""
     if getattr(sys, "frozen", False):
@@ -22,6 +24,7 @@ def _is_production() -> bool:
         return False
 
 
+@lru_cache(maxsize=1)
 def get_app_root() -> Path:
     if _is_production():
         return Path(sys.executable).parent

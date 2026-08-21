@@ -199,7 +199,7 @@ class TabManager(QWidget):
 
     # ── Tab management ─────────────────────────────────────
 
-    def add_tab(self, ip: str) -> CashSessionWidget | None:
+    def add_tab(self, ip: str, connect: bool = True) -> CashSessionWidget | None:
         ip = ip.strip()
         if not ip:
             return None
@@ -225,8 +225,11 @@ class TabManager(QWidget):
         self._tab_bar.set_active(ip)
         self._stack.setCurrentWidget(session_widget)
 
-        # Автоподключение и сбор информации сразу при открытии вкладки
-        session_widget.start_connecting()
+        # Автоподключение и сбор информации сразу при открытии вкладки.
+        # При массовом восстановлении connect=False — волны задаёт
+        # restore_sessions_async() (Semaphore(3)).
+        if connect:
+            session_widget.start_connecting()
 
         self._update_state()
         self._session_mgr.save_sessions()
@@ -307,10 +310,27 @@ class TabManager(QWidget):
         if not ips:
             return
         logger.info(f"Restoring {len(ips)} sessions: {ips}")
+        widgets: list[CashSessionWidget] = []
         for ip in ips:
-            self.add_tab(ip)
+            w = self.add_tab(ip, connect=False)
+            if w is not None:
+                widgets.append(w)
         if ips and self._session_mgr.has_session(ips[-1]):
             last_ip = ips[-1]
             self._tab_bar.set_active(last_ip)
             self._stack.setCurrentWidget(self._session_mgr.get_session(last_ip))
             logger.debug(f"Activated last tab: {last_ip}")
+        if widgets:
+            asyncio.ensure_future(self._connect_in_waves(widgets))
+
+    async def _connect_in_waves(self, widgets: list[CashSessionWidget]) -> None:
+        """Connect restored tabs in waves of 3 so a dead host doesn't stall others."""
+        sem = asyncio.Semaphore(3)
+
+        async def _one(w: CashSessionWidget) -> None:
+            async with sem:
+                await w.connect_coro()
+
+        await asyncio.gather(
+            *(_one(w) for w in widgets), return_exceptions=True
+        )

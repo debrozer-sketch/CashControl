@@ -142,9 +142,25 @@ class MainWindow(QMainWindow):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        if not getattr(self, "_post_show_done", False):
+            self._post_show_done = True
+            # Отложенная инициализация: окно уже показано, тяжёлое грузим в фоне
+            QTimer.singleShot(0, self._post_show_init)
         QTimer.singleShot(0, self._tab_manager.restore_sessions)
         # Запускаем клиент обновлений после старта event loop
         QTimer.singleShot(500, self._update_client.start)
+
+    def _post_show_init(self) -> None:
+        """Deferred init after the window is visible (acceleration step 5)."""
+        import time as _time
+
+        t0 = _time.perf_counter()
+        try:
+            self._registry.ensure_loaded()
+        except Exception:
+            logger.exception("Post-show init: failed to load commands")
+        dt_ms = (_time.perf_counter() - t0) * 1000
+        logger.debug(f"Post-show init completed in {dt_ms:.1f} ms")
 
     def _on_tab_changed(self, ip: object) -> None:
         """Update status when active tab changes."""
