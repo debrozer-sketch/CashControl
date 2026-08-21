@@ -1,1 +1,0 @@
-"""Reinstall module — POS software archive management and installation."""

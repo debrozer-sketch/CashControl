@@ -119,8 +119,6 @@ class MainWindow(QMainWindow):
             "F6": "_on_postgres",
             "F7": "_on_keyboard",
             "F8": "_on_commands_clicked",
-            "F9": "_on_reinstall",
-            "F10": "_on_mover",
         }
         for seq, handler in toolbar_hotkeys.items():
             sc = QShortcut(QKeySequence(seq), self)

@@ -3,7 +3,7 @@ Toolbar — top toolbar with main actions and per-tab action buttons.
 
 Contains:
 - Toolbar (top): add cash, settings, refresh
-- CashToolbar (per-tab): restart, reboot, VNC, SSH, WinSCP, DB, keyboard, commands, reinstall, mover
+- CashToolbar (per-tab): restart, reboot, VNC, SSH, WinSCP, DB, keyboard, commands
 """
 
 from __future__ import annotations
@@ -220,23 +220,6 @@ class CashToolbar(QWidget):
         self._commands_btn.clicked.connect(self._on_commands_clicked)
         layout.addWidget(c)
 
-        layout.addWidget(self._sep())
-
-        # Maintenance
-        self._reinstall_btn = PushButton("Переустановка", self)
-        self._reinstall_btn.setIcon(FluentIcon.ALBUM)
-        self._reinstall_btn.setToolTip("Переустановка кассового ПО")
-        self._reinstall_btn.setFixedHeight(_TOOL_BTN_SIZE)
-        self._reinstall_btn.clicked.connect(self._on_reinstall)
-        layout.addWidget(self._reinstall_btn)
-
-        self._mover_btn = PushButton("Mover", self)
-        self._mover_btn.setIcon(FluentIcon.SEND)
-        self._mover_btn.setToolTip("Доставка файлов и команд на кассу")
-        self._mover_btn.setFixedHeight(_TOOL_BTN_SIZE)
-        self._mover_btn.clicked.connect(self._on_mover)
-        layout.addWidget(self._mover_btn)
-
         layout.addStretch()
 
     @staticmethod
@@ -258,7 +241,6 @@ class CashToolbar(QWidget):
             self._restart_btn, self._reboot_btn,
             self._vnc_btn, self._ssh_btn, self._winscp_btn,
             self._pg_btn, self._commands_btn, self._refresh_btn,
-            self._reinstall_btn, self._mover_btn,
         ]
         for btn in btns:
             btn.setEnabled(not busy)
@@ -649,36 +631,6 @@ class CashToolbar(QWidget):
         ip = session_widget.ip
         logger.info(f"Refresh requested for {ip}, doing full reconnect")
         asyncio.ensure_future(session_widget.reconnect_to(ip))
-
-    def _on_reinstall(self) -> None:
-        active_type = None
-        active_session = None
-        session_widget = self._get_active_session_widget()
-        if session_widget and hasattr(session_widget, '_session') and session_widget._session:
-            active_session = session_widget._session
-            active_type = getattr(active_session, 'cash_type', None)
-
-        from cashcontrol.gui.dialogs.reinstall_dialog import ReinstallDialog
-        dialog = ReinstallDialog(
-            active_cash_type=active_type,
-            active_session=active_session,
-            parent=self,
-        )
-        dialog.exec()
-
-    def _on_mover(self) -> None:
-        active_session = None
-        session_widget = self._get_active_session_widget()
-        if session_widget and hasattr(session_widget, '_session') and session_widget._session:
-            active_session = session_widget._session
-
-        from cashcontrol.gui.dialogs.mover_dialog import MoverDialog
-        dialog = MoverDialog(
-            active_session=active_session,
-            parent=self,
-        )
-        dialog.setModal(True)
-        dialog.show()
 
     # ── Action execution ────────────────────────────────────
 

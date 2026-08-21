@@ -86,11 +86,6 @@ uv run nuitka ^
     --nofollow-import-to=cashcontrol.gui.vnc_preview ^
     --nofollow-import-to=cashcontrol.gui.db_viewer_widget ^
     --nofollow-import-to=cashcontrol.gui.dialogs.command_editor ^
-    --nofollow-import-to=cashcontrol.gui.dialogs.mover_editor_dialog ^
-    --nofollow-import-to=cashcontrol.gui.dialogs.mover_dialog ^
-    --nofollow-import-to=cashcontrol.gui.dialogs.reinstall_dialog ^
-    --nofollow-import-to=cashcontrol.gui.dialogs.reinstall_progress_dialog ^
-    --nofollow-import-to=cashcontrol.gui.dialogs.mover_progress_dialog ^
     --nofollow-import-to=cashcontrol.gui.dialogs.command_result_dialog ^
     --nofollow-import-to=cashcontrol.gui.dialogs.logs_viewer ^
     --nofollow-import-to=cashcontrol.gui.dialogs.help_dialog ^
@@ -108,7 +103,6 @@ uv run nuitka ^
     --include-package=pydantic ^
     --include-package=cryptography ^
     --include-package=loguru ^
-    --include-package=pycdlib ^
     --include-package=win32api ^
     --include-package=win32crypt ^
     --include-package=numpy ^
@@ -148,28 +142,10 @@ if exist "styles" xcopy /s /q /y "styles" "%FINAL_OUT%\styles\" >nul
 echo   soft\...
 if exist "soft" (
     xcopy /s /q /y "soft" "%FINAL_OUT%\soft\" >nul
-    REM Remove reinstall archives — too large for distribution
-    REM Keep empty directories so the app creates them correctly
-    del /q "%FINAL_OUT%\soft\reinstall\pos\*.tar" 2>nul
-    del /q "%FINAL_OUT%\soft\reinstall\sco3\*.tar" 2>nul
-    del /q "%FINAL_OUT%\soft\reinstall\touch\*.tar" 2>nul
-    REM Ensure reinstall directories exist even if soft/reinstall/ didn't exist yet
-    mkdir "%FINAL_OUT%\soft\reinstall\pos" 2>nul
-    mkdir "%FINAL_OUT%\soft\reinstall\sco3" 2>nul
-    mkdir "%FINAL_OUT%\soft\reinstall\touch" 2>nul
 )
 
 echo   docs\...
 if exist "docs" xcopy /s /q /y "docs" "%FINAL_OUT%\docs\" >nul
-
-echo   mover\...
-if exist "mover" (
-    xcopy /s /q /y "mover" "%FINAL_OUT%\mover\" >nul
-    REM Ensure mover subdirectories exist
-    mkdir "%FINAL_OUT%\mover\scenarios" 2>nul
-    mkdir "%FINAL_OUT%\mover\files" 2>nul
-    mkdir "%FINAL_OUT%\mover\data" 2>nul
-)
 
 echo   modules\...
 if exist "modules" (
@@ -184,7 +160,7 @@ if exist "modules" (
         xcopy /y "src\cashcontrol\gui\vnc_preview.py" "%FINAL_OUT%\modules\gui\" >nul
         xcopy /y "src\cashcontrol\gui\db_viewer_widget.py" "%FINAL_OUT%\modules\gui\" >nul
         xcopy /y "src\cashcontrol\gui\dialogs\__init__.py" "%FINAL_OUT%\modules\gui\dialogs\" >nul
-        for %%f in (command_editor mover_editor_dialog mover_dialog reinstall_dialog reinstall_progress_dialog mover_progress_dialog command_result_dialog logs_viewer help_dialog alias_editor add_cash_dialog) do (
+        for %%f in (command_editor command_result_dialog logs_viewer help_dialog alias_editor add_cash_dialog) do (
             if exist "src\cashcontrol\gui\dialogs\%%f.py" xcopy /y "src\cashcontrol\gui\dialogs\%%f.py" "%FINAL_OUT%\modules\gui\dialogs\" >nul
         )
         xcopy /y "src\cashcontrol\gui\dialogs\settings\__init__.py" "%FINAL_OUT%\modules\gui\dialogs\settings\" >nul

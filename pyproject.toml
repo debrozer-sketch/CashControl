@@ -25,8 +25,6 @@ dependencies = [
     "loguru>=0.7",
     # VNC pixel conversion
     "numpy>=1.26",
-    # ISO reading
-    "pycdlib>=1.14",
     # Safe XML parsing
     "defusedxml>=0.7",
     # Windows-specific
