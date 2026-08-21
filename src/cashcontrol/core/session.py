@@ -58,6 +58,11 @@ class CashSession:
         return self._is_connected
 
     @property
+    def ssh_connected(self) -> bool:
+        """Alias for is_connected — original dataclass API."""
+        return self._is_connected
+
+    @property
     def db_connected(self) -> bool:
         return self._db_connected
 
