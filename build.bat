@@ -100,6 +100,7 @@ uv run nuitka ^
     --include-package=qasync ^
     --include-package=asyncssh ^
     --include-package=asyncpg ^
+    --include-package=psycopg2 ^
     --include-package=pydantic ^
     --include-package=cryptography ^
     --include-package=win32api ^
