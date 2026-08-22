@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from cashcontrol.infrastructure.audit_logger import get_logger
+from cashcontrol.infrastructure.path_resolver import _is_production
 
 logger = get_logger()
 
@@ -32,16 +33,6 @@ def is_module_managed(qualified_name: str) -> bool:
         qualified_name == prefix or qualified_name.startswith(prefix + ".")
         for prefix in _HOT_PACKAGE_PREFIXES
     )
-
-
-def _is_production() -> bool:
-    if getattr(sys, "frozen", False):
-        return True
-    try:
-        import __compiled__  # noqa: F401  # Nuitka marker
-        return True
-    except ImportError:
-        return False
 
 
 class _ModulesFinder(importlib.abc.MetaPathFinder):
@@ -71,7 +62,9 @@ class _ModulesFinder(importlib.abc.MetaPathFinder):
 _modules_finder: _ModulesFinder | None = None
 
 
-def _ensure_finder() -> None:
+def install() -> None:
+    """Install the hot-reload finder (idempotent). Must run before any
+    managed GUI module is imported."""
     global _modules_finder
     if not _is_production():
         return
@@ -79,6 +72,7 @@ def _ensure_finder() -> None:
         return
 
     from cashcontrol.infrastructure.path_resolver import get_app_root
+
     modules_dir = get_app_root() / "modules"
     if not modules_dir.exists():
         logger.warning(f"modules/ directory not found at {modules_dir}")
@@ -89,8 +83,11 @@ def _ensure_finder() -> None:
     logger.info(f"Installed hot module finder: {modules_dir}")
 
 
+_ensure_finder = install
+
+
 def load_module(qualified_name: str) -> object | None:
-    _ensure_finder()
+    install()
     try:
         return importlib.import_module(qualified_name)
     except ImportError:
@@ -114,3 +111,10 @@ def get_class(qualified_name: str, class_name: str) -> type:
             f"Class '{class_name}' not found in module '{qualified_name}'"
         )
     return cls
+
+
+if _is_production():
+    try:
+        install()
+    except Exception:
+        logger.exception("Failed to install hot module finder on import")

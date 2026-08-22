@@ -9,14 +9,18 @@ from pathlib import Path
 
 @lru_cache(maxsize=1)
 def _is_production() -> bool:
-    """True when running from a compiled (Nuitka/frozen) build."""
+    """True for installed builds: Nuitka-compiled or packaged runtime layout."""
     if getattr(sys, "frozen", False):
         return True
+    if "__compiled__" in globals():  # Nuitka marker (per compiled module)
+        return True
     try:
-        import __compiled__  # noqa: F401  # Nuitka marker
+        import __compiled__  # noqa: F401  # Nuitka marker, importable variant
         return True
     except ImportError:
-        return False
+        pass
+    exe_dir = Path(sys.executable).parent  # installed non-frozen layout
+    return (exe_dir / "version.txt").exists() or (exe_dir / "modules").exists()
 
 
 @lru_cache(maxsize=1)

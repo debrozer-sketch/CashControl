@@ -10,11 +10,11 @@ from __future__ import annotations
 import asyncio
 import sys
 
-from PySide6.QtWidgets import QApplication  # noqa: E402  # must be before qasync
-import qasync  # noqa: E402
+import qasync
+from PySide6.QtWidgets import QApplication  # must be before qasync
 
-from cashcontrol import __app_name__, __version__  # noqa: E402
-from cashcontrol.infrastructure.audit_logger import (  # noqa: E402
+from cashcontrol import __app_name__, __version__
+from cashcontrol.infrastructure.audit_logger import (
     audit_log,
     get_logger,
     setup_logger,
@@ -54,6 +54,10 @@ def main() -> None:
     audit_log(action_type="system", action_name="app_start", result="success")
 
     logger.info(f"Starting {__app_name__} v{__version__}")
+
+    from cashcontrol.infrastructure.module_loader import install
+
+    install()  # до любых импортов GUI — иначе excluded-модули не найдутся
 
     from cashcontrol.infrastructure.config_manager import ConfigManager
 

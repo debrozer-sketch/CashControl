@@ -34,3 +34,5 @@ Thumbs.db
 .DS_Store
 _recovered_src/
 data.*.bak/
+
+modules.stale.bak/

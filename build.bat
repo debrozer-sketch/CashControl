@@ -102,10 +102,10 @@ uv run nuitka ^
     --include-package=asyncpg ^
     --include-package=pydantic ^
     --include-package=cryptography ^
-    --include-package=loguru ^
     --include-package=win32api ^
     --include-package=win32crypt ^
     --include-package=numpy ^
+    --nofollow-import-to=*.tests ^
     "%ENTRY_POINT%"
 
 if errorlevel 1 (
@@ -150,33 +150,35 @@ echo   docs\...
 if exist "docs" xcopy /s /q /y "docs" "%FINAL_OUT%\docs\" >nul
 
 echo   modules\...
-if exist "modules" (
-    xcopy /s /q /y "modules" "%FINAL_OUT%\modules\" >nul
-) else (
-    REM Build modules/ from source (Variant A — src is source of truth)
-    if not exist "%FINAL_OUT%\modules" mkdir "%FINAL_OUT%\modules"
-    if exist "src\cashcontrol\gui\dialogs" (
-        mkdir "%FINAL_OUT%\modules\gui\dialogs\settings" 2>nul
-        mkdir "%FINAL_OUT%\modules\gui\widgets\keyboard_layouts" 2>nul
-        xcopy /y "src\cashcontrol\gui\toolbar.py" "%FINAL_OUT%\modules\gui\" >nul
-        xcopy /y "src\cashcontrol\gui\vnc_preview.py" "%FINAL_OUT%\modules\gui\" >nul
-        xcopy /y "src\cashcontrol\gui\db_viewer_widget.py" "%FINAL_OUT%\modules\gui\" >nul
-        xcopy /y "src\cashcontrol\gui\dialogs\__init__.py" "%FINAL_OUT%\modules\gui\dialogs\" >nul
-        for %%f in (command_editor command_result_dialog logs_viewer help_dialog alias_editor add_cash_dialog) do (
-            if exist "src\cashcontrol\gui\dialogs\%%f.py" xcopy /y "src\cashcontrol\gui\dialogs\%%f.py" "%FINAL_OUT%\modules\gui\dialogs\" >nul
-        )
-        xcopy /y "src\cashcontrol\gui\dialogs\settings\__init__.py" "%FINAL_OUT%\modules\gui\dialogs\settings\" >nul
-        for %%f in (settings_dialog tab_connection tab_general tab_logs tab_programs) do (
-            if exist "src\cashcontrol\gui\dialogs\settings\%%f.py" xcopy /y "src\cashcontrol\gui\dialogs\settings\%%f.py" "%FINAL_OUT%\modules\gui\dialogs\settings\" >nul
-        )
-        xcopy /y "src\cashcontrol\gui\widgets\__init__.py" "%FINAL_OUT%\modules\gui\widgets\" >nul
-        for %%f in (info_section_widget virtual_keyboard) do (
-            if exist "src\cashcontrol\gui\widgets\%%f.py" xcopy /y "src\cashcontrol\gui\widgets\%%f.py" "%FINAL_OUT%\modules\gui\widgets\" >nul
-        )
-        if exist "src\cashcontrol\gui\widgets\keyboard_layouts" (
-            xcopy /s /q /y "src\cashcontrol\gui\widgets\keyboard_layouts\*.json" "%FINAL_OUT%\modules\gui\widgets\keyboard_layouts\" >nul
-        )
+REM Build modules/ from source (Variant A - src is source of truth)
+if not exist "%FINAL_OUT%\modules" mkdir "%FINAL_OUT%\modules"
+if exist "src\cashcontrol\gui\dialogs" (
+    mkdir "%FINAL_OUT%\modules\gui\dialogs\settings" 2>nul
+    mkdir "%FINAL_OUT%\modules\gui\widgets\keyboard_layouts" 2>nul
+    xcopy /y "src\cashcontrol\gui\toolbar.py" "%FINAL_OUT%\modules\gui\" >nul
+    xcopy /y "src\cashcontrol\gui\vnc_preview.py" "%FINAL_OUT%\modules\gui\" >nul
+    xcopy /y "src\cashcontrol\gui\db_viewer_widget.py" "%FINAL_OUT%\modules\gui\" >nul
+    xcopy /y "src\cashcontrol\gui\dialogs\__init__.py" "%FINAL_OUT%\modules\gui\dialogs\" >nul
+    for %%f in (command_editor command_result_dialog logs_viewer help_dialog alias_editor add_cash_dialog) do (
+        if exist "src\cashcontrol\gui\dialogs\%%f.py" xcopy /y "src\cashcontrol\gui\dialogs\%%f.py" "%FINAL_OUT%\modules\gui\dialogs\" >nul
     )
+    xcopy /y "src\cashcontrol\gui\dialogs\settings\__init__.py" "%FINAL_OUT%\modules\gui\dialogs\settings\" >nul
+    for %%f in (settings_dialog tab_connection tab_general tab_logs tab_programs) do (
+        if exist "src\cashcontrol\gui\dialogs\settings\%%f.py" xcopy /y "src\cashcontrol\gui\dialogs\settings\%%f.py" "%FINAL_OUT%\modules\gui\dialogs\settings\" >nul
+    )
+    xcopy /y "src\cashcontrol\gui\widgets\__init__.py" "%FINAL_OUT%\modules\gui\widgets\" >nul
+    for %%f in (info_section_widget virtual_keyboard) do (
+        if exist "src\cashcontrol\gui\widgets\%%f.py" xcopy /y "src\cashcontrol\gui\widgets\%%f.py" "%FINAL_OUT%\modules\gui\widgets\" >nul
+    )
+    if exist "src\cashcontrol\gui\widgets\keyboard_layouts" (
+        xcopy /s /q /y "src\cashcontrol\gui\widgets\keyboard_layouts\*.json" "%FINAL_OUT%\modules\gui\widgets\keyboard_layouts\" >nul
+    )
+)
+
+REM Optional manual overrides on top of generated set
+if exist "modules" (
+    echo   optional modules override from project root
+    xcopy /s /q /y "modules" "%FINAL_OUT%\modules\" >nul
 )
 
 if exist "%FINAL_OUT%\main.exe" rename "%FINAL_OUT%\main.exe" "%APP_NAME%.exe"

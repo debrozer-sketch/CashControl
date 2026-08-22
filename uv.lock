@@ -50,7 +50,7 @@ wheels = [
 
 [[package]]
 name = "cashcontrol"
-version = "3.0.0"
+version = "3.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "asyncpg" },
@@ -60,7 +60,6 @@ dependencies = [
     { name = "loguru" },
     { name = "numpy" },
     { name = "psycopg2-binary" },
-    { name = "pycdlib" },
     { name = "pydantic" },
     { name = "pyside6" },
     { name = "pyside6-fluent-widgets" },
@@ -87,7 +86,6 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "psycopg2-binary", specifier = ">=2.9" },
-    { name = "pycdlib", specifier = ">=1.14" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pyside6", specifier = ">=6.7,<6.9" },
     { name = "pyside6-fluent-widgets", specifier = ">=1.7" },
@@ -338,15 +336,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3f/19/7dc003b32fe35024df89b658104f7c8538a8b2dcbde7a4e746ce929742e7/psycopg2_binary-2.9.12-cp313-cp313-musllinux_1_2_riscv64.whl", hash = "sha256:98062447aebc20ed20add1f547a364fd0ef8933640d5372ff1873f8deb9b61be", size = 3048968, upload-time = "2026-04-20T23:35:16.757Z" },
     { url = "https://files.pythonhosted.org/packages/91/58/2dbd7db5c604d45f4950d988506aae672a14126ec22998ced5021cbb76bb/psycopg2_binary-2.9.12-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:66a7685d7e548f10fb4ce32fb01a7b7f4aa702134de92a292c7bd9e0d3dbd290", size = 3351369, upload-time = "2026-04-20T23:35:18.933Z" },
     { url = "https://files.pythonhosted.org/packages/42/ee/dee8dcaad07f735824de3d6563bc67119fa6c28257b17977a8d624f02fab/psycopg2_binary-2.9.12-cp313-cp313-win_amd64.whl", hash = "sha256:b6937f5fe4e180aeee87de907a2fa982ded6f7f15d7218f78a083e4e1d68f2a0", size = 2757347, upload-time = "2026-04-20T23:35:21.283Z" },
-]
-
-[[package]]
-name = "pycdlib"
-version = "1.20.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f4/01/7fdd73e832b95a1b32e137be2fbeed05abef3aec527bcfebca4c313969a6/pycdlib-1.20.0.tar.gz", hash = "sha256:1d768eb491d761a3bace188270f152ef40f33fb0d3daf6cf39bc38a81272072c", size = 328278, upload-time = "2026-08-05T13:59:47.58Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/2e/624824081e1ceb69bcd2c3b2358d01e8ba7e7c84a0f019bf24e1e822ec01/pycdlib-1.20.0-py2.py3-none-any.whl", hash = "sha256:cb675959dd6d61e94f02560ed7e9a5d368a3188b5f7f31813bc25a750cff0863", size = 228561, upload-time = "2026-08-05T13:59:45.007Z" },
 ]
 
 [[package]]
