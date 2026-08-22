@@ -240,24 +240,6 @@ class DBSession:
         result = await self._execute("fetch", query, args, timeout, use_lock=True)
         return result
 
-    async def execute_one(
-        self, query: str, *args: Any, timeout: int | None = None
-    ) -> Any | None:
-        """Execute query and return first row or None.
-
-        See _execute docstring for full parameter documentation.
-        """
-        return await self._execute("fetchrow", query, args, timeout)
-
-    async def execute_value(
-        self, query: str, *args: Any, timeout: int | None = None
-    ) -> Any | None:
-        """Execute query and return single value or None.
-
-        See _execute docstring for full parameter documentation.
-        """
-        return await self._execute("fetchval", query, args, timeout)
-
     @property
     def is_connected(self) -> bool:
         """Check if session is connected."""

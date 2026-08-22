@@ -51,14 +51,6 @@ class AliasManager:
     def usb_key(vid: str, pid: str) -> str:
         return f"usb:{vid.lower()}:{pid.lower()}"
 
-    @staticmethod
-    def port_key(path: str) -> str:
-        return f"port:{path}"
-
-    @staticmethod
-    def raw_key(raw: str) -> str:
-        return f"raw:{raw}"
-
     def _load(self) -> None:
         if not self._path.exists():
             return

@@ -287,10 +287,10 @@ class TabConnection(QWidget):
         conn = config.settings.connection
 
         self.ssh_login.setText(conn.ssh_login)
-        self.ssh_port.setText(str(conn.ssh_port))
+        self.ssh_port.setText(str(int(conn.ssh_port)) if float(conn.ssh_port).is_integer() else str(conn.ssh_port))
         self.db_login.setText(conn.db_login)
-        self.db_port.setText(str(conn.db_port))
-        self.vnc_port.setText(str(conn.vnc_port))
+        self.db_port.setText(str(int(conn.db_port)) if float(conn.db_port).is_integer() else str(conn.db_port))
+        self.vnc_port.setText(str(int(conn.vnc_port)) if float(conn.vnc_port).is_integer() else str(conn.vnc_port))
 
         vnc = config.settings.vnc_preview
         idx = self.vnc_quality.findText(vnc.quality)
@@ -311,9 +311,9 @@ class TabConnection(QWidget):
             )
 
     def save(self, config: ConfigManager) -> None:
-        ssh_port = max(1, min(65535, int(self.ssh_port.text() or 22)))
-        db_port = max(1, min(65535, int(self.db_port.text() or 5432)))
-        vnc_port = max(1, min(65535, int(self.vnc_port.text() or 5900)))
+        ssh_port = max(1, min(65535, int(float(self.ssh_port.text() or 22))))
+        db_port = max(1, min(65535, int(float(self.db_port.text() or 5432))))
+        vnc_port = max(1, min(65535, int(float(self.vnc_port.text() or 5900))))
 
         config.update(
             "connection",

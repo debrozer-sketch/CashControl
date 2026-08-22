@@ -62,15 +62,15 @@ _BG_COLORS: dict[str, str] = {
 
 # Regex для парсинга строки лога
 _LOG_RE = re.compile(
-    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)"   # timestamp
+    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[.,]\d+)"   # timestamp
     r"\s*\|\s*"
     r"(\w+)"                                             # level
     r"\s*\|.*$"
 )
 
 _AUDIT_RE = re.compile(
-    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)"
-    r"\s*\|\s*AUDIT\s*\|\s*"
+    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}[.,]\d+)"
+    r"\s*\|\s*(?:AUDIT\s*\|\s*)?"
     r"(.+)$"
 )
 
@@ -316,10 +316,10 @@ class LogsViewerDialog(QDialog):
         # Tabs
         self._tabs = QTabWidget(self)
 
-        self._main_panel = _LogPanel("cashcontrol_*.log", self)
+        self._main_panel = _LogPanel("app_*.log", self)
         self._tabs.addTab(self._main_panel, "📋 Основной лог")
 
-        self._audit_panel = _LogPanel("audit_*.log", self)
+        self._audit_panel = _LogPanel("audit*.log", self)
         self._tabs.addTab(self._audit_panel, "🔒 Журнал действий")
 
         root.addWidget(self._tabs, stretch=1)

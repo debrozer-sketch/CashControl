@@ -18,8 +18,6 @@ from cashcontrol.gui.sidebar import SidebarPanel
 from cashcontrol.gui.status_bar import CashStatusBar
 from cashcontrol.gui.tab_manager import TabManager
 from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
-from cashcontrol.infrastructure.hot_reload_manager import HotReloadManager
-from cashcontrol.infrastructure.update_client import UpdateClient
 
 logger = get_logger()
 
@@ -48,18 +46,8 @@ class MainWindow(QMainWindow):
         self.setObjectName("CashControlMainWindow")
 
         self._registry = ActionsRegistry()
-        self._hot_reload_mgr = HotReloadManager(
-            registry=self._registry, parent=self)
-        from cashcontrol.infrastructure.config_manager import ConfigManager as _CM
-        _cfg = _CM()
-        self._update_client = UpdateClient(
-            network_path=_cfg.settings.update.network_path,
-            hot_reload_manager=self._hot_reload_mgr,
-            parent=self,
-        )
 
         self._init_ui()
-        self._connect_update_signals()
         self._restore_geometry()
 
         self.set_status("Готово")
@@ -68,10 +56,6 @@ class MainWindow(QMainWindow):
     @property
     def registry(self) -> ActionsRegistry:
         return self._registry
-
-    @property
-    def hot_reload_manager(self) -> HotReloadManager:
-        return self._hot_reload_mgr
 
     def _init_ui(self) -> None:
         central = QWidget(self)
@@ -151,8 +135,6 @@ class MainWindow(QMainWindow):
             # Отложенная инициализация: окно уже показано, тяжёлое грузим в фоне
             QTimer.singleShot(0, self._post_show_init)
         QTimer.singleShot(0, self._tab_manager.restore_sessions)
-        # Запускаем клиент обновлений после старта event loop
-        QTimer.singleShot(500, self._update_client.start)
 
     def _post_show_init(self) -> None:
         """Deferred init after the window is visible (acceleration step 5)."""
@@ -203,7 +185,6 @@ class MainWindow(QMainWindow):
         settings.endGroup()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        self._update_client.stop()
         self._tab_manager.cleanup()  # завершить VNC и прочие внешние процессы
 
         settings = QSettings(__app_name__, __app_name__)
@@ -247,91 +228,3 @@ class MainWindow(QMainWindow):
     @property
     def tab_manager(self) -> TabManager:
         return self._tab_manager
-
-    @property
-    def update_client(self) -> UpdateClient:
-        return self._update_client
-
-    def check_updates_now(self) -> None:
-        """Публичный метод для вызова из settings_general."""
-        self._update_client.check_now()
-
-    def _connect_update_signals(self) -> None:
-        """Подключить сигналы UpdateClient к UI."""
-        uc = self._update_client
-
-        uc.check_started.connect(
-            lambda: self.set_status("🔄 Проверка обновлений…"))
-
-        uc.check_finished.connect(
-            lambda: self.set_status("Готово"))
-
-        uc.server_status_changed.connect(self._on_update_server_status)
-        uc.update_available.connect(self._on_update_available)
-        uc.update_failed.connect(self._on_update_failed)
-        uc.restart_required.connect(self._on_restart_required)
-
-        self._hot_reload_mgr.reload_done.connect(self._on_reload_done)
-
-    def _on_reload_done(self, result) -> None:
-        if any("toolbar" in p.replace("\\", "/") for p in result.reloaded):
-            self._tab_manager.reload_toolbar()
-
-    def _on_update_server_status(self, online: bool) -> None:
-        if not online:
-            from cashcontrol.gui.notification_manager import get_notification_manager
-            get_notification_manager().notify("Сервер обновлений недоступен: Работаем с текущими файлами", level="warning")
-
-    def _on_update_available(self, result) -> None:
-        if not result.updated and not result.cold_files:
-            return
-
-        from cashcontrol.gui.notification_manager import get_notification_manager
-        nm = get_notification_manager()
-
-        if result.updated:
-            detail = f"Обновлено файлов: {len(result.updated)}"
-            if result.new_version:
-                detail += f"  •  v{result.new_version}"
-            nm.notify(detail, level="success")
-
-        if result.cold_files:
-            nm.notify(
-                f"Доступно обновление v{result.new_version}. "
-                f"Оно будет применено при следующем запуске.",
-                level="info",
-            )
-
-    def _on_update_failed(self, error: str) -> None:
-        from cashcontrol.gui.notification_manager import get_notification_manager
-        get_notification_manager().notify(f"Ошибка обновления: {error}", level="warning")
-
-    def _on_restart_required(self, files: list) -> None:
-        import sys as _sys
-
-        from PySide6.QtWidgets import QMessageBox
-        names = "\n".join(f"  • {f}" for f in files[:5])
-        if len(files) > 5:
-            names += f"\n  … и ещё {len(files)-5}"
-        reply = QMessageBox.question(
-            self,
-            "Требуется перезапуск",
-            f"Следующие файлы требуют перезапуска программы:\n{names}\n\nПерезапустить сейчас?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
-            self._tab_manager.save_sessions()
-            from cashcontrol.infrastructure.path_resolver import _is_production
-            if _is_production():
-                # Prod: перезапускаем через os.execv
-                import os
-                exe = _sys.executable
-                os.execv(exe, [exe])
-            else:
-                # Dev: просто уведомляем — перезапустить вручную
-                QMessageBox.information(
-                    self,
-                    "Перезапуск",
-                    "Закройте и снова откройте программу вручную\n"
-                    "(в dev-режиме автоперезапуск недоступен).",
-                )

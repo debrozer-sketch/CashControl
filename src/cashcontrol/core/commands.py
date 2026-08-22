@@ -210,31 +210,3 @@ class CommandExecutor:
 
         return result
 
-    async def execute_cash_reboot(self, session: CashSession) -> CommandExecutionResult:
-        """
-        Reboot entire cash register system (cash reboot).
-
-        SSH connection will drop immediately — this is expected behaviour.
-        We send the command and don't wait for a response.
-        """
-        logger.warning(f"Rebooting cash register {session.host}")
-
-        try:
-            # Отправляем команду и не ждём ответа — SSH оборвётся, это нормально
-            await session.ssh.execute("cash reboot", timeout=5)
-        except Exception:
-            # ожидаемо: SSH обрывается после отправки ребута
-            pass
-
-        audit_log(
-            action_type="cash_operation",
-            action_name="cash_reboot",
-            target=session.host,
-            result="success",
-        )
-
-        return CommandExecutionResult(
-            success=True,
-            output="Команда ребута отправлена. Касса перезагружается (~30–60 сек).",
-            error=None,
-        )

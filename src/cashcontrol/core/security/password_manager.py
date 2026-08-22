@@ -131,22 +131,6 @@ class PasswordManager:
         self._success_cache[cache_key] = password
         logger.info(f"Cached successful {password_type} password for {ip}")
 
-    def get_cached_password(
-        self, ip: str, password_type: str = "ssh"
-    ) -> str | None:
-        """
-        Get cached password for IP if exists.
-
-        Args:
-            ip: Target IP
-            password_type: "ssh" or "db"
-
-        Returns:
-            Cached password or None
-        """
-        cache_key = f"{ip}:{password_type}"
-        return self._success_cache.get(cache_key)
-
     def clear_cache(self, ip: str | None = None) -> None:
         """
         Clear password cache.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QPoint, QSize, Qt, Signal
+from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QMenu, QWidget
 from qfluentwidgets import TabBar, TabCloseButtonDisplayMode
@@ -91,13 +91,6 @@ class CashTabBar(QWidget):
         idx = self._find_tab_index(ip)
         if idx >= 0:
             self._bar.setCurrentIndex(idx)
-
-    def get_active_ip(self) -> str | None:
-        idx = self._bar.currentIndex()
-        if idx < 0:
-            return None
-        item = self._bar.tabItem(idx)
-        return item.routeKey() if item else None
 
     def set_ping_status(self, ip: str, status: str) -> None:
         color = _DOT_COLORS.get(status, _DOT_COLORS["unknown"])

@@ -141,15 +141,17 @@ class CashStatusBar(QWidget):
         self._status_lbl.setText(text)
 
     def add_history_entry(self, ip: str, entry: HistoryEntry) -> None:
-        if ip == self._active_ip:
-            self._add_history_item(entry)
-            icon = "✅" if entry.result == "success" else "❌"
-            msg  = f"{icon} {entry.action_name}"
-            if entry.details:
-                msg += f" — {entry.details}"
-            self._status_lbl.setText(msg)
+        self._add_history_item(entry)
+        icon = "✅" if entry.result == "success" else "❌"
+        msg  = f"{icon} {entry.action_name}"
+        if entry.details:
+            msg += f" — {entry.details}"
+        self._status_lbl.setText(msg)
 
     def add_notification(self, n: Notification) -> None:
+        self._expanded = True
+        self._do_expand()
+        self._switch_tab(1)
         icons  = {"info": "ℹ", "success": "✅", "warning": "⚠", "error": "❌"}
         prefix = icons.get(n.level, "ℹ")
         self._add_notif_item(f"{prefix} {n.message}")

@@ -83,10 +83,12 @@ class ConnectionTestPage(QWizardPage):
 
         from cashcontrol.core.session import CashSession
 
-        session = CashSession(host=ip, ssh_port=ssh_port, db_port=db_port)
+        session = CashSession(ip)
         try:
             ok = await asyncio.wait_for(session.connect(), timeout=10.0)
             if ok:
+                session.setup_db(database="postgres")
+                await session.connect_db()
                 text = f"SSH: подключение успешно ({ip}:{ssh_port})\n"
                 if session.db_connected:
                     text += f"DB:  подключение успешно ({ip}:{db_port})"

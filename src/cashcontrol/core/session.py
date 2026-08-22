@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import Any
 
 from cashcontrol.core.db import DBSession
 from cashcontrol.core.ssh import CommandResult, SSHConnectionError, SSHSession
@@ -149,22 +148,6 @@ class CashSession:
             return -1, "", str(e)
         except Exception as e:
             return -1, "", str(e)
-
-    async def upload(self, local: Any, remote: str) -> bool:
-        try:
-            await self._ssh.upload_file(local, remote)
-            return True
-        except Exception as e:
-            logger.error(f"Upload failed for {self._ip}: {e}")
-            return False
-
-    async def download(self, remote: str, local: Any) -> bool:
-        try:
-            await self._ssh.download_file(remote, local)
-            return True
-        except Exception as e:
-            logger.error(f"Download failed for {self._ip}: {e}")
-            return False
 
     # ── Context manager ──────────────────────────────────────────────────
 

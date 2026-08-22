@@ -16,8 +16,6 @@
   hot-reload без перезапуска
 - **Горячие клавиши** — Ctrl+V встроенный VNC, Ctrl+Shift+V внешний VNC, Ctrl+S SSH,
   Ctrl+W WinSCP, Ctrl+R рестарт ПО, Ctrl+Shift+R перезагрузка кассы
-- **Автообновления** — проверка сетевого ресурса через cc-updater (Go),
-  hot/cold обновления
 
 ## Требования
 
@@ -69,7 +67,6 @@ src/cashcontrol/
   infrastructure/ конфиг, пути, загрузчики модулей, обновления, аудит-лог
 collectors/      TOML-коллекторы информации о кассе
 commands/        пользовательские команды (TOML/Python)
-cc-updater/      Go-исходники агента автообновлений
 docs/patch.md    история изменений (показывается в «О программе»)
 tests/           тесты
 ```

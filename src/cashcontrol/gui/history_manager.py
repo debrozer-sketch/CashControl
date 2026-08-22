@@ -87,10 +87,6 @@ class HistoryManager(QObject):
             f = self._history_dir() / f"{ip.replace(':', '_')}.jsonl"
             f.unlink(missing_ok=True)
 
-    def on_tab_closed(self, ip: str) -> None:
-        if self._mode() == "session":
-            self._memory.pop(ip, None)
-
     def _append_to_file(self, ip: str, entry: HistoryEntry) -> None:
         path = self._history_dir() / f"{ip.replace(':', '_')}.jsonl"
         with path.open("a", encoding="utf-8") as f:

@@ -7,11 +7,11 @@ from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout, QWidget
 
 from cashcontrol.core.aliases.alias_manager import get_alias_manager
-from cashcontrol.core.info.info_manager import CollectionStatus, InfoField
+from cashcontrol.core.info.info_manager import InfoField
 from cashcontrol.gui.theme_helper import color as _tc
 
 if TYPE_CHECKING:
-    from cashcontrol.core.info.info_manager import InfoSection
+    pass
 
 
 class InfoGroupWidget(QFrame):
@@ -60,49 +60,9 @@ class InfoGroupWidget(QFrame):
         self._body.setText(text)
         self.setStyleSheet("")
 
-    def update_data(self, section: InfoSection) -> None:
-        """Update this group from a single section (legacy compatibility)."""
-        if section.status == CollectionStatus.LOADING:
-            self.show_loading()
-            return
-        if section.status == CollectionStatus.TIMEOUT:
-            self.show_timeout()
-            return
-        if section.status == CollectionStatus.ERROR:
-            self.show_error(section.error)
-            return
-        if section.status == CollectionStatus.SKIPPED:
-            return
-
-        fields = section.fields
-        if not fields:
-            fields = [
-                _simple_field(k, v)
-                for k, v in section.data.items()
-                if not k.endswith("_error")
-                and not k.endswith("_skipped")
-                and not k.endswith("_raw")
-                and v is not None
-                and v != ""
-            ]
-
-        if fields:
-            self.add_items(fields)
-
     def add_items(self, fields: list[InfoField]) -> None:
         """Append multiple InfoFields to this group and refresh display."""
         self._fields.extend(fields)
-        self._render_body()
-
-    def add_field(self, label: str, value: str, alias_key: str | None = None) -> None:
-        """Append a single field with optional alias support."""
-        field = InfoField(
-            key=label.lower().replace(" ", "_"),
-            label=label,
-            value=value,
-            alias_key=alias_key,
-        )
-        self._fields.append(field)
         self._render_body()
 
     def _render_body(self) -> None:

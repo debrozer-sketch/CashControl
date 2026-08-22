@@ -143,9 +143,9 @@ class TabGeneral(QWidget):
         language = ["ru", "en"][self.lang_combo.currentIndex()]
         history_mode = ["session", "persistent"][self.history_combo.currentIndex()]
 
-        max_tabs = max(1, min(50, int(self.max_tabs_edit.text() or 15)))
-        cache_ttl = max(10, min(3600, int(self.cache_ttl_edit.text() or 300)))
-        timeout = max(5, min(300, int(self.timeout_edit.text() or 10)))
+        max_tabs = max(1, min(50, int(float(self.max_tabs_edit.text() or 15))))
+        cache_ttl = max(10, min(3600, int(float(self.cache_ttl_edit.text() or 300))))
+        timeout = max(5, min(300, int(float(self.timeout_edit.text() or 10))))
 
         config.update("general", theme=theme, language=language, max_tabs=max_tabs,
                        info_cache_ttl=cache_ttl, history_mode=history_mode)

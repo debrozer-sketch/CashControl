@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import json
 import subprocess
 import time
@@ -82,21 +81,9 @@ class SessionManager(QObject):
         if task and not task.done():
             task.cancel()
 
-    def stop_all_pings(self) -> None:
-        for ip in list(self._ping_tasks):
-            self.stop_ping(ip)
-
     def set_ping_status(self, ip: str, status: str) -> None:
         self._ping_statuses[ip] = status
         self.ping_status_changed.emit(ip, status)
-
-    def get_ping_status(self, ip: str) -> str | None:
-        return self._ping_statuses.get(ip)
-
-    @staticmethod
-    async def _wait_task_done(task: asyncio.Task) -> None:
-        with contextlib.suppress(asyncio.CancelledError, Exception):
-            await task
 
     async def _ping_loop(self, ip: str) -> None:
         interval = self._config.settings.connection.ping_interval
@@ -138,9 +125,6 @@ class SessionManager(QObject):
             return "timeout"
 
     # ── VNC processes ────────────────────────────────────────
-
-    def register_vnc(self, ip: str, proc: subprocess.Popen) -> None:
-        self._vnc_procs[ip] = proc
 
     def kill_vnc(self, ip: str) -> None:
         proc = self._vnc_procs.pop(ip, None)

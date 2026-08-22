@@ -47,64 +47,6 @@ def _install_async_exception_handler(loop: asyncio.AbstractEventLoop) -> None:
     loop.set_exception_handler(handler)
 
 
-async def _startup_update_check(app_window) -> None:
-    """Check for updates at startup using cc-updater.exe."""
-    logger = get_logger()
-    from cashcontrol.infrastructure.config_manager import ConfigManager
-
-    cfg = ConfigManager().settings.update
-    if not cfg.enabled:
-        return
-
-    from cashcontrol.infrastructure.update_client import UpdateClient
-
-    client = UpdateClient(cfg.network_path)
-
-    if UpdateClient.has_pending_cold():
-        await client.apply_cold()
-        UpdateClient.clear_pending()
-
-    if not cfg.check_on_startup:
-        return
-
-    result = await client.check()
-    if result.error:
-        logger.warning(f"Update check error: {result.error}")
-        return
-
-    if not result.available:
-        return
-
-    if result.hot_files:
-        applied = await client.apply_hot()
-        if applied:
-            from cashcontrol.gui.notification_manager import get_notification_manager
-            app_window.set_status("Применяю hot-обновления…")
-            from cashcontrol.infrastructure.hot_reload_manager import HotReloadManager
-            from cashcontrol.infrastructure.path_resolver import get_app_root
-            hr = HotReloadManager()
-            app_root = get_app_root()
-            for f in result.hot_files:
-                hr.reload_module(app_root / f)
-            get_notification_manager().notify(
-                f"Обновлено файлов: {len(result.hot_files)}",
-                level="success",
-            )
-            app_window.set_status("Готово")
-
-    if result.cold_files:
-        client.set_pending_cold()
-        app_window.set_status(
-            f"Доступно обновление v{result.new_version}. "
-            f"Оно будет применено при следующем запуске."
-        )
-        from cashcontrol.gui.notification_manager import get_notification_manager
-        get_notification_manager().notify(
-            f"Доступно обновление v{result.new_version}. Перезапустите программу.",
-            level="info",
-        )
-
-
 def main() -> None:
     """Application entry point."""
     setup_logger()
@@ -133,9 +75,9 @@ def main() -> None:
     # Show main window (after wizard if first launch)
     def _show_main_window():
         from cashcontrol.gui.main_window import MainWindow
-        window = MainWindow()
-        window.show()
-        asyncio.ensure_future(_startup_update_check(window))
+        global _main_window          # держим ссылку — иначе GC удалит окно
+        _main_window = MainWindow()
+        _main_window.show()
 
     # First launch — run setup wizard (after event loop starts)
     if config.is_first_launch:

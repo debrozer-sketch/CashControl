@@ -13,7 +13,7 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import FluentIcon, PushButton, RoundMenu, ToolButton
+from qfluentwidgets import FluentIcon, RoundMenu, ToolButton
 
 from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
 from cashcontrol.infrastructure.config_manager import ConfigManager
@@ -576,6 +576,11 @@ class CashToolbar(QWidget):
 
     # ── Commands ────────────────────────────────────────────
 
+    def commands_btn_center(self) -> QPoint:
+        """Глобальная точка под центром кнопки «Команды» — для меню."""
+        btn = self._commands_btn
+        return btn.mapToGlobal(QPoint(btn.width() // 2, btn.height()))
+
     def _on_commands_clicked(self) -> None:
         session = self._get_active_session_widget()
         if not session:
@@ -593,16 +598,16 @@ class CashToolbar(QWidget):
         menu = QMenu(self)
         menu.setToolTipsVisible(True)
 
-        json_actions = sorted(
-            [a for a in mw.registry.get_all_actions() if a.category == "json"],
+        actions = sorted(
+            mw.registry.get_all_actions(),
             key=lambda a: a.description.lower()
         )
 
-        if not json_actions:
+        if not actions:
             no_act = menu.addAction("Нет команд — создайте в редакторе команд")
             no_act.setEnabled(False)
         else:
-            for action in json_actions:
+            for action in actions:
                 act = menu.addAction(action.name)
                 act.setToolTip(action.description or action.name)
                 act.setData(action.name)
@@ -633,6 +638,20 @@ class CashToolbar(QWidget):
         asyncio.ensure_future(session_widget.reconnect_to(ip))
 
     # ── Action execution ────────────────────────────────────
+
+    def _add_history(self, ip: str, action_name: str, success: bool,
+                     details: str = "") -> None:
+        from datetime import datetime
+
+        from cashcontrol.gui.history_manager import (
+            HistoryEntry, get_history_manager)
+        try:
+            get_history_manager().add(ip, HistoryEntry(
+                timestamp=datetime.now(), action_name=action_name,
+                result="success" if success else "error",
+                details=(details or "")[:200], ip=ip))
+        except Exception:
+            logger.exception("history add failed")
 
     def _set_toolbar_busy(self, busy: bool, message: str = "") -> None:
         self.set_busy(busy)
@@ -676,9 +695,11 @@ class CashToolbar(QWidget):
             else:
                 if not result.success:
                     QMessageBox.warning(self, "Ошибка команды", result.message)
+            self._add_history(ip, title, result.success, result.message)
         except Exception as e:
             logger.error(f"Action '{action_name}' exception: {e}")
             QMessageBox.critical(self, "Ошибка", f"Неожиданная ошибка: {e}")
+            self._add_history(ip, title, False, str(e))
         finally:
             self._set_toolbar_busy(False)
             if ping_was_active:

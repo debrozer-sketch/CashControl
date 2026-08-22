@@ -61,8 +61,10 @@ Name: "desktopicon"; Description: "Создать ярлык на рабочем
 Name: "startmenuicon"; Description: "Создать ярлык в меню Пуск"; GroupDescription: "Дополнительно:"
 
 [Files]
-; All files from dist\CashControl\
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; All files from dist\CashControl\ EXCEPT user data:
+; data/logs создаются приложением на месте и не должны ни поставляться,
+; ни перезаписываться при апгрейде поверх старой версии.
+Source: "{#SourceDir}\*"; Excludes: "data,data\*,logs,logs\*,*.pyc"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Start menu shortcut

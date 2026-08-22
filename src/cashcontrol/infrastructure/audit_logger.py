@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import datetime
 from typing import Any
 
 _LOGGER: logging.Logger | None = None

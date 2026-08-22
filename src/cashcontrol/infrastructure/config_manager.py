@@ -6,6 +6,10 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from cashcontrol.infrastructure.audit_logger import get_logger
+
+logger = get_logger()
+
 
 class ConnectionSettings(BaseModel):
     ssh_login: str = "tc"
@@ -66,19 +70,11 @@ class VncPreviewSettings(BaseModel):
     color_level: str = "rgb222"
 
 
-class UpdateSettings(BaseModel):
-    network_path: str | None = None
-    enabled: bool = True
-    check_on_startup: bool = True
-    check_interval_h: int = 24
-
-
 class Settings(BaseModel):
     connection: ConnectionSettings = Field(default_factory=ConnectionSettings)
     programs: ProgramsSettings = Field(default_factory=ProgramsSettings)
     general: GeneralSettings = Field(default_factory=GeneralSettings)
     vnc_preview: VncPreviewSettings = Field(default_factory=VncPreviewSettings)
-    update: UpdateSettings = Field(default_factory=UpdateSettings)
 
 
 class ConfigManager:
@@ -125,8 +121,8 @@ class ConfigManager:
             try:
                 data = json.loads(self._path.read_text(encoding="utf-8"))
                 return Settings.model_validate(data)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f'Настройки не прочитаны ({e}), использую значения по умолчанию')
         return Settings()
 
     def save(self) -> None:

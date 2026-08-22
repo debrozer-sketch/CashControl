@@ -1,3 +1,10 @@
+"""Lazy module loading + optional runtime override from the modules/ directory.
+
+In an installed build, selected GUI modules may be replaced by external files
+under {app}/modules/** (field hotfix without rebuilding the exe). In dev mode
+get_class() simply imports the regular package module.
+"""
+
 from __future__ import annotations
 
 import importlib
@@ -10,110 +17,31 @@ from cashcontrol.infrastructure.audit_logger import get_logger
 
 logger = get_logger()
 
-
-def _find_prefixes_file() -> Path | None:
-    candidates: list[Path] = []
-
-    candidates.append(Path(__file__).resolve().parent / "hot_prefixes.json")
-
-    try:
-        from cashcontrol.infrastructure.path_resolver import get_app_root
-        root = get_app_root()
-        for sub in ("src", "."):
-            candidates.append(root / sub / "cashcontrol" / "infrastructure" / "hot_prefixes.json")
-    except Exception:
-        pass
-
-    if getattr(sys, "frozen", False):
-        candidates.append(Path(sys.executable).parent / "cashcontrol" / "infrastructure" / "hot_prefixes.json")
-
-    try:
-        from __compiled__ import containing_dir
-        candidates.append(Path(containing_dir).resolve() / "hot_prefixes.json")
-    except (ImportError, AttributeError):
-        pass
-
-    for candidate in candidates:
-        if candidate and candidate.exists():
-            return candidate
-
-    return candidates[0] if candidates else None
-
-
-_HOT_PREFIXES_FILE = _find_prefixes_file()
-
-
-def _load_hot_prefixes() -> tuple[frozenset[str], frozenset[str]]:
-    path = _HOT_PREFIXES_FILE
-    if path and path.exists():
-        try:
-            import json
-            data = json.loads(path.read_text(encoding="utf-8"))
-            pkg = frozenset(data.get("hot_package_prefixes", []))
-            fs = frozenset(data.get("hot_fs_prefixes", []))
-            if not pkg:
-                logger.error(
-                    f"hot_prefixes.json at {path} is malformed — "
-                    f"'hot_package_prefixes' is empty or missing. "
-                    f"Hot-reloadable GUI modules will be UNAVAILABLE in this session."
-                )
-            elif not fs:
-                logger.error(
-                    f"hot_prefixes.json at {path} is malformed — "
-                    f"'hot_fs_prefixes' is empty or missing. "
-                    f"All updates will be classified as 'cold'."
-                )
-            else:
-                return pkg, fs
-        except Exception as e:
-            logger.error(
-                f"Failed to load hot_prefixes.json from {path}: {e}. "
-                f"Hot-reloadable GUI modules will be UNAVAILABLE in this session."
-            )
-    else:
-        logger.error(
-            f"hot_prefixes.json not found (checked {path}). "
-            f"Hot-reloadable GUI modules will be UNAVAILABLE in this session."
-        )
-
-    return (
-        frozenset(),
-        frozenset({"commands/", "styles/", "modules/"}),
-    )
-
-
-_HOT_PACKAGE_PREFIXES, _HOT_FS_PREFIXES = _load_hot_prefixes()
+# Префиксы модулей, которые разрешено переопределять из modules/.
+_HOT_PACKAGE_PREFIXES = frozenset({
+    "cashcontrol.gui.toolbar",
+    "cashcontrol.gui.vnc_preview",
+    "cashcontrol.gui.db_viewer_widget",
+    "cashcontrol.gui.dialogs",
+    "cashcontrol.gui.widgets",
+})
 
 
 def is_module_managed(qualified_name: str) -> bool:
-    for prefix in _HOT_PACKAGE_PREFIXES:
-        if qualified_name == prefix or qualified_name.startswith(prefix + "."):
-            return True
-    return False
-
-
-def is_hot_fs_path(rel_path: str) -> bool:
-    rel = rel_path.replace("\\", "/")
-    for prefix in _HOT_FS_PREFIXES:
-        if rel.startswith(prefix):
-            return True
-    return False
+    return any(
+        qualified_name == prefix or qualified_name.startswith(prefix + ".")
+        for prefix in _HOT_PACKAGE_PREFIXES
+    )
 
 
 def _is_production() -> bool:
     if getattr(sys, "frozen", False):
         return True
     try:
-        import __compiled__
+        import __compiled__  # noqa: F401  # Nuitka marker
         return True
     except ImportError:
-        pass
-    if sys.executable.lower().endswith(".exe"):
-        exe_dir = Path(sys.executable).parent
-        marker = exe_dir / "cashcontrol" / "infrastructure" / "hot_prefixes.json"
-        if marker.exists():
-            return True
-    return False
+        return False
 
 
 class _ModulesFinder(importlib.abc.MetaPathFinder):
@@ -161,16 +89,6 @@ def _ensure_finder() -> None:
     logger.info(f"Installed hot module finder: {modules_dir}")
 
 
-def get_modules_dir() -> Path | None:
-    if not _is_production():
-        return None
-    from cashcontrol.infrastructure.path_resolver import get_app_root
-    modules_dir = get_app_root() / "modules"
-    if modules_dir.exists():
-        return modules_dir
-    return None
-
-
 def load_module(qualified_name: str) -> object | None:
     _ensure_finder()
     try:
@@ -178,20 +96,6 @@ def load_module(qualified_name: str) -> object | None:
     except ImportError:
         logger.exception(f"Failed to load module: {qualified_name}")
         return None
-
-
-def reload_module(qualified_name: str) -> bool:
-    module = sys.modules.get(qualified_name)
-    if module is None:
-        logger.debug(f"Module {qualified_name} not loaded, cannot reload")
-        return False
-    try:
-        importlib.reload(module)
-        logger.info(f"Hot reloaded: {qualified_name}")
-        return True
-    except Exception:
-        logger.exception(f"Hot reload failed for {qualified_name}")
-        return False
 
 
 def get_class(qualified_name: str, class_name: str) -> type:

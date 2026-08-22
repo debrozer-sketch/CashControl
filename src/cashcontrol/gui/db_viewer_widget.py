@@ -21,7 +21,7 @@ from pathlib import Path
 import psycopg2
 from psycopg2 import sql as pgsql
 from psycopg2 import extras as pgextras
-from PySide6.QtCore import Qt, QThread, QTimer, QPropertyAnimation, Signal, QPoint, QSize
+from PySide6.QtCore import Qt, QThread, QTimer, QPropertyAnimation, Signal, QSize
 from PySide6.QtGui import (QBrush, QColor, QFont, QFontDatabase, QGuiApplication,
                            QKeySequence, QShortcut, QSyntaxHighlighter,
                            QTextCharFormat, QTextCursor)

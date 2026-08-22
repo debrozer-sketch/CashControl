@@ -195,8 +195,6 @@ class _CommandForm(QWidget):
 
     # Публичный API
     def set_edit_mode(self, on): self._set_edit(on)
-    def is_edit_mode(self): return not self._name.isReadOnly()
-
     def load(self, data):
         self._name.setText(data.get("name", ""))
         self._desc.setText(data.get("description", ""))
@@ -225,7 +223,7 @@ class _CommandForm(QWidget):
             d["commands"] = []
             d["py_source"] = self._py.toPlainText()
         else:
-            d["commands"] = [l.rstrip() for l in self._cmds.toPlainText().splitlines() if l.strip()]
+            d["commands"] = [line.rstrip() for line in self._cmds.toPlainText().splitlines() if line.strip()]
         return d
 
     def clear(self):
@@ -247,7 +245,7 @@ class _CommandForm(QWidget):
             if "async def execute(session" not in self._py.toPlainText():
                 return "Скрипт должен содержать: async def execute(session, **kwargs)"
         else:
-            if not any(l.strip() for l in self._cmds.toPlainText().splitlines()):
+            if not any(line.strip() for line in self._cmds.toPlainText().splitlines()):
                 return "Список команд не может быть пустым"
         return None
 
@@ -386,7 +384,8 @@ class CommandEditorDialog(QDialog):
                 elif line.startswith("# requires_confirmation:"):
                     req = line[len("# requires_confirmation:"):].strip().lower() == "true"
                 elif line.startswith("# timeout:"):
-                    with contextlib.suppress(ValueError): timeout = int(line[len("# timeout:"):].strip())
+                    with contextlib.suppress(ValueError):
+                        timeout = int(line[len("# timeout:"):].strip())
             return {"name": f.stem, "description": desc, "timeout": timeout,
                     "requires_confirmation": req, "command_type": "python", "py_source": src}
         else:
@@ -446,7 +445,8 @@ class CommandEditorDialog(QDialog):
 
         if self._file and not self._is_new:
             if (self._orig_name and self._orig_name != name) or self._file.suffix != ext:
-                with contextlib.suppress(Exception): self._file.unlink(missing_ok=True)
+                with contextlib.suppress(Exception):
+                    self._file.unlink(missing_ok=True)
                 target = self._dir / f"{file_stem}{ext}"
             else:
                 target = self._file
@@ -462,7 +462,7 @@ class CommandEditorDialog(QDialog):
                     f"# timeout: {data.get('timeout', 30)}",
                 ])
                 lines = src.splitlines()
-                body_start = next((i for i, l in enumerate(lines) if not l.strip().startswith("#")), 0)
+                body_start = next((i for i, ln in enumerate(lines) if not ln.strip().startswith("#")), 0)
                 body = "\n".join(lines[body_start:]).lstrip("\n")
                 target.write_text(header + "\n\n" + body, encoding="utf-8")
             else:

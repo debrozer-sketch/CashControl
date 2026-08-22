@@ -9,7 +9,6 @@ from cashcontrol.gui.dialogs.settings.tab_connection import TabConnection
 from cashcontrol.gui.dialogs.settings.tab_general import TabGeneral
 from cashcontrol.gui.dialogs.settings.tab_logs import TabLogs
 from cashcontrol.gui.dialogs.settings.tab_programs import TabPrograms
-from cashcontrol.gui.dialogs.settings.tab_updates import TabUpdates
 from cashcontrol.infrastructure.audit_logger import audit_log
 from cashcontrol.infrastructure.config_manager import ConfigManager
 
@@ -31,13 +30,11 @@ class SettingsDialog(QDialog):
         self._tab_conn = TabConnection(self)
         self._tab_prog = TabPrograms(self)
         self._tab_general = TabGeneral(self)
-        self._tab_updates = TabUpdates(self)
         self._tab_logs = TabLogs(self)
 
         self._tabs.addTab(self._tab_conn, "Подключение")
         self._tabs.addTab(self._tab_prog, "Программы")
         self._tabs.addTab(self._tab_general, "Общие")
-        self._tabs.addTab(self._tab_updates, "Обновления")
         self._tabs.addTab(self._tab_logs, "Логи")
         self._tabs.setCurrentIndex(start_tab)
 
@@ -62,7 +59,6 @@ class SettingsDialog(QDialog):
         self._tab_conn.load(self._config)
         self._tab_prog.load(self._config)
         self._tab_general.load(self._config)
-        self._tab_updates.load(self._config)
         self._tab_logs.load(self._config)
 
     def _save_all(self) -> bool:
@@ -70,7 +66,6 @@ class SettingsDialog(QDialog):
             self._tab_conn.save(self._config)
             self._tab_prog.save(self._config)
             self._tab_general.save(self._config)
-            self._tab_updates.save(self._config)
             self._tab_logs.save(self._config)
             self._config.save()
             return True

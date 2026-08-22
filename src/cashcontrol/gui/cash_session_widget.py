@@ -261,7 +261,20 @@ class CashSessionWidget(QWidget):
             self.loading_label.setText("SSH подключено")
             self._reconnect_btn_shown = False
             self.connection_state_changed.emit(self._ip, "ok")
+            from datetime import datetime as _dt
+            from cashcontrol.gui.history_manager import (
+                HistoryEntry, get_history_manager)
+            try:
+                get_history_manager().add(self._ip, HistoryEntry(
+                    timestamp=_dt.now(), action_name="Подключение",
+                    result="success", details=f"SSH {self._ip}", ip=self._ip))
+            except Exception:
+                pass
             self._vnc_widget.set_session(self._session)
+
+            if getattr(self, "_vnc_resume", False):
+                self._vnc_resume = False
+                self.connect_vnc()
 
             from cashcontrol.core.info.collectors.cash_type import (
                 CashTypeCollector,
@@ -753,6 +766,15 @@ class CashSessionWidget(QWidget):
                 await self._info_task
             self._info_task = None
 
+        # VNC отключаем ДО разрыва SSH, иначе воркер зависает на мёртвом сокете
+        vnc_resume = False
+        try:
+            if self._vnc_widget.state() == "connected":
+                vnc_resume = True
+                self._vnc_widget.disconnect_vnc()
+        except Exception:
+            pass
+
         if self._session:
             try:
                 conn = getattr(self._session.ssh, "_conn", None)
@@ -765,9 +787,9 @@ class CashSessionWidget(QWidget):
                 pass
             self._session = None
 
-        self._vnc_widget.cleanup()
         self._ip = new_ip
         self._vnc_widget._ip = new_ip
+        self._vnc_resume = vnc_resume
         self._info_loaded = False
         self._loading = False
         self._clear_sections()

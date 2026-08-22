@@ -124,17 +124,19 @@ if exist "%NUITKA_OUT%" (
     pause & exit /b 1
 )
 
-echo   data\...
-if exist "data" xcopy /s /q /y "data" "%FINAL_OUT%\data\" >nul
+REM Пользовательские данные НИКОГДА не попадают в сборку:
+REM они создаются приложением на месте установки при первом запуске,
+REM а апгрейд поверх старой версии их не трогает.
+echo   [purge user data from dist]
+if exist "%FINAL_OUT%\data" rmdir /s /q "%FINAL_OUT%\data"
+if exist "%FINAL_OUT%\logs" rmdir /s /q "%FINAL_OUT%\logs"
+if exist "%FINAL_OUT%\.pending_update" del /q "%FINAL_OUT%\.pending_update" 2>nul
 
 echo   commands\...
 if exist "commands" xcopy /s /q /y "commands" "%FINAL_OUT%\commands\" >nul
 
 echo   collectors\...
 if exist "collectors" xcopy /s /q /y "collectors" "%FINAL_OUT%\collectors\" >nul
-
-echo   scenarios\...
-if exist "scenarios" xcopy /s /q /y "scenarios" "%FINAL_OUT%\scenarios\" >nul
 
 echo   styles\...
 if exist "styles" xcopy /s /q /y "styles" "%FINAL_OUT%\styles\" >nul
@@ -164,7 +166,7 @@ if exist "modules" (
             if exist "src\cashcontrol\gui\dialogs\%%f.py" xcopy /y "src\cashcontrol\gui\dialogs\%%f.py" "%FINAL_OUT%\modules\gui\dialogs\" >nul
         )
         xcopy /y "src\cashcontrol\gui\dialogs\settings\__init__.py" "%FINAL_OUT%\modules\gui\dialogs\settings\" >nul
-        for %%f in (settings_dialog tab_connection tab_general tab_logs tab_programs tab_updates) do (
+        for %%f in (settings_dialog tab_connection tab_general tab_logs tab_programs) do (
             if exist "src\cashcontrol\gui\dialogs\settings\%%f.py" xcopy /y "src\cashcontrol\gui\dialogs\settings\%%f.py" "%FINAL_OUT%\modules\gui\dialogs\settings\" >nul
         )
         xcopy /y "src\cashcontrol\gui\widgets\__init__.py" "%FINAL_OUT%\modules\gui\widgets\" >nul

@@ -110,31 +110,6 @@ class CashInfoSnapshot:
     def get_section(self, name: str) -> InfoSection | None:
         return getattr(self, name, None)
 
-    def is_complete(self) -> bool:
-        return all(
-            s.status != CollectionStatus.LOADING
-            for name in ALL_SECTIONS
-            if (s := self.get_section(name)) is not None
-        )
-
-    def has_errors(self) -> bool:
-        return any(
-            s.status == CollectionStatus.ERROR
-            for name in ALL_SECTIONS
-            if (s := self.get_section(name)) is not None
-        )
-
-    def sections_by_group(self) -> dict[str, list[InfoSection]]:
-        result: dict[str, list[InfoSection]] = {}
-        for group, names in SECTION_GROUPS.items():
-            sections = []
-            for name in names:
-                sec = self.get_section(name)
-                if sec is not None:
-                    sections.append(sec)
-            result[group] = sections
-        return result
-
 
 class BaseCollector:
     name: str = ""
@@ -158,7 +133,7 @@ _COLLECTOR_SPECS: dict[str, tuple[str, str]] = {
     "bank_terminal": ("cashcontrol.core.info.collectors.bank_terminal", "BankTerminalCollector"),
     "dns": ("cashcontrol.core.info.collectors.dns_info", "DNSInfoCollector"),
     "loymax": ("cashcontrol.core.info.collectors.loymax", "LoymaxCollector"),
-    "qrid": ("cashcontrol.core.info.collectors.qrid", "QridCollector"),
+    "qrid": ("cashcontrol.core.info.collectors.qrid", "QRIDCollector"),
 }
 
 
