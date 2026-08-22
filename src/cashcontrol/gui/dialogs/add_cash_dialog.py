@@ -7,8 +7,8 @@ from __future__ import annotations
 import re
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QVBoxLayout
-from qfluentwidgets import FluentIcon, LineEdit, PushButton
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout
+from qfluentwidgets import BodyLabel, FluentIcon, LineEdit, PrimaryPushButton, PushButton
 
 
 class AddCashDialog(QDialog):
@@ -28,22 +28,27 @@ class AddCashDialog(QDialog):
     def _init_ui(self) -> None:
         """Build the dialog layout."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(12)
+        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setSpacing(10)
 
-        label = QLabel("Введите IP-адрес кассы:", self)
-        layout.addWidget(label)
-
+        row = QHBoxLayout()
+        row.setSpacing(8)
+        label = BodyLabel("IP-адрес кассы:", self)
+        label.setFixedWidth(110)
+        label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
         self._ip_input = LineEdit(self)
         self._ip_input.setPlaceholderText("192.168.1.10")
         self._ip_input.setClearButtonEnabled(True)
         self._ip_input.returnPressed.connect(self._on_ok)
-        layout.addWidget(self._ip_input)
+        row.addWidget(label)
+        row.addWidget(self._ip_input, stretch=1)
+        layout.addLayout(row)
 
         # Buttons
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self._ok_btn = PushButton("Добавить", self, FluentIcon.ADD)
+        self._ok_btn = PrimaryPushButton("Добавить", self, FluentIcon.ADD)
         self._ok_btn.clicked.connect(self._on_ok)
         btn_layout.addWidget(self._ok_btn)
 

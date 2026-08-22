@@ -16,10 +16,8 @@ from PySide6.QtWidgets import (
     QFrame,
     QGroupBox,
     QHBoxLayout,
-    QLabel,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QPlainTextEdit,
     QScrollArea,
     QSizePolicy,
@@ -28,12 +26,15 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from qfluentwidgets import (
+    BodyLabel,
     CardWidget,
     ComboBox,
     FluentIcon,
     LineEdit,
+    MessageBox,
     PrimaryPushButton,
     PushButton,
+    StrongBodyLabel,
     SubtitleLabel,
     ToolButton,
 )
@@ -127,7 +128,7 @@ class _CommandForm(QWidget):
         self._ssh_box = QGroupBox("Команды (по одной на строку):", self)
         sl = QVBoxLayout(self._ssh_box)
         sl.setContentsMargins(6, 6, 6, 6)
-        hint = QLabel("Выполняются последовательно по SSH. Остановка при первой ошибке.", self)
+        hint = BodyLabel("Выполняются последовательно по SSH. Остановка при первой ошибке.", self)
         from cashcontrol.gui.theme_helper import color as _tc
         hint.setStyleSheet(f"color:{_tc('text_secondary')};font-size:11px;")
         hint.setWordWrap(True)
@@ -144,7 +145,7 @@ class _CommandForm(QWidget):
         self._py_box = QGroupBox("Python-скрипт:", self)
         pl = QVBoxLayout(self._py_box)
         pl.setContentsMargins(6, 6, 6, 6)
-        ph = QLabel("Обязательно: async def execute(session, **kwargs)\nДоступно: session.ssh.execute(), session.host", self)
+        ph = BodyLabel("Обязательно: async def execute(session, **kwargs)\nДоступно: session.ssh.execute(), session.host", self)
         from cashcontrol.gui.theme_helper import color as _tc
         ph.setStyleSheet(f"color:{_tc('text_secondary')};font-size:11px;")
         ph.setWordWrap(True)
@@ -163,7 +164,7 @@ class _CommandForm(QWidget):
     def _row(self, label, widget):
         row = QHBoxLayout()
         row.setSpacing(8)
-        lbl = QLabel(label, self)
+        lbl = BodyLabel(label, self)
         lbl.setFixedWidth(85)
         lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         row.addWidget(lbl)
@@ -285,13 +286,13 @@ class CommandEditorDialog(QDialog):
         ll = QVBoxLayout(left)
         ll.setContentsMargins(8, 8, 8, 8)
         ll.setSpacing(6)
-        ll.addWidget(QLabel("<b>Команды</b>", self))
+        ll.addWidget(StrongBodyLabel("Команды", self))
         self._list = QListWidget(self)
         self._list.currentItemChanged.connect(self._on_select)
         ll.addWidget(self._list, stretch=1)
         row_b = QHBoxLayout()
         row_b.setSpacing(4)
-        self._btn_new = PushButton("+ Новая", self)
+        self._btn_new = PushButton("Новая", self, FluentIcon.ADD)
         self._btn_new.clicked.connect(self._on_new)
         row_b.addWidget(self._btn_new)
         self._btn_del = ToolButton(FluentIcon.DELETE, self)
@@ -316,13 +317,13 @@ class CommandEditorDialog(QDialog):
 
         act = QHBoxLayout()
         act.addStretch()
-        self._btn_edit = PushButton("✏ Редактировать", self)
+        self._btn_edit = PushButton("Редактировать", self, FluentIcon.EDIT)
         self._btn_edit.clicked.connect(self._on_edit)
         act.addWidget(self._btn_edit)
         self._btn_cancel = PushButton("Отмена", self)
         self._btn_cancel.clicked.connect(self._on_cancel)
         act.addWidget(self._btn_cancel)
-        self._btn_save = PrimaryPushButton("💾 Сохранить", self)
+        self._btn_save = PrimaryPushButton("Сохранить", self, FluentIcon.SAVE)
         self._btn_save.clicked.connect(self._on_save)
         act.addWidget(self._btn_save)
         rl.addLayout(act)
@@ -331,7 +332,7 @@ class CommandEditorDialog(QDialog):
 
         cr = QHBoxLayout()
         cr.addStretch()
-        btn_close = PushButton("Close", self)
+        btn_close = PushButton("Закрыть", self)
         btn_close.clicked.connect(self.accept)
         cr.addWidget(btn_close)
         root.addLayout(cr)
@@ -401,7 +402,7 @@ class CommandEditorDialog(QDialog):
             self._form.load(data)
             self._orig_name = data.get("name", f.stem)
         except Exception as e:
-            QMessageBox.warning(self, "Ошибка", f"Не удалось загрузить:\n{e}")
+            MessageBox("Ошибка", f"Не удалось загрузить:\n{e}", self).exec()
             return
         self._set_mode("view")
 
@@ -435,7 +436,7 @@ class CommandEditorDialog(QDialog):
     def _on_save(self):
         err = self._form.validate()
         if err:
-            QMessageBox.warning(self, "Ошибка", err)
+            MessageBox("Ошибка", err, self).exec()
             return
         data = self._form.to_dict()
         name = data["name"]
@@ -470,7 +471,7 @@ class CommandEditorDialog(QDialog):
                 target.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
             logger.info(f"Command saved: {target.name}")
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось сохранить:\n{e}")
+            MessageBox("Ошибка", f"Не удалось сохранить:\n{e}", self).exec()
             return
 
         self._file = target
@@ -491,17 +492,15 @@ class CommandEditorDialog(QDialog):
         if not item:
             return
         f = item.data(Qt.ItemDataRole.UserRole)
-        reply = QMessageBox.question(
-            self, "Удалить", f"Удалить «{item.text()}»?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        dlg = MessageBox("Удаление", f"Удалить «{item.text()}»?", self)
+        dlg.yesButton.setText("Удалить")
+        if not dlg.exec():
             return
         try:
             f.unlink(missing_ok=True)
             logger.info(f"Command deleted: {f.name}")
         except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Не удалось удалить:\n{e}")
+            MessageBox("Ошибка", f"Не удалось удалить:\n{e}", self).exec()
             return
         self._file = None
         self._orig_name = None

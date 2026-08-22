@@ -9,11 +9,18 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QScrollArea,
     QSplitter,
     QVBoxLayout,
     QWidget,
+)
+from qfluentwidgets import (
+    BodyLabel,
+    FluentIcon,
+    LineEdit,
+    PrimaryPushButton,
+    PushButton,
+    ToolButton,
 )
 
 from cashcontrol.core.info import InfoCollector, ProblemChecker
@@ -129,25 +136,22 @@ class CashSessionWidget(QWidget):
         root.addWidget(splitter, stretch=1)
 
         vnc_bar = QWidget(self)
-        vnc_bar.setFixedHeight(36)
+        vnc_bar.setFixedHeight(40)
         vnc_bar.setStyleSheet("background: transparent;")
         bar_layout = QHBoxLayout(vnc_bar)
         bar_layout.setContentsMargins(6, 4, 6, 4)
         bar_layout.setSpacing(6)
 
-        self._btn_vnc_connect = QPushButton("Подключить VNC", vnc_bar)
-        self._btn_vnc_connect.setFixedHeight(26)
+        self._btn_vnc_connect = PushButton("Подключить", vnc_bar)
         self._btn_vnc_connect.clicked.connect(self._vnc_widget.connect_vnc)
         bar_layout.addWidget(self._btn_vnc_connect)
 
-        self._btn_vnc_disconnect = QPushButton("Отключить VNC", vnc_bar)
-        self._btn_vnc_disconnect.setFixedHeight(26)
+        self._btn_vnc_disconnect = PushButton("Отключить", vnc_bar)
         self._btn_vnc_disconnect.clicked.connect(self._vnc_widget.disconnect_vnc)
         self._btn_vnc_disconnect.hide()
         bar_layout.addWidget(self._btn_vnc_disconnect)
 
-        self._btn_vnc_fullscreen = QPushButton("Полный экран", vnc_bar)
-        self._btn_vnc_fullscreen.setFixedHeight(26)
+        self._btn_vnc_fullscreen = PushButton("Полный экран", vnc_bar, FluentIcon.FULL_SCREEN)
         self._btn_vnc_fullscreen.clicked.connect(self._vnc_widget.open_fullscreen)
         bar_layout.addWidget(self._btn_vnc_fullscreen)
 
@@ -262,8 +266,8 @@ class CashSessionWidget(QWidget):
             self._reconnect_btn_shown = False
             self.connection_state_changed.emit(self._ip, "ok")
             from datetime import datetime as _dt
-            from cashcontrol.gui.history_manager import (
-                HistoryEntry, get_history_manager)
+
+            from cashcontrol.gui.history_manager import HistoryEntry, get_history_manager
             try:
                 get_history_manager().add(self._ip, HistoryEntry(
                     timestamp=_dt.now(), action_name="Подключение",
@@ -335,14 +339,8 @@ class CashSessionWidget(QWidget):
         self.loading_label.show()
         self.loading_label.setText(message)
 
-        btn = QPushButton("Переподключить", self._info_content)
+        btn = PrimaryPushButton("Переподключить", self._info_content)
         btn.setFixedHeight(34)
-        from cashcontrol.gui.theme_helper import color as _tc
-
-        btn.setStyleSheet(
-            f"background: {_tc('accent')}; color: {_tc('text_on_accent')}; border-radius: 4px;"
-            "font-size: 13px; padding: 0 16px;"
-        )
         btn.clicked.connect(self._do_reconnect)
         self.info_layout.insertWidget(1, btn)
         self._extra_widgets.append(btn)
@@ -524,7 +522,7 @@ class CashSessionWidget(QWidget):
         if port:
             return [InfoField("fr_port", "ФР подключён", str(port))]
         elif err:
-            return [InfoField("fr_error", "ФР", f"⚠ {err}")]
+            return [InfoField("fr_error", "ФР", err)]
         return []
 
     def _build_display_items(self, section: InfoSection) -> list[InfoField]:
@@ -535,7 +533,7 @@ class CashSessionWidget(QWidget):
             return [InfoField("display_port", "Дисплей покупателя", str(port))]
         elif err:
             return [
-                InfoField("display_error", "Дисплей покупателя", f"⚠ {err}")
+                InfoField("display_error", "Дисплей покупателя", err)
             ]
         return []
 
@@ -565,20 +563,21 @@ class CashSessionWidget(QWidget):
             for i, dev in enumerate(devices):
                 name = dev.get("name", "—")
                 connected = dev.get("connected")
-                icon = " ✅" if connected else (" ❌" if connected is False else "")
+                state = (" — подключено" if connected
+                         else (" — отключено" if connected is False else ""))
                 field_label = label if len(devices) == 1 else f"{label} N{i+1}"
                 alias_key = fields[i].alias_key if i < len(fields) else None
                 items.append(
                     InfoField(
                         f"{list_key}_{i}",
                         field_label,
-                        f"{name}{icon}",
+                        f"{name}{state}",
                         alias_key=alias_key,
                     )
                 )
             return items
         elif error:
-            return [InfoField(f"{list_key}_error", label, f"⚠ {error}")]
+            return [InfoField(f"{list_key}_error", label, error)]
         return []
 
     def _build_keyboard_items(self, section: InfoSection) -> list[InfoField]:
@@ -588,7 +587,7 @@ class CashSessionWidget(QWidget):
         if kbd:
             return [InfoField("keyboard_model", "Клавиатура", str(kbd))]
         elif err:
-            return [InfoField("keyboard_error", "Клавиатура", f"⚠ {err}")]
+            return [InfoField("keyboard_error", "Клавиатура", err)]
         return []
 
     def _build_bank_items(self, section: InfoSection) -> list[InfoField]:
@@ -599,7 +598,7 @@ class CashSessionWidget(QWidget):
             usb_note = " (EnableUSB)" if d.get("bank_usb_mode") == "1" else ""
             return [InfoField("bank_port", "Банк", f"{port}{usb_note}")]
         elif err:
-            return [InfoField("bank_error", "Банк", f"⚠ {err}")]
+            return [InfoField("bank_error", "Банк", err)]
         return []
 
     def _build_dns_items(self, section: InfoSection) -> list[InfoField]:
@@ -617,7 +616,7 @@ class CashSessionWidget(QWidget):
         if login:
             return [InfoField("loymax_login", "Loymax", str(login))]
         elif err:
-            return [InfoField("loymax_error", "Loymax", f"⚠ {err}")]
+            return [InfoField("loymax_error", "Loymax", err)]
         return []
 
     def _build_qrid_items(self, section: InfoSection) -> list[InfoField]:
@@ -627,7 +626,7 @@ class CashSessionWidget(QWidget):
         if qrid:
             return [InfoField("qrid", "QRID", str(qrid))]
         elif err:
-            return [InfoField("qrid_error", "QRID", f"⚠ {err}")]
+            return [InfoField("qrid_error", "QRID", err)]
         return []
 
     def _build_generic_items(self, section: InfoSection) -> list[InfoField]:
@@ -692,41 +691,27 @@ class CashSessionWidget(QWidget):
         if getattr(self, "_ip_edit_widget", None):
             return
 
-        from PySide6.QtWidgets import QLineEdit
-
         container = QWidget(self)
         c_layout = QHBoxLayout(container)
         c_layout.setContentsMargins(8, 6, 8, 6)
         c_layout.setSpacing(6)
 
-        lbl = QLabel("Новый IP:", container)
-        from cashcontrol.gui.theme_helper import color as _tc
-
-        lbl.setStyleSheet(f"font-size: 13px; color: {_tc('text_secondary')};")
+        lbl = BodyLabel("Новый IP:", container)
         c_layout.addWidget(lbl)
 
-        edit = QLineEdit(self._ip, container)
-        edit.setStyleSheet(
-            f"font-size: 14px; padding: 4px 8px; border: 2px solid {_tc('accent')};"
-            "border-radius: 4px;"
-        )
+        edit = LineEdit(container)
+        edit.setText(self._ip)
         edit.selectAll()
         edit.setFixedHeight(32)
         c_layout.addWidget(edit, stretch=1)
 
-        btn_ok = QPushButton("Подключить", container)
+        btn_ok = PrimaryPushButton("Подключить", container)
         btn_ok.setFixedHeight(32)
-        btn_ok.setStyleSheet(
-            f"background: {_tc('accent')}; color: {_tc('text_on_accent')}; border-radius: 4px; padding: 0 12px;"
-        )
         c_layout.addWidget(btn_ok)
 
-        btn_cancel = QPushButton("X", container)
-        btn_cancel.setFixedHeight(32)
-        btn_cancel.setFixedWidth(32)
-        btn_cancel.setStyleSheet(
-            f"background: {_tc('btn_cancel_bg')}; border-radius: 4px;"
-        )
+        btn_cancel = ToolButton(FluentIcon.CLOSE, container)
+        btn_cancel.setFixedSize(32, 32)
+        btn_cancel.setToolTip("Отмена")
         c_layout.addWidget(btn_cancel)
 
         self.info_layout.insertWidget(0, container)

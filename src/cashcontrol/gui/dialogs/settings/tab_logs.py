@@ -14,12 +14,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from qfluentwidgets import (
-    FluentIcon,
     BodyLabel,
     CardWidget,
     ComboBox,
+    FluentIcon,
     MessageBox,
-    PrimaryPushButton,
     PushButton,
     SubtitleLabel,
 )
@@ -152,8 +151,6 @@ class TabLogs(QWidget):
         InfoBar.success(title="Готово", content=f"Удалено файлов: {count}",
                         parent=self, position=InfoBarPosition.TOP_RIGHT,
                         duration=2500)
-
-        MessageBox("Готово", f"Удалено {count} файлов логов.", self).exec()
         logger.info(f"Cleared {count} log files by user request")
 
     def load(self, config: ConfigManager) -> None:

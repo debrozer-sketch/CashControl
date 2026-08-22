@@ -22,19 +22,23 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
-    QComboBox,
     QDialog,
     QHBoxLayout,
-    QLabel,
-    QLineEdit,
     QPlainTextEdit,
-    QPushButton,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import SubtitleLabel
+from qfluentwidgets import (
+    BodyLabel,
+    ComboBox,
+    FluentIcon,
+    LineEdit,
+    PushButton,
+    SubtitleLabel,
+)
 
+from cashcontrol.gui.theme_helper import color as _tc
 from cashcontrol.infrastructure.audit_logger import get_logger
 from cashcontrol.infrastructure.path_resolver import get_logs_dir
 
@@ -43,21 +47,14 @@ if TYPE_CHECKING:
 
 logger = get_logger()
 
-# ── Цвета подсветки уровней ────────────────────────────────────────────────
-_LEVEL_COLORS: dict[str, str] = {
-    "DEBUG":    "#888888",
-    "INFO":     "#dddddd",
-    "SUCCESS":  "#4caf50",
-    "WARNING":  "#ff9800",
-    "ERROR":    "#f44336",
-    "CRITICAL": "#e91e63",
-    "AUDIT":    "#64b5f6",
+# ── Цвета подсветки уровней (токены темы) ──────────────────────────────────
+_LEVEL_TOKENS: dict[str, str] = {
+    "DEBUG": "text_tertiary", "INFO": "text_code", "SUCCESS": "success",
+    "WARNING": "warning", "ERROR": "error", "CRITICAL": "error", "AUDIT": "info",
 }
 
-_BG_COLORS: dict[str, str] = {
-    "WARNING":  "#1a1400",
-    "ERROR":    "#1a0000",
-    "CRITICAL": "#1a0010",
+_LEVEL_BG_TOKENS: dict[str, str] = {
+    "WARNING": "bg_warning", "ERROR": "bg_danger", "CRITICAL": "bg_danger",
 }
 
 # Regex для парсинга строки лога
@@ -102,43 +99,40 @@ class _LogPanel(QWidget):
         toolbar.setSpacing(6)
 
         # File selector
-        toolbar.addWidget(QLabel("Файл:", self))
-        self._file_combo = QComboBox(self)
+        toolbar.addWidget(BodyLabel("Файл:", self))
+        self._file_combo = ComboBox(self)
         self._file_combo.setMinimumWidth(200)
         self._file_combo.currentIndexChanged.connect(self._on_file_changed)
         toolbar.addWidget(self._file_combo)
 
         # Level filter
-        toolbar.addWidget(QLabel("Уровень:", self))
-        self._level_combo = QComboBox(self)
+        toolbar.addWidget(BodyLabel("Уровень:", self))
+        self._level_combo = ComboBox(self)
         self._level_combo.addItems(["Все", "DEBUG", "INFO", "WARNING", "ERROR"])
         self._level_combo.currentIndexChanged.connect(self._apply_filter)
         toolbar.addWidget(self._level_combo)
 
         # Search
-        self._search_edit = QLineEdit(self)
-        self._search_edit.setPlaceholderText("🔍 Поиск...")
+        self._search_edit = LineEdit(self)
+        self._search_edit.setPlaceholderText("Поиск")
         self._search_edit.setMaximumWidth(200)
         self._search_edit.textChanged.connect(self._apply_filter)
         toolbar.addWidget(self._search_edit)
 
         # Refresh
-        self._refresh_btn = QPushButton("↻ Обновить", self)
-        self._refresh_btn.setFixedWidth(90)
+        self._refresh_btn = PushButton("Обновить", self, FluentIcon.SYNC)
         self._refresh_btn.clicked.connect(self._load_current_file)
         toolbar.addWidget(self._refresh_btn)
 
         # Open folder
-        self._folder_btn = QPushButton("📁 Папка", self)
-        self._folder_btn.setFixedWidth(80)
+        self._folder_btn = PushButton("Папка", self, FluentIcon.FOLDER)
         self._folder_btn.clicked.connect(self._open_folder)
         toolbar.addWidget(self._folder_btn)
 
         toolbar.addStretch()
 
         # Line count label
-        self._count_label = QLabel("", self)
-        from cashcontrol.gui.theme_helper import color as _tc
+        self._count_label = BodyLabel("", self)
         self._count_label.setStyleSheet(f"color: {_tc('text_secondary')}; font-size: 11px;")
         toolbar.addWidget(self._count_label)
 
@@ -152,9 +146,9 @@ class _LogPanel(QWidget):
         self._text.setFont(font)
         self._text.setStyleSheet(
             "QPlainTextEdit {"
-            "  background: #1e1e1e;"
-            "  color: #dddddd;"
-            "  border: 1px solid #333;"
+            f"  background: {_tc('bg_code')};"
+            f"  color: {_tc('text_code')};"
+            f"  border: 1px solid {_tc('border_primary')};"
             "  border-radius: 4px;"
             "}"
         )
@@ -234,7 +228,7 @@ class _LogPanel(QWidget):
         cursor = self._text.textCursor()
 
         base_fmt = QTextCharFormat()
-        base_fmt.setForeground(QColor("#dddddd"))
+        base_fmt.setForeground(QColor(_tc("text_code")))
 
         for line in lines:
             # Determine level for this line
@@ -246,11 +240,10 @@ class _LogPanel(QWidget):
                 level = "AUDIT"
 
             fmt = QTextCharFormat()
-            color = _LEVEL_COLORS.get(level, "#dddddd")
-            fmt.setForeground(QColor(color))
-            bg = _BG_COLORS.get(level, "")
-            if bg:
-                fmt.setBackground(QColor(bg))
+            fmt.setForeground(QColor(_tc(_LEVEL_TOKENS.get(level, "text_code"))))
+            bg_token = _LEVEL_BG_TOKENS.get(level)
+            if bg_token:
+                fmt.setBackground(QColor(_tc(bg_token)))
 
             cursor.movePosition(QTextCursor.MoveOperation.End)
             cursor.insertText(line + "\n", fmt)
@@ -258,8 +251,8 @@ class _LogPanel(QWidget):
         # Highlight search term
         if highlight:
             hl_fmt = QTextCharFormat()
-            hl_fmt.setBackground(QColor("#ff6f00"))
-            hl_fmt.setForeground(QColor("#ffffff"))
+            hl_fmt.setBackground(QColor(_tc("accent")))
+            hl_fmt.setForeground(QColor(_tc("text_on_accent")))
 
             doc = self._text.document()
             cursor = QTextCursor(doc)
@@ -317,10 +310,10 @@ class LogsViewerDialog(QDialog):
         self._tabs = QTabWidget(self)
 
         self._main_panel = _LogPanel("app_*.log", self)
-        self._tabs.addTab(self._main_panel, "📋 Основной лог")
+        self._tabs.addTab(self._main_panel, "Основной лог")
 
         self._audit_panel = _LogPanel("audit*.log", self)
-        self._tabs.addTab(self._audit_panel, "🔒 Журнал действий")
+        self._tabs.addTab(self._audit_panel, "Журнал действий")
 
         root.addWidget(self._tabs, stretch=1)
 
@@ -328,11 +321,11 @@ class LogsViewerDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch()
 
-        refresh_all = QPushButton("↻ Обновить всё", self)
+        refresh_all = PushButton("Обновить всё", self, FluentIcon.SYNC)
         refresh_all.clicked.connect(self._refresh_all)
         btn_row.addWidget(refresh_all)
 
-        close_btn = QPushButton("Закрыть", self)
+        close_btn = PushButton("Закрыть", self)
         close_btn.clicked.connect(self.close)
         btn_row.addWidget(close_btn)
 

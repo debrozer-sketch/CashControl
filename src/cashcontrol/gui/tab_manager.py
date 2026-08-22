@@ -8,12 +8,10 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QFrame,
     QLabel,
-    QMessageBox,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
-
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 from cashcontrol.gui.cash_session_widget import CashSessionWidget
@@ -286,9 +284,9 @@ class TabManager(QWidget):
             return
 
         if self._session_mgr.has_session(new_ip):
-            from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Уже открыта",
-                                f"Вкладка для {new_ip} уже существует.")
+            InfoBar.warning(title="Вкладка уже открыта",
+                            content=f"Вкладка для {new_ip} уже существует",
+                            parent=self, position=InfoBarPosition.TOP, duration=3000)
             return
 
         sw = self._session_mgr.remove_session(old_ip)

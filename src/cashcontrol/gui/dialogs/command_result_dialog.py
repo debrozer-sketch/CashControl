@@ -15,14 +15,13 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import CardWidget, SubtitleLabel
+from qfluentwidgets import CardWidget, InfoBarIcon, PrimaryPushButton, SubtitleLabel
 
 if TYPE_CHECKING:
     from cashcontrol.actions_registry import ActionResult
@@ -55,8 +54,8 @@ class CommandResultDialog(QDialog):
 
     def _init_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(20, 16, 20, 16)
-        root.setSpacing(12)
+        root.setContentsMargins(16, 12, 16, 12)
+        root.setSpacing(10)
 
         # ── Title ──────────────────────────────────────────────
         title_label = SubtitleLabel(self._title, self)
@@ -68,15 +67,11 @@ class CommandResultDialog(QDialog):
         status_layout.setContentsMargins(12, 10, 12, 10)
 
         from cashcontrol.gui.theme_helper import color as _tc
-        if self._result.success:
-            icon_text = "✅"
-            status_color = _tc('success')
-        else:
-            icon_text = "❌"
-            status_color = _tc('error')
+        icon = InfoBarIcon.SUCCESS if self._result.success else InfoBarIcon.ERROR
+        status_color = _tc('success') if self._result.success else _tc('error')
 
-        icon_label = QLabel(icon_text, status_card)
-        icon_label.setStyleSheet("font-size: 24px;")
+        icon_label = QLabel(status_card)
+        icon_label.setPixmap(icon.icon().pixmap(24, 24))
         status_layout.addWidget(icon_label)
 
         msg_label = QLabel(self._result.message or ("Успешно" if self._result.success else "Ошибка"))
@@ -112,9 +107,9 @@ class CommandResultDialog(QDialog):
             root.addStretch(1)
 
         # ── Button ─────────────────────────────────────────────
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok, self)
-        buttons.accepted.connect(self.accept)
-        root.addWidget(buttons)
+        close_btn = PrimaryPushButton("Закрыть", self)
+        close_btn.clicked.connect(self.accept)
+        root.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignRight)
 
     def _build_output_text(self) -> str:
         """Build full output text from result."""

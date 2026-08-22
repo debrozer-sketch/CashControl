@@ -8,7 +8,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIntValidator
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QMessageBox,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -18,7 +17,9 @@ from qfluentwidgets import (
     BodyLabel,
     CardWidget,
     ComboBox,
+    FluentIcon,
     LineEdit,
+    MessageBox,
     PushButton,
     StrongBodyLabel,
     SubtitleLabel,
@@ -114,12 +115,10 @@ class TabConnection(QWidget):
         layout.addWidget(self.ssh_passwords)
 
         ssh_btns = QHBoxLayout()
-        self.btn_show_ssh = PushButton("👁 Показать", card)
-        self.btn_show_ssh.setFixedHeight(28)
+        self.btn_show_ssh = PushButton("Показать", card, FluentIcon.VIEW)
         self.btn_show_ssh.clicked.connect(self._show_ssh_passwords)
         ssh_btns.addWidget(self.btn_show_ssh)
-        self.btn_clear_ssh = PushButton("🗑 Очистить пароли SSH", card)
-        self.btn_clear_ssh.setFixedHeight(28)
+        self.btn_clear_ssh = PushButton("Очистить пароли SSH", card, FluentIcon.DELETE)
         self.btn_clear_ssh.clicked.connect(self._clear_ssh_passwords)
         ssh_btns.addWidget(self.btn_clear_ssh)
         ssh_btns.addStretch()
@@ -153,12 +152,10 @@ class TabConnection(QWidget):
         layout.addWidget(self.db_passwords)
 
         db_btns = QHBoxLayout()
-        self.btn_show_db = PushButton("👁 Показать", card)
-        self.btn_show_db.setFixedHeight(28)
+        self.btn_show_db = PushButton("Показать", card, FluentIcon.VIEW)
         self.btn_show_db.clicked.connect(self._show_db_passwords)
         db_btns.addWidget(self.btn_show_db)
-        self.btn_clear_db = PushButton("🗑 Очистить пароли БД", card)
-        self.btn_clear_db.setFixedHeight(28)
+        self.btn_clear_db = PushButton("Очистить пароли БД", card, FluentIcon.DELETE)
         self.btn_clear_db.clicked.connect(self._clear_db_passwords)
         db_btns.addWidget(self.btn_clear_db)
         db_btns.addStretch()
@@ -243,13 +240,11 @@ class TabConnection(QWidget):
             self.db_passwords.setPlaceholderText("Пароли БД не заданы")
 
     def _clear_ssh_passwords(self) -> None:
-        reply = QMessageBox.warning(
-            self, "Очистить SSH пароли",
-            "Удалить все сохранённые SSH пароли?\nВы не сможете подключаться к кассам.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        dlg = MessageBox("Очистка SSH паролей",
+                         "Удалить все сохранённые SSH пароли?\nВы не сможете подключаться к кассам.",
+                         self)
+        dlg.yesButton.setText("Удалить")
+        if dlg.exec():
             self._config.update("connection", ssh_passwords_encrypted=[])
             self.ssh_passwords.clear()
             self.ssh_passwords.setPlaceholderText("SSH пароли очищены")
@@ -257,13 +252,10 @@ class TabConnection(QWidget):
             logger.info("SSH passwords cleared by user")
 
     def _clear_db_passwords(self) -> None:
-        reply = QMessageBox.warning(
-            self, "Очистить пароли БД",
-            "Удалить все сохранённые пароли PostgreSQL?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
+        dlg = MessageBox("Очистка паролей БД",
+                         "Удалить все сохранённые пароли PostgreSQL?", self)
+        dlg.yesButton.setText("Удалить")
+        if dlg.exec():
             self._config.update("connection", db_passwords_encrypted=[])
             self.db_passwords.clear()
             self.db_passwords.setPlaceholderText("Пароли БД очищены")

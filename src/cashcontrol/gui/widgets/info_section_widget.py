@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
@@ -9,9 +9,6 @@ from PySide6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout, QWidget
 from cashcontrol.core.aliases.alias_manager import get_alias_manager
 from cashcontrol.core.info.info_manager import InfoField
 from cashcontrol.gui.theme_helper import color as _tc
-
-if TYPE_CHECKING:
-    pass
 
 
 class InfoGroupWidget(QFrame):
@@ -136,14 +133,12 @@ class InfoGroupWidget(QFrame):
             self._update_field_display(field, new_name)
 
     def _reset_alias(self, field: InfoField) -> None:
-        from PySide6.QtWidgets import QMessageBox
+        from qfluentwidgets import MessageBox
 
-        reply = QMessageBox.question(
-            self,
-            "Сброс алиаса",
-            "Сбросить название к значению из встроенного справочника?",
-        )
-        if reply == QMessageBox.StandardButton.Yes and field.alias_key:
+        dlg = MessageBox("Сброс алиаса",
+                         "Сбросить название к значению из встроенного справочника?", self)
+        dlg.yesButton.setText("Сбросить")
+        if dlg.exec() and field.alias_key:
             get_alias_manager().delete_alias(field.alias_key)
             self._update_field_display(field, field.value)
 

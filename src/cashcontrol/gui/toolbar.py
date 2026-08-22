@@ -20,13 +20,19 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
-    QPushButton,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import FluentIcon, RoundMenu, ToolButton
+from qfluentwidgets import (
+    FluentIcon,
+    InfoBar,
+    InfoBarPosition,
+    MessageBox,
+    PushButton,
+    RoundMenu,
+    ToolButton,
+)
 
 from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
 from cashcontrol.infrastructure.config_manager import ConfigManager
@@ -55,17 +61,17 @@ class Toolbar(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 5, 10, 5)
 
-        self.btn_add_cash = QPushButton("\u2795 Добавить кассу")
+        self.btn_add_cash = PushButton("Добавить кассу", self, FluentIcon.ADD)
         self.btn_add_cash.clicked.connect(self.add_cash_requested.emit)
         layout.addWidget(self.btn_add_cash)
 
-        self.btn_refresh = QPushButton("\U0001f504 Обновить")
+        self.btn_refresh = PushButton("Обновить", self, FluentIcon.SYNC)
         self.btn_refresh.clicked.connect(self.refresh_requested.emit)
         layout.addWidget(self.btn_refresh)
 
         layout.addStretch()
 
-        self.btn_settings = QPushButton("\u2699\ufe0f Настройки")
+        self.btn_settings = PushButton("Настройки", self, FluentIcon.SETTING)
         self.btn_settings.clicked.connect(self.settings_requested.emit)
         layout.addWidget(self.btn_settings)
 
@@ -274,7 +280,8 @@ class CashToolbar(QWidget):
             return None
         session = tm.get_active_session()
         if not session:
-            QMessageBox.warning(self, "Нет активной вкладки", "Откройте вкладку с кассой")
+            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
+                            parent=self, position=InfoBarPosition.TOP, duration=3000)
             return None
         return session.ip
 
@@ -304,12 +311,10 @@ class CashToolbar(QWidget):
     def _on_reboot_terminal(self) -> None:
         ip = self._require_active_tab()
         if ip:
-            reply = QMessageBox.question(
-                self, "Подтверждение",
-                f"Перезагрузить кассу {ip}?\n\nСистема будет перезагружена!",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
+            dlg = MessageBox("Перезагрузка кассы",
+                             f"Перезагрузить кассу {ip}?\nСистема будет перезагружена.", self)
+            dlg.yesButton.setText("Перезагрузить")
+            if dlg.exec():
                 asyncio.ensure_future(self._exec_action(ip, "reboot_cash", title="Перезагрузка кассы"))
 
     # ── External program launchers ─────────────────────────
@@ -401,7 +406,8 @@ class CashToolbar(QWidget):
 
         session = self._get_active_session_widget()
         if not session:
-            QMessageBox.warning(self, "Нет активной вкладки", "Откройте вкладку с кассой")
+            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
+                            parent=self, position=InfoBarPosition.TOP, duration=3000)
             return
 
         p = self._config.settings.programs
@@ -459,7 +465,8 @@ class CashToolbar(QWidget):
 
         session = self._get_active_session_widget()
         if not session:
-            QMessageBox.warning(self, "Нет активной вкладки", "Откройте вкладку с кассой")
+            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
+                            parent=self, position=InfoBarPosition.TOP, duration=3000)
             return
 
         p = self._config.settings.programs
@@ -489,10 +496,9 @@ class CashToolbar(QWidget):
             os_type = session.os_type
 
         if not password:
-            QMessageBox.warning(
-                self, "Нет пароля",
-                f"Не удалось получить пароль для {ip}.\nПроверьте настройки подключения."
-            )
+            MessageBox("Нет пароля",
+                       f"Не удалось получить пароль для {ip}.\nПроверьте настройки подключения.",
+                       self).exec()
             return
 
         protocol = "sftp" if os_type.lower() == "ubuntu" else "scp"
@@ -584,7 +590,8 @@ class CashToolbar(QWidget):
     def _on_commands_clicked(self) -> None:
         session = self._get_active_session_widget()
         if not session:
-            QMessageBox.warning(self, "Нет активной вкладки", "Откройте вкладку с кассой")
+            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
+                            parent=self, position=InfoBarPosition.TOP, duration=3000)
             return
 
         mw = self._get_main_window()
@@ -618,12 +625,10 @@ class CashToolbar(QWidget):
             action_name = chosen.data()
             action_obj = mw.registry.get_action(action_name)
             if action_obj and action_obj.requires_confirmation:
-                reply = QMessageBox.question(
-                    self, "Подтверждение",
-                    f"Выполнить {action_obj.description} на кассе {session.ip}?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                )
-                if reply != QMessageBox.StandardButton.Yes:
+                dlg = MessageBox("Подтверждение",
+                                 f"Выполнить {action_obj.description} на кассе {session.ip}?", self)
+                dlg.yesButton.setText("Выполнить")
+                if not dlg.exec():
                     return
             asyncio.ensure_future(
                 self._exec_action(session.ip, action_name, title=action_obj.description if action_obj else action_name)
@@ -643,8 +648,7 @@ class CashToolbar(QWidget):
                      details: str = "") -> None:
         from datetime import datetime
 
-        from cashcontrol.gui.history_manager import (
-            HistoryEntry, get_history_manager)
+        from cashcontrol.gui.history_manager import HistoryEntry, get_history_manager
         try:
             get_history_manager().add(ip, HistoryEntry(
                 timestamp=datetime.now(), action_name=action_name,
@@ -664,7 +668,7 @@ class CashToolbar(QWidget):
 
         session_widget = self._session_mgr.get_session(ip)
         if not session_widget or not session_widget.session:
-            QMessageBox.warning(self, "Ошибка", "Касса не подключена")
+            MessageBox("Ошибка", "Касса не подключена", self).exec()
             return
 
         mw = self._get_main_window()
@@ -680,7 +684,7 @@ class CashToolbar(QWidget):
                 return
             extra_kwargs["user_input"] = value.strip()
 
-        self._set_toolbar_busy(True, f"⏳ {title} — {ip}…")
+        self._set_toolbar_busy(True, f"{title} — {ip}…")
 
         ping_was_active = self._session_mgr.active_ip == ip
         if ping_was_active:
@@ -694,11 +698,11 @@ class CashToolbar(QWidget):
                 dlg.exec()
             else:
                 if not result.success:
-                    QMessageBox.warning(self, "Ошибка команды", result.message)
+                    MessageBox("Ошибка команды", result.message, self).exec()
             self._add_history(ip, title, result.success, result.message)
         except Exception as e:
             logger.error(f"Action '{action_name}' exception: {e}")
-            QMessageBox.critical(self, "Ошибка", f"Неожиданная ошибка: {e}")
+            MessageBox("Ошибка", f"Неожиданная ошибка: {e}", self).exec()
             self._add_history(ip, title, False, str(e))
         finally:
             self._set_toolbar_busy(False)

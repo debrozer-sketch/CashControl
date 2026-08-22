@@ -2,50 +2,14 @@
 help_css.py — CSS/QSS styles for HelpDialog.
 
 Single source of truth: one template per surface + a palette per theme.
+Palettes are resolved 1-1 from theme_helper tokens.
 """
 
 from __future__ import annotations
 
 from string import Template
 
-# ── Palettes ──────────────────────────────────────────────────────────────
-
-_PALETTES: dict[str, dict[str, str]] = {
-    "light": {
-        "text": "#1A1A2E",
-        "body_bg": "transparent",
-        "accent": "#1565C0",
-        "h2_border": "#42A5F5",
-        "h3_color": "#333333",
-        "code_bg": "#EEF2FF",
-        "note_bg": "#E3F2FD",
-        "note_border": "#1565C0",
-        "warn_bg": "#FFF8E1",
-        "warn_border": "#FFB300",
-        "tip_bg": "#E8F5E9",
-        "tip_border": "#2E7D32",
-        "th_bg": "#1565C0",
-        "td_border": "#DDE1E8",
-        "row_even": "#F4F6F9",
-    },
-    "dark": {
-        "text": "#e0e0e0",
-        "body_bg": "#1e1e1e",
-        "accent": "#4fc3f7",
-        "h2_border": "#0288d1",
-        "h3_color": "#bbbbbb",
-        "code_bg": "#2d2d2d",
-        "note_bg": "#1a2a3a",
-        "note_border": "#0288d1",
-        "warn_bg": "#2a2a1a",
-        "warn_border": "#FFB300",
-        "tip_bg": "#1a2a1a",
-        "tip_border": "#2E7D32",
-        "th_bg": "#0288d1",
-        "td_border": "#333333",
-        "row_even": "#2a2a2a",
-    },
-}
+from cashcontrol.gui.theme_helper import color as _tc
 
 # ── HTML page CSS ─────────────────────────────────────────────────────────
 
@@ -156,22 +120,6 @@ _TREE_QSS = Template(
 """
 )
 
-_TREE_PALETTES: dict[str, dict[str, str]] = {
-    "light": {
-        "panel_bg": "#F0F4FA",
-        "text": "#1A1A2E",
-        "sel_bg": "#1565C0",
-        "hover_bg": "#D8E4F5",
-    },
-    "dark": {
-        "panel_bg": "#1e2a3a",
-        "text": "#e0e0e0",
-        "sel_bg": "#0277bd",
-        "hover_bg": "#1a3a5a",
-    },
-}
-
-
 def _theme_name() -> str:
     try:
         from qfluentwidgets import isDarkTheme
@@ -181,21 +129,44 @@ def _theme_name() -> str:
         return "light"
 
 
+def _palette() -> dict[str, str]:
+    dark = _theme_name() == "dark"
+    return {
+        "text": _tc("text_primary"),
+        "body_bg": _tc("bg_code") if dark else "transparent",
+        "accent": _tc("text_link") if dark else _tc("accent"),
+        "h2_border": _tc("info"),
+        "h3_color": _tc("text_secondary") if dark else _tc("text_primary"),
+        "code_bg": _tc("bg_secondary") if dark else _tc("bg_code"),
+        "note_bg": _tc("bg_info"),      "note_border": _tc("info"),
+        "warn_bg": _tc("bg_warning"),   "warn_border": _tc("warning_border"),
+        "tip_bg": _tc("bg_success"),    "tip_border": _tc("success"),
+        "th_bg": _tc("text_link") if dark else _tc("accent"),
+        "td_border": _tc("border_secondary"),
+        "row_even": _tc("bg_table_alt"),
+    }
+
+
+def _tree_palette() -> dict[str, str]:
+    return {"panel_bg": _tc("bg_secondary"), "text": _tc("text_primary"),
+            "sel_bg": _tc("accent"), "hover_bg": _tc("bg_hover")}
+
+
 def get_css() -> str:
     """Full page CSS for the current theme."""
-    return _PAGE_CSS.substitute(_PALETTES[_theme_name()])
+    return _PAGE_CSS.substitute(_palette())
 
 
 def get_tree_stylesheet() -> str:
     """QSS for the sections tree on the current theme."""
-    return _TREE_QSS.substitute(_TREE_PALETTES[_theme_name()])
+    return _TREE_QSS.substitute(_tree_palette())
 
 
 def get_panel_bg() -> str:
     """Panel background color for the current theme."""
-    return _TREE_PALETTES[_theme_name()]["panel_bg"]
+    return _tree_palette()["panel_bg"]
 
 
 def get_scroll_bg() -> str:
     """Scroll area background for the current theme."""
-    return _PALETTES[_theme_name()]["body_bg"] if _theme_name() == "dark" else "white"
+    return _tc("bg_code") if _theme_name() == "dark" else _tc("bg_primary")

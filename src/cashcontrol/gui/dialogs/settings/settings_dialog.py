@@ -1,15 +1,17 @@
-"""Unified settings dialog with tabbed categories."""
+"""Unified settings dialog with sidebar navigation."""
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
-    QTabWidget,
+    QListWidget,
+    QListWidgetItem,
+    QStackedWidget,
     QVBoxLayout,
 )
-from qfluentwidgets import PrimaryPushButton, PushButton
+from qfluentwidgets import FluentIcon, PrimaryPushButton, PushButton
 
 from cashcontrol.gui.dialogs.settings.tab_connection import TabConnection
 from cashcontrol.gui.dialogs.settings.tab_general import TabGeneral
@@ -18,31 +20,47 @@ from cashcontrol.gui.dialogs.settings.tab_programs import TabPrograms
 from cashcontrol.infrastructure.audit_logger import audit_log
 from cashcontrol.infrastructure.config_manager import ConfigManager
 
+_PAGES = [
+    (FluentIcon.LINK, "Подключение"),
+    (FluentIcon.APPLICATION, "Программы"),
+    (FluentIcon.SETTING, "Общие"),
+    (FluentIcon.DOCUMENT, "Логи"),
+]
+
 
 class SettingsDialog(QDialog):
-    """Single dialog with all settings organized in tabs."""
+    """Single dialog with settings organized as a left-side menu."""
 
     def __init__(self, parent=None, start_tab: int = 0) -> None:
         super().__init__(parent)
         self.setWindowTitle("Настройки")
         self.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.setMinimumWidth(740)
-        self.setMinimumHeight(600)
-        self.resize(780, 680)
+        self.setMinimumHeight(560)
+        self.resize(780, 620)
 
         self._config = ConfigManager()
 
-        self._tabs = QTabWidget(self)
+        self._stack = QStackedWidget(self)
         self._tab_conn = TabConnection(self)
         self._tab_prog = TabPrograms(self)
         self._tab_general = TabGeneral(self)
         self._tab_logs = TabLogs(self)
+        for page in (self._tab_conn, self._tab_prog, self._tab_general, self._tab_logs):
+            self._stack.addWidget(page)
 
-        self._tabs.addTab(self._tab_conn, "Подключение")
-        self._tabs.addTab(self._tab_prog, "Программы")
-        self._tabs.addTab(self._tab_general, "Общие")
-        self._tabs.addTab(self._tab_logs, "Логи")
-        self._tabs.setCurrentIndex(start_tab)
+        self._menu = QListWidget(self)
+        self._menu.setFixedWidth(176)
+        self._menu.setIconSize(QSize(18, 18))
+        self._menu.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._menu.setStyleSheet(
+            "QListWidget::item { min-height: 34px; padding: 0 10px;"
+            " margin: 2px 4px; border-radius: 6px; }"
+        )
+        for icon, title in _PAGES:
+            self._menu.addItem(QListWidgetItem(icon, title))
+        self._menu.setCurrentRow(start_tab)
+        self._menu.currentRowChanged.connect(self._stack.setCurrentIndex)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
@@ -58,10 +76,15 @@ class SettingsDialog(QDialog):
         self._cancel_btn.clicked.connect(self.reject)
         self._apply_btn.clicked.connect(self._on_apply)
 
+        body = QHBoxLayout()
+        body.setSpacing(10)
+        body.addWidget(self._menu)
+        body.addWidget(self._stack, stretch=1)
+
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 12, 16, 12)
+        root.setContentsMargins(12, 10, 12, 12)
         root.setSpacing(8)
-        root.addWidget(self._tabs, stretch=1)
+        root.addLayout(body, stretch=1)
         root.addLayout(btn_row)
 
         self._load_all()

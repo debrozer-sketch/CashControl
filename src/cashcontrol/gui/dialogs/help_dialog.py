@@ -27,6 +27,7 @@ from cashcontrol.gui.dialogs.help_css import (
     get_scroll_bg,
     get_tree_stylesheet,
 )
+from cashcontrol.gui.theme_helper import color as _tc
 
 
 class HelpDialog(QDialog):
@@ -56,6 +57,9 @@ class HelpDialog(QDialog):
             self._tree.setCurrentItem(first)
             self._show_page(first)
 
+        from cashcontrol.gui.theme_engine import ThemeEngine
+        ThemeEngine.instance().theme_changed.connect(self._refresh_theme)
+
     def _setup_ui(self) -> None:
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -67,15 +71,17 @@ class HelpDialog(QDialog):
         left = QWidget()
         left.setFixedWidth(230)
         left.setStyleSheet(f"background: {get_panel_bg()};")
+        self._left_panel = left
         ll = QVBoxLayout(left)
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(0)
 
         header = QLabel("  Содержание")
         header.setFixedHeight(40)
+        self._header = header
         header.setStyleSheet(
-            "background: #1565C0; color: white; font-size: 13px; "
-            "font-weight: 700; padding-left: 12px;"
+            f"background: {_tc('accent')}; color: {_tc('text_on_accent')}; "
+            "font-size: 13px; font-weight: 700; padding-left: 12px;"
         )
         ll.addWidget(header)
 
@@ -99,6 +105,7 @@ class HelpDialog(QDialog):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(scroll.Shape.NoFrame)
         scroll.setStyleSheet(f"background: {get_scroll_bg()};")
+        self._scroll = scroll
 
         self._content_w = QLabel()
         self._content_w.setAlignment(
@@ -134,3 +141,15 @@ class HelpDialog(QDialog):
         fn = self._pages.get(item)
         if fn:
             self._content_w.setText(fn())
+
+    def _refresh_theme(self) -> None:
+        self._left_panel.setStyleSheet(f"background: {get_panel_bg()};")
+        self._header.setStyleSheet(
+            f"background: {_tc('accent')}; color: {_tc('text_on_accent')}; "
+            "font-size: 13px; font-weight: 700; padding-left: 12px;"
+        )
+        self._tree.setStyleSheet(get_tree_stylesheet())
+        self._scroll.setStyleSheet(f"background: {get_scroll_bg()};")
+        cur = self._tree.currentItem()
+        if cur:
+            self._show_page(cur)
