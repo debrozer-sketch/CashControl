@@ -59,9 +59,9 @@ class ThemeEngine(QObject):
         # ── Общий блок — работает для обеих тем ──────────────────────────
         common = f"""
             QToolTip {{
-                background-color: #2d2d2d;
-                color: #f0f0f0;
-                border: 1px solid #555555;
+                background-color: {_tc('bg_tooltip')};
+                color: {_tc('text_primary')};
+                border: 1px solid {_tc('border_primary')};
                 padding: 4px 8px;
                 border-radius: 3px;
                 font-size: 12px;
@@ -82,7 +82,7 @@ class ThemeEngine(QObject):
             }}
             QMenu::item:selected {{
                 background-color: {_tc('accent')};
-                color: #ffffff;
+                color: {_tc('text_on_accent')};
             }}
             QMenu::item:disabled {{
                 color: {_tc('text_tertiary')};
@@ -157,7 +157,7 @@ class ThemeEngine(QObject):
                 }}
                 QListWidget::item:selected {{
                     background-color: {_tc('accent')};
-                    color: #ffffff;
+                    color: {_tc('text_on_accent')};
                 }}
                 QListWidget::item:hover {{
                     background-color: {_tc('bg_hover')};
@@ -176,13 +176,13 @@ class ThemeEngine(QObject):
                     background-color: {_tc('bg_pressed')};
                 }}
                 TabBar {{
-                    background-color: #2b2b2b;
-                    border-bottom: 1px solid #3f3f3f;
+                    background-color: {_tc('bg_secondary')};
+                    border-bottom: 1px solid {_tc('border_primary')};
                 }}
                 TabBar::tab {{
-                    background-color: #333333;
-                    color: #cccccc;
-                    border: 1px solid #3f3f3f;
+                    background-color: {_tc('bg_tertiary')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
                     border-bottom: none;
                     border-top-left-radius: 4px;
                     border-top-right-radius: 4px;
@@ -191,23 +191,23 @@ class ThemeEngine(QObject):
                     margin-top: 2px;
                 }}
                 TabBar::tab:selected {{
-                    background-color: #1f1f1f;
-                    color: #ffffff;
-                    border: 2px solid #0078d4;
+                    background-color: {_tc('bg_primary')};
+                    color: {_tc('text_primary')};
+                    border: 2px solid {_tc('accent')};
                     border-bottom: none;
                     margin-top: 0px;
                     padding: 7px 17px;
                     font-weight: bold;
                 }}
                 TabBar::tab:hover:!selected {{
-                    background-color: #3d3d3d;
-                    border-color: #555555;
+                    background-color: {_tc('bg_hover')};
+                    border-color: {_tc('tab_hover_border')};
                 }}
             """
         else:
             theme_style = f"""
                 QMainWindow {{
-                    background-color: #f3f3f3;
+                    background-color: {_tc('bg_secondary')};
                 }}
                 QFrame[frameShape="5"] {{
                     background-color: {_tc('border_primary')};
@@ -218,12 +218,12 @@ class ThemeEngine(QObject):
                     margin-top: 8px;
                 }}
                 TabBar {{
-                    background-color: #f0f0f0;
-                    border-bottom: 1px solid #c0c0c0;
+                    background-color: {_tc('bg_secondary')};
+                    border-bottom: 1px solid {_tc('border_input')};
                 }}
                 TabBar::tab {{
-                    background-color: #e0e0e0;
-                    border: 1px solid #b0b0b0;
+                    background-color: {_tc('bg_hover')};
+                    border: 1px solid {_tc('border_input')};
                     border-bottom: none;
                     border-top-left-radius: 4px;
                     border-top-right-radius: 4px;
@@ -232,16 +232,16 @@ class ThemeEngine(QObject):
                     margin-top: 2px;
                 }}
                 TabBar::tab:selected {{
-                    background-color: #ffffff;
-                    border: 2px solid #0078d4;
+                    background-color: {_tc('bg_primary')};
+                    border: 2px solid {_tc('accent')};
                     border-bottom: none;
                     margin-top: 0px;
                     padding: 7px 17px;
                     font-weight: bold;
                 }}
                 TabBar::tab:hover:!selected {{
-                    background-color: #d0d0d0;
-                    border-color: #909090;
+                    background-color: {_tc('bg_pressed')};
+                    border-color: {_tc('tab_hover_border')};
                 }}
             """
 

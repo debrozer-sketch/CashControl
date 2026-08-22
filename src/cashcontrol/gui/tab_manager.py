@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qfluentwidgets import InfoBar, InfoBarPosition
+
 from cashcontrol.gui.cash_session_widget import CashSessionWidget
 from cashcontrol.gui.session_manager import SessionManager
 from cashcontrol.gui.tab_bar import CashTabBar
@@ -105,7 +107,7 @@ class TabManager(QWidget):
 
         self._stack = QStackedWidget(self)
 
-        self._placeholder = QLabel("Нажмите  +  или  Ctrl+T  чтобы добавить кассу", self._stack)
+        self._placeholder = QLabel("Нажмите «+» или Ctrl+T, чтобы добавить кассу", self._stack)
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         from cashcontrol.gui.theme_helper import color as _thc
         self._placeholder.setStyleSheet(f"color: {_thc('text_secondary')}; font-size: 16px; padding: 40px;")
@@ -210,7 +212,10 @@ class TabManager(QWidget):
 
         max_tabs = self._config.settings.general.max_tabs
         if self._session_mgr.session_count() >= max_tabs:
-            QMessageBox.warning(self, "Лимит вкладок", f"Максимальное количество вкладок: {max_tabs}")
+            InfoBar.warning(
+                title="Лимит вкладок",
+                content=f"Максимальное количество вкладок: {max_tabs}",
+                parent=self, position=InfoBarPosition.TOP, duration=3000)
             return None
 
         session_widget = CashSessionWidget(ip, parent=self)

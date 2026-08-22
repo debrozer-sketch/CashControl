@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTabWidget, QVBoxLayout
+from PySide6.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QTabWidget,
+    QVBoxLayout,
+)
+from qfluentwidgets import PrimaryPushButton, PushButton
 
 from cashcontrol.gui.dialogs.settings.tab_connection import TabConnection
 from cashcontrol.gui.dialogs.settings.tab_general import TabGeneral
@@ -38,20 +44,25 @@ class SettingsDialog(QDialog):
         self._tabs.addTab(self._tab_logs, "Логи")
         self._tabs.setCurrentIndex(start_tab)
 
-        btn_box = QDialogButtonBox(self)
-        self._save_btn = btn_box.addButton("Сохранить", QDialogButtonBox.ButtonRole.AcceptRole)
-        self._apply_btn = btn_box.addButton("Применить", QDialogButtonBox.ButtonRole.ApplyRole)
-        self._cancel_btn = btn_box.addButton("Отмена", QDialogButtonBox.ButtonRole.RejectRole)
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+        btn_row.addStretch()
+        self._save_btn = PrimaryPushButton("Сохранить", self)
+        self._apply_btn = PushButton("Применить", self)
+        self._cancel_btn = PushButton("Отмена", self)
+        for b in (self._save_btn, self._apply_btn, self._cancel_btn):
+            b.setFixedWidth(120)
+            btn_row.addWidget(b)
 
-        btn_box.accepted.connect(self._on_save)
-        btn_box.rejected.connect(self.reject)
+        self._save_btn.clicked.connect(self._on_save)
+        self._cancel_btn.clicked.connect(self.reject)
         self._apply_btn.clicked.connect(self._on_apply)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(16, 12, 16, 12)
         root.setSpacing(8)
         root.addWidget(self._tabs, stretch=1)
-        root.addWidget(btn_box)
+        root.addLayout(btn_row)
 
         self._load_all()
 
@@ -77,11 +88,16 @@ class SettingsDialog(QDialog):
     def _on_save(self) -> None:
         if self._save_all():
             audit_log(action_type="settings", action_name="update_settings", result="success")
-            from qfluentwidgets import MessageBox
-            MessageBox("Успешно", "Настройки сохранены", self).exec()
+            from qfluentwidgets import InfoBar, InfoBarPosition
+            parent = self.parent() or self
+            InfoBar.success(title="Сохранено", content="Настройки сохранены",
+                            parent=parent, position=InfoBarPosition.TOP_RIGHT,
+                            duration=2000)
             self.accept()
 
     def _on_apply(self) -> None:
         if self._save_all():
-            from qfluentwidgets import MessageBox
-            MessageBox("Успешно", "Настройки применены", self).exec()
+            from qfluentwidgets import InfoBar, InfoBarPosition
+            InfoBar.success(title="Сохранено", content="Настройки применены",
+                            parent=self, position=InfoBarPosition.TOP_RIGHT,
+                            duration=2000)

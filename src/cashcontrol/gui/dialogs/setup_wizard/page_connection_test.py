@@ -48,7 +48,7 @@ class ConnectionTestPage(QWizardPage):
             return
 
         self.test_btn.setEnabled(False)
-        self.test_btn.setText("Проверяю")
+        self.test_btn.setText("Проверка")
         self.result_label.setText("Подключение...")
 
         self._test_task = asyncio.ensure_future(self._do_test_async(ip))

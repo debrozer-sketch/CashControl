@@ -23,7 +23,7 @@ class FinishPage(QWizardPage):
 
     def initializePage(self) -> None:
         w = self.wizard()
-        self.header.setText("Все готово к работе!")
+        self.header.setText("Всё готово к работе")
         self.detail.setText(
             f"SSH:     {w.field('ssh_login') or 'tc'} : {w.field('ssh_port') or '22'}\n"
             f"DB:      {w.field('db_login') or 'postgres'} : {w.field('db_port') or '5432'}"

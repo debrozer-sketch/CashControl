@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QMenu, QWidget
-from qfluentwidgets import TabBar, TabCloseButtonDisplayMode
+from qfluentwidgets import FluentIcon, TabBar, TabCloseButtonDisplayMode
 
-_DOT_COLORS: dict[str, QColor] = {
-    "ok": QColor("#2ecc71"),
-    "slow": QColor("#f1c40f"),
-    "timeout": QColor("#e74c3c"),
-    "unknown": QColor("#95a5a6"),
-}
+from cashcontrol.gui.theme_helper import color as _tc
+
+_DOT_TOKENS = {"ok": "success", "slow": "warning",
+               "timeout": "error", "unknown": "text_tertiary"}
 
 
-def _make_dot_icon(color: QColor, size: int = 12) -> QIcon:
+def _make_dot_icon(status: str, size: int = 12) -> QIcon:
+    color = QColor(_tc(_DOT_TOKENS.get(status, "unknown")))
     pixmap = QPixmap(size, size)
     pixmap.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pixmap)
@@ -80,7 +79,7 @@ class CashTabBar(QWidget):
         layout.addWidget(self._bar)
 
     def add_tab(self, ip: str) -> None:
-        self._bar.addTab(ip, ip, _make_dot_icon(_DOT_COLORS["unknown"]))
+        self._bar.addTab(ip, ip, _make_dot_icon("unknown"))
 
     def remove_tab(self, ip: str) -> None:
         idx = self._find_tab_index(ip)
@@ -93,12 +92,11 @@ class CashTabBar(QWidget):
             self._bar.setCurrentIndex(idx)
 
     def set_ping_status(self, ip: str, status: str) -> None:
-        color = _DOT_COLORS.get(status, _DOT_COLORS["unknown"])
         idx = self._find_tab_index(ip)
         if idx >= 0:
             item = self._bar.tabItem(idx)
             if item:
-                item.setIcon(_make_dot_icon(color))
+                item.setIcon(_make_dot_icon(status))
 
     def get_all_ips(self) -> list[str]:
         result: list[str] = []
@@ -160,19 +158,28 @@ class CashTabBar(QWidget):
 
         menu = QMenu(self)
         menu.setToolTipsVisible(True)
-        action_close = menu.addAction(f"\u2715  \u0417\u0430\u043a\u0440\u044b\u0442\u044c \u0432\u043a\u043b\u0430\u0434\u043a\u0443  {ip}")
-        action_close.setToolTip("\u0417\u0430\u043a\u0440\u044b\u0442\u044c \u0432\u043a\u043b\u0430\u0434\u043a\u0443 \u0438 \u043e\u0442\u043a\u043b\u044e\u0447\u0438\u0442\u044c\u0441\u044f \u043e\u0442 \u043a\u0430\u0441\u0441\u044b")
+
+        from qfluentwidgets import FluentIcon as _FI
+
+        a_close = QAction(_FI.CLOSE.icon(), f"Закрыть вкладку  {ip}", self)
+        a_close.setToolTip("Закрыть вкладку и отключиться от кассы")
+        a_ip = QAction(_FI.EDIT.icon(), "Изменить IP", self)
         menu.addSeparator()
-        action_change_ip = menu.addAction("\u270f\ufe0f  \u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c IP")
+        a_refr = QAction(_FI.SYNC.icon(), "Обновить данные", self)
+        a_copy = QAction(_FI.COPY.icon(), "Копировать IP", self)
+        menu.addAction(a_close)
         menu.addSeparator()
-        action_refresh = menu.addAction("\U0001f504  \u041e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0435")
-        action_copy = menu.addAction("\U0001f4cb  \u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c IP")
+        menu.addAction(a_ip)
+        menu.addSeparator()
+        menu.addAction(a_refr)
+        menu.addAction(a_copy)
+
         chosen = menu.exec(self._bar.mapToGlobal(pos))
-        if chosen == action_close:
+        if chosen == a_close:
             self.tab_close_requested.emit(ip)
-        elif chosen == action_change_ip:
+        elif chosen == a_ip:
             self.tab_ip_changed.emit(ip, "")
-        elif chosen == action_refresh:
+        elif chosen == a_refr:
             self.tab_refresh_requested.emit(ip)
         elif chosen == action_copy:
             from PySide6.QtWidgets import QApplication

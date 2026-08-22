@@ -13,19 +13,21 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt
+from PySide6.QtCore import Property, QEasingCurve, QPropertyAnimation, QSize, Qt
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
-    QPushButton,
     QSizePolicy,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
+
+from qfluentwidgets import FluentIcon, MessageBox, ToolButton
 
 if TYPE_CHECKING:
     from cashcontrol.gui.history_manager import HistoryEntry
@@ -96,14 +98,18 @@ class CashStatusBar(QWidget):
         tab_row = QHBoxLayout()
         tab_row.setSpacing(2)
 
-        self._btn_history = QPushButton("История", self._expanded_panel)
-        self._btn_history.setFixedHeight(22)
-        self._btn_history.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_history = ToolButton(FluentIcon.HISTORY, self._expanded_panel)
+        self._btn_history.setFixedSize(24, 24)
+        self._btn_history.setIconSize(QSize(14, 14))
+        self._btn_history.setCheckable(True)
+        self._btn_history.setToolTip("История")
         self._btn_history.clicked.connect(lambda: self._switch_tab(0))
 
-        self._btn_notifs = QPushButton("Уведомления", self._expanded_panel)
-        self._btn_notifs.setFixedHeight(22)
-        self._btn_notifs.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_notifs = ToolButton(FluentIcon.INFO, self._expanded_panel)
+        self._btn_notifs.setFixedSize(24, 24)
+        self._btn_notifs.setIconSize(QSize(14, 14))
+        self._btn_notifs.setCheckable(True)
+        self._btn_notifs.setToolTip("Уведомления")
         self._btn_notifs.clicked.connect(lambda: self._switch_tab(1))
 
         tab_row.addWidget(self._btn_history)
@@ -123,8 +129,10 @@ class CashStatusBar(QWidget):
 
         el.addWidget(self._stack, stretch=1)
 
-        self._clear_btn = QPushButton("Очистить", self._expanded_panel)
-        self._clear_btn.setFixedHeight(22)
+        self._clear_btn = ToolButton(FluentIcon.DELETE, self._expanded_panel)
+        self._clear_btn.setFixedSize(24, 24)
+        self._clear_btn.setIconSize(QSize(14, 14))
+        self._clear_btn.setToolTip("Очистить")
         self._clear_btn.clicked.connect(self._on_clear)
         el.addWidget(self._clear_btn)
 
@@ -140,36 +148,39 @@ class CashStatusBar(QWidget):
     def set_status_text(self, text: str) -> None:
         self._status_lbl.setText(text)
 
+    def _set_status(self, text: str, tone: str | None = None) -> None:
+        from cashcontrol.gui.theme_helper import color as _tc
+
+        self._status_lbl.setText(text)
+        self._status_lbl.setStyleSheet(
+            f"color: {_tc(tone) if tone else _tc('text_primary')};"
+        )
+
+    def set_status_text(self, text: str) -> None:
+        self._set_status(text)
+
     def add_history_entry(self, ip: str, entry: HistoryEntry) -> None:
         self._add_history_item(entry)
-        icon = "✅" if entry.result == "success" else "❌"
-        msg  = f"{icon} {entry.action_name}"
+        ok = entry.result == "success"
+        msg = f"{entry.action_name}: {'успешно' if ok else 'ошибка'}"
         if entry.details:
             msg += f" — {entry.details}"
-        self._status_lbl.setText(msg)
+        self._set_status(msg, "success" if ok else "error")
 
     def add_notification(self, n: Notification) -> None:
         self._expanded = True
         self._do_expand()
         self._switch_tab(1)
-        icons  = {"info": "ℹ", "success": "✅", "warning": "⚠", "error": "❌"}
-        prefix = icons.get(n.level, "ℹ")
-        self._add_notif_item(f"{prefix} {n.message}")
+        self._add_notif_item(n.message)
         short = n.message[:80] + "…" if len(n.message) > 80 else n.message
-        self._status_lbl.setText(f"{prefix} {short}")
+        self._set_status(short, n.level)
 
     # ── Tabs ──────────────────────────────────────────────────────────────
 
     def _switch_tab(self, index: int) -> None:
         self._stack.setCurrentIndex(index)
-        active_ss   = "font-weight: bold; text-decoration: underline;"
-        inactive_ss = ""
-        if index == 0:
-            self._btn_history.setStyleSheet(active_ss)
-            self._btn_notifs.setStyleSheet(inactive_ss)
-        else:
-            self._btn_history.setStyleSheet(inactive_ss)
-            self._btn_notifs.setStyleSheet(active_ss)
+        self._btn_history.setChecked(index == 0)
+        self._btn_notifs.setChecked(index == 1)
 
     # ── Expand / collapse ─────────────────────────────────────────────────
 
@@ -219,12 +230,9 @@ class CashStatusBar(QWidget):
     # ── Clear ─────────────────────────────────────────────────────────────
 
     def _on_clear(self) -> None:
-        from PySide6.QtWidgets import QMessageBox
-        reply = QMessageBox.question(
-            self, "Очистить", "Очистить все записи?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        dlg = MessageBox("Очистка", "Очистить все записи?", self)
+        dlg.yesButton.setText("Очистить")
+        if not dlg.exec():
             return
         if self._stack.currentIndex() == 0:
             self._history_list.clear()
@@ -247,12 +255,17 @@ class CashStatusBar(QWidget):
             self._add_history_item(entry)
 
     def _add_history_item(self, entry: HistoryEntry) -> None:
-        icon = "✅" if entry.result == "success" else "❌"
         ts   = entry.timestamp.strftime("%H:%M:%S")
-        text = f"{ts}  {icon}  {entry.action_name}"
+        text = f"{ts}  {entry.action_name}"
+        if entry.result != "success":
+            text += " — ошибка"
         if entry.details:
             text += f" — {entry.details}"
-        self._history_list.insertItem(0, QListWidgetItem(text))
+        item = QListWidgetItem(text)
+        if entry.result != "success":
+            from cashcontrol.gui.theme_helper import color as _tc
+            item.setForeground(QColor(_tc("error")))
+        self._history_list.insertItem(0, item)
 
     def _add_notif_item(self, text: str) -> None:
         self._notif_list.insertItem(0, QListWidgetItem(text))

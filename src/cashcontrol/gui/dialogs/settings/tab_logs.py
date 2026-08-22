@@ -8,18 +8,19 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QMessageBox,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 from qfluentwidgets import (
+    FluentIcon,
     BodyLabel,
     CardWidget,
     ComboBox,
     MessageBox,
     PrimaryPushButton,
+    PushButton,
     SubtitleLabel,
 )
 
@@ -97,8 +98,8 @@ class TabLogs(QWidget):
         open_lbl = BodyLabel("", card)
         open_lbl.setFixedWidth(_LABEL_W)
         open_row.addWidget(open_lbl)
-        self.btn_open_logs = PrimaryPushButton("📂 Открыть папку логов", card)
-        self.btn_open_logs.setFixedWidth(200)
+        self.btn_open_logs = PushButton("Открыть папку логов", card, FluentIcon.FOLDER)
+        self.btn_open_logs.setFixedWidth(220)
         self.btn_open_logs.clicked.connect(self._open_logs_folder)
         open_row.addWidget(self.btn_open_logs)
         open_row.addStretch()
@@ -109,8 +110,8 @@ class TabLogs(QWidget):
         clear_lbl = BodyLabel("", card)
         clear_lbl.setFixedWidth(_LABEL_W)
         clear_row.addWidget(clear_lbl)
-        self.btn_clear_logs = PrimaryPushButton("🗑 Очистить логи", card)
-        self.btn_clear_logs.setFixedWidth(200)
+        self.btn_clear_logs = PushButton("Очистить логи", card, FluentIcon.DELETE)
+        self.btn_clear_logs.setFixedWidth(220)
         self.btn_clear_logs.clicked.connect(self._clear_logs)
         clear_row.addWidget(self.btn_clear_logs)
         clear_row.addStretch()
@@ -123,16 +124,14 @@ class TabLogs(QWidget):
         if logs_dir.exists():
             os.startfile(str(logs_dir))
         else:
-            QMessageBox.information(self, "Папка логов", f"Папка не найдена:\n{logs_dir}")
+            MessageBox("Папка логов", f"Папка не найдена:\n{logs_dir}", self).exec()
 
     def _clear_logs(self) -> None:
-        reply = QMessageBox.question(
-            self, "Очистить логи",
-            "Удалить все файлы логов?\nЭто действие нельзя отменить.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
+        dlg = MessageBox(
+            "Очистить логи",
+            "Удалить все файлы логов?\nЭто действие нельзя отменить.", self)
+        dlg.yesButton.setText("Удалить")
+        if not dlg.exec():
             return
 
         logs_dir = get_logs_dir()
@@ -147,6 +146,12 @@ class TabLogs(QWidget):
                     count += 1
                 except Exception as e:
                     logger.warning(f"Failed to delete {f}: {e}")
+
+
+        from qfluentwidgets import InfoBar, InfoBarPosition
+        InfoBar.success(title="Готово", content=f"Удалено файлов: {count}",
+                        parent=self, position=InfoBarPosition.TOP_RIGHT,
+                        duration=2500)
 
         MessageBox("Готово", f"Удалено {count} файлов логов.", self).exec()
         logger.info(f"Cleared {count} log files by user request")

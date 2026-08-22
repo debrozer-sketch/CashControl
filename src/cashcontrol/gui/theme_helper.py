@@ -52,6 +52,7 @@ _COLORS = {
     "border_secondary": ("#e0e0e0", "#333333"),
     "border_input":     ("#c0c0c0", "#3f3f3f"),
     "border_focus":     ("#0078d4", "#0078d4"),
+    "tab_hover_border": ("#909090", "#555555"),
 
     # Accent
     "accent":           ("#0078d4", "#0078d4"),
