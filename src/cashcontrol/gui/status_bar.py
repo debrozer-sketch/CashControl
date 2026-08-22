@@ -145,9 +145,6 @@ class CashStatusBar(QWidget):
         self._active_ip = ip if ip else None
         self._refresh_history()
 
-    def set_status_text(self, text: str) -> None:
-        self._status_lbl.setText(text)
-
     def _set_status(self, text: str, tone: str | None = None) -> None:
         from cashcontrol.gui.theme_helper import color as _tc
 
@@ -168,9 +165,6 @@ class CashStatusBar(QWidget):
         self._set_status(msg, "success" if ok else "error")
 
     def add_notification(self, n: Notification) -> None:
-        self._expanded = True
-        self._do_expand()
-        self._switch_tab(1)
         self._add_notif_item(n.message)
         short = n.message[:80] + "…" if len(n.message) > 80 else n.message
         self._set_status(short, n.level)
