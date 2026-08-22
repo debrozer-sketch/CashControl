@@ -30,14 +30,14 @@ class InfoGroupWidget(QFrame):
 
         self._title = QLabel(f"<b>{title}</b>")
         self._title.setTextFormat(Qt.TextFormat.RichText)
-        self._title.setStyleSheet(f"font-size: 12px; color: {_tc('text_primary')};")
+        self._title.setStyleSheet(f"font-size: 13px; color: {_tc('text_primary')};")
         self._layout.addWidget(self._title)
 
         self._body = QLabel()
         self._body.setTextFormat(Qt.TextFormat.RichText)
         self._body.setWordWrap(True)
         self._body.setStyleSheet(
-            f"font-size: 11px; color: {_tc('text_secondary')}; padding-left: 12px;"
+            f"font-size: 12px; color: {_tc('text_primary')}; padding-left: 12px;"
         )
         self._body.linkActivated.connect(self._on_link_activated)
         self._layout.addWidget(self._body)
@@ -71,13 +71,17 @@ class InfoGroupWidget(QFrame):
                 if has_alias
                 else f.value
             )
+            label_html = (
+                f'<span style="color:{_tc("text_secondary")};"><b>{f.label}:</b></span>'
+            )
             if has_alias:
                 lines.append(
-                    f'<b>{f.label}:</b> <a href="alias:{f.alias_key}" '
+                    f'{label_html} '
+                    f'<a href="alias:{f.alias_key}" '
                     f'style="color:{_tc("text_link")};text-decoration:none;">{displayed}</a>'
                 )
             else:
-                lines.append(f"<b>{f.label}:</b> {displayed}")
+                lines.append(f"{label_html} {displayed}")
 
         self._body.setText("<br>".join(lines) if lines else "<i>Нет данных</i>")
 

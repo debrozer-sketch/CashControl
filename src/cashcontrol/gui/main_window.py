@@ -69,13 +69,18 @@ class MainWindow(QMainWindow):
         self._sidebar = SidebarPanel(self)
         root_layout.addWidget(self._sidebar)
 
-        separator = QFrame(central)
+        sep_box = QWidget(central)
+        sep_lay = QVBoxLayout(sep_box)
+        sep_lay.setContentsMargins(0, 8, 0, 8)
+        sep_lay.setSpacing(0)
+        separator = QFrame(sep_box)
         separator.setFrameShape(QFrame.Shape.VLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         separator.setFixedWidth(1)
         from cashcontrol.gui.theme_helper import color as _tc
         separator.setStyleSheet(f"background-color: {_tc('separator')};")
-        root_layout.addWidget(separator)
+        sep_lay.addWidget(separator)
+        root_layout.addWidget(sep_box)
 
         # Right panel
         right_panel = QWidget(central)

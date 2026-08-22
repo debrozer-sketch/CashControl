@@ -58,9 +58,12 @@ class SettingsDialog(QDialog):
             " margin: 2px 4px; border-radius: 6px; }"
         )
         for icon, title in _PAGES:
-            self._menu.addItem(QListWidgetItem(icon, title))
+            self._menu.addItem(QListWidgetItem(icon.icon(), title))
         self._menu.setCurrentRow(start_tab)
         self._menu.currentRowChanged.connect(self._stack.setCurrentIndex)
+
+        from cashcontrol.gui.theme_engine import ThemeEngine
+        ThemeEngine.instance().theme_changed.connect(self._refresh_menu_icons)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
@@ -88,6 +91,12 @@ class SettingsDialog(QDialog):
         root.addLayout(btn_row)
 
         self._load_all()
+
+    def _refresh_menu_icons(self, _theme: str = "") -> None:
+        for i, (icon, _title) in enumerate(_PAGES):
+            item = self._menu.item(i)
+            if item is not None:
+                item.setIcon(icon.icon())
 
     def _load_all(self) -> None:
         self._tab_conn.load(self._config)

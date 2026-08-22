@@ -212,6 +212,21 @@ class ThemeEngine(QObject):
                 QFrame[frameShape="5"] {{
                     background-color: {_tc('border_primary')};
                 }}
+                QLabel {{
+                    color: {_tc('text_primary')};
+                }}
+                QListWidget {{
+                    background-color: {_tc('bg_surface')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                }}
+                QListWidget::item:selected {{
+                    background-color: {_tc('accent')};
+                    color: {_tc('text_on_accent')};
+                }}
+                QListWidget::item:hover {{
+                    background-color: {_tc('bg_hover')};
+                }}
                 QGroupBox {{
                     border: 1px solid {_tc('border_primary')};
                     border-radius: 4px;

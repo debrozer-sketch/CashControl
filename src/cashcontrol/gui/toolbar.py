@@ -17,7 +17,6 @@ from PySide6.QtCore import QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QFileDialog,
-    QFrame,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
@@ -166,7 +165,7 @@ class CashToolbar(QWidget):
         self.setFixedHeight(_TOOL_BTN_SIZE + 22)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
-        layout.setSpacing(4)
+        layout.setSpacing(6)
 
         # Cash control group
         c = _make_labeled_btn(FluentIcon.SYNC, "Рестарт", "Перезагрузить ПО (cash restart)")
@@ -178,8 +177,6 @@ class CashToolbar(QWidget):
         self._reboot_btn = c.btn
         self._reboot_btn.clicked.connect(self._on_reboot_terminal)
         layout.addWidget(c)
-
-        layout.addWidget(self._sep())
 
         # External tools group
         c = _make_labeled_btn(FluentIcon.VIEW, "VNC", "VNC — удалённый просмотр экрана кассы")
@@ -210,15 +207,11 @@ class CashToolbar(QWidget):
         self._kb_container.hide()
         layout.addWidget(self._kb_container)
 
-        layout.addWidget(self._sep())
-
         # Data group
         c = _make_labeled_btn(FluentIcon.UPDATE, "Обновить", "Обновить данные кассы")
         self._refresh_btn = c.btn
         self._refresh_btn.clicked.connect(self._on_refresh_info)
         layout.addWidget(c)
-
-        layout.addWidget(self._sep())
 
         # Commands
         c = _make_labeled_btn(FluentIcon.SCROLL, "Команды", "Выбрать и выполнить команду на кассе")
@@ -227,14 +220,6 @@ class CashToolbar(QWidget):
         layout.addWidget(c)
 
         layout.addStretch()
-
-    @staticmethod
-    def _sep() -> QFrame:
-        s = QFrame()
-        s.setFrameShape(QFrame.Shape.VLine)
-        s.setFrameShadow(QFrame.Shadow.Sunken)
-        s.setFixedHeight(_TOOL_BTN_SIZE - 4)
-        return s
 
     # ── Public API ──────────────────────────────────────────
 
