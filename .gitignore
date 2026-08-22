@@ -36,3 +36,4 @@ _recovered_src/
 data.*.bak/
 
 modules.stale.bak/
+installer/
