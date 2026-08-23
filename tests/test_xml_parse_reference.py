@@ -31,15 +31,14 @@ XML_FILES = [
 
 def _parse_and_extract(content: str) -> dict:
     """Parse XML and extract fields the same way collectors do."""
-    import defusedxml.ElementTree as ET
+    import defusedxml.ElementTree
 
     result: dict = {}
 
-    root = ET.fromstring(content)
+    root = defusedxml.ElementTree.fromstring(content)
     result["root_tag"] = root.tag
     result["root_attrs"] = dict(root.attrib)
 
-    ns = {"ns": "http://crystals.ru/cash/settings"}
     for elem in root.iter():
         tag = elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
         key = elem.get("key", "")
@@ -80,6 +79,9 @@ class TestXmlParseReference:
                 continue
             content = path.read_text(encoding="utf-8")
             current[fname] = _parse_and_extract(content)
+
+        if not current:
+            pytest.skip("No fixture files present")
 
         reference = _load_reference()
 
