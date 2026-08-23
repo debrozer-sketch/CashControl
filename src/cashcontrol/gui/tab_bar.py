@@ -59,8 +59,7 @@ class CashTabBar(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        from cashcontrol.gui.theme_helper import set_visual_role
-        set_visual_role(self, "tabStrip")
+        self.setObjectName("CashTabBar")
         self._bar = _ScrollableTabBar(self)
         self._bar.setMovable(True)
         self._bar.setTabMaximumWidth(220)
