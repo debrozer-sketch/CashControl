@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QFrame, QLabel, QMenu, QVBoxLayout, QWidget
 from cashcontrol.core.aliases.alias_manager import get_alias_manager
 from cashcontrol.core.info.info_manager import InfoField
 from cashcontrol.gui.theme_helper import color as _tc
+from cashcontrol.gui.theme_helper import set_visual_role
 
 
 class InfoGroupWidget(QFrame):
@@ -20,7 +21,9 @@ class InfoGroupWidget(QFrame):
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("InfoCard")
+        from cashcontrol.gui.theme_helper import set_visual_role
+
+        set_visual_role(self, "infoCard", state="loading")
         self._title_text = title
         self._fields: list[InfoField] = []
 
@@ -80,11 +83,13 @@ class InfoGroupWidget(QFrame):
 
     def show_timeout(self) -> None:
         self._clear_skeleton()
+        set_visual_role(self, "infoCard", state="timeout")
         self._body.setText("<i>Таймаут</i>")
         self.setStyleSheet("")
 
     def show_error(self, error: str | None = None) -> None:
         self._clear_skeleton()
+        set_visual_role(self, "infoCard", state="error")
         text = f"<i>{error or 'Ошибка'}</i>"
         self._body.setText(text)
         self.setStyleSheet("")
@@ -92,6 +97,7 @@ class InfoGroupWidget(QFrame):
     def add_items(self, fields: list[InfoField]) -> None:
         """Append multiple InfoFields to this group and refresh display."""
         self._clear_skeleton()
+        set_visual_role(self, "infoCard", state=None)
         self._fields.extend(fields)
         self._render_body()
 

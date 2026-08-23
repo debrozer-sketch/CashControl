@@ -6,6 +6,8 @@ All GUI modules should use these helpers instead of hardcoding hex colors.
 
 from __future__ import annotations
 
+import re
+
 
 def is_dark() -> bool:
     """Return True if current qfluentwidgets theme is dark."""
@@ -21,111 +23,222 @@ def is_dark() -> bool:
 # Semantic color pairs: (light_value, dark_value)
 _COLORS = {
     # Backgrounds
-    "bg_app":           ("#f3f3f3", "#202020"),
-    "bg_primary":       ("#f3f3f3", "#202020"),
-    "bg_secondary":     ("#fafafa", "#272727"),
-    "bg_card":          ("#ffffff", "#2b2b2b"),
-    "bg_surface":       ("#ffffff", "#2b2b2b"),
-    "bg_surface_hover": ("#f9f9f9", "#353535"),
-    "bg_elevated":      ("#fafafa", "#323232"),
+    "bg_primary":       ("#ffffff", "#202020"),
+    "bg_secondary":     ("#f3f3f3", "#2b2b2b"),
     "bg_tertiary":      ("#e8edf5", "#333333"),
-    "bg_hover":         ("#f9f9f9", "#353535"),
-    "bg_pressed":       ("#eeeeee", "#1a1a1a"),
+    "bg_surface":       ("#ffffff", "#2b2b2b"),
+    "bg_hover":         ("#e0e0e0", "#3d3d3d"),
+    "bg_pressed":       ("#d0d0d0", "#1a1a1a"),
     "bg_input":         ("#ffffff", "#2b2b2b"),
     "bg_code":          ("#f5f5f5", "#1e1e1e"),
-    "bg_tooltip":       ("#ffffff", "#323232"),
+    "bg_tooltip":       ("#ffffff", "#2b2b2b"),
     "bg_dialog":        ("#ffffff", "#202020"),
-    "bg_selected":      ("#0067c0", "#4cc2ff"),
+    "bg_selected":      ("#0078d4", "#0078d4"),
     "bg_warning":       ("#fff8e1", "#3d3000"),
     "bg_info":          ("#e3f2fd", "#0d2137"),
     "bg_success":       ("#e8f5e9", "#0d2b0d"),
     "bg_danger":        ("#fce4ec", "#3d0a0a"),
-    "bg_table_alt":     ("#f9f9f9", "#353535"),
+    "bg_table_alt":     ("#f4f6f9", "#2f2f2f"),
 
     # Text
-    "text_primary":     ("#1a1a1a", "#ffffff"),
-    "text_secondary":   ("#5c5c5c", "#b0b0b0"),
-    "text_tertiary":    ("#757575", "#8a8a8a"),
-    "text_disabled":    ("#a0a0a0", "#666666"),
-    "text_on_accent":   ("#ffffff", "#1a1a1a"),
-    "text_link":        ("#0067c0", "#4cc2ff"),
-    "text_heading":     ("#1a1a1a", "#ffffff"),
+    "text_primary":     ("#1a1a2e", "#e0e0e0"),
+    "text_secondary":   ("#555555", "#aaaaaa"),
+    "text_tertiary":    ("#888888", "#666666"),
+    "text_on_accent":   ("#ffffff", "#ffffff"),
+    "text_link":        ("#1565c0", "#5ba3e6"),
+    "text_heading":     ("#1a1a2e", "#e0e0e0"),
     "text_code":        ("#333333", "#d4d4d4"),
 
     # Borders
-    "border_primary":   ("#e0e0e0", "#454545"),
-    "border_subtle":    ("#ebebeb", "#383838"),
-    "border_light":     ("#ebebeb", "#383838"),
+    "border_primary":   ("#d0d0d0", "#3f3f3f"),
     "border_secondary": ("#e0e0e0", "#333333"),
     "border_input":     ("#c0c0c0", "#3f3f3f"),
-    "border_focus":     ("#0067c0", "#4cc2ff"),
+    "border_focus":     ("#0078d4", "#0078d4"),
     "tab_hover_border": ("#909090", "#555555"),
-    "control_border_bottom": ("#8a8a8a", "#9a9a9a"),
 
     # Accent
-    "accent":           ("#0067c0", "#4cc2ff"),
-    "accent_hover":     ("#00549e", "#45b1e8"),
-    "accent_pressed":   ("#00417a", "#3aa0d6"),
-    "accent_text":      ("#0067c0", "#4cc2ff"),
-    "accent_fill":      ("#0067c0", "#4cc2ff"),
-    "accent_fill_hover": ("#00549e", "#45b1e8"),
-    "accent_fill_pressed": ("#00417a", "#3aa0d6"),
-    "accent_subtle":    ("#e5f1fb", "#1c3547"),
-    "accent_subtle_hover": ("#d9ecfc", "#25465e"),
+    "accent":           ("#0078d4", "#0078d4"),
+    "accent_hover":     ("#106ebe", "#1a8ae6"),
     "accent_light":     ("#e6f1fb", "#0a3a6b"),
 
     # Status
-    "status_ok":        ("#0f7b0f", "#6ccb5f"),
-    "status_warn":      ("#9d5d00", "#fce100"),
-    "status_error":     ("#c42b1c", "#ff99a4"),
-    "status_neutral":   ("#6b6b6b", "#9d9d9d"),
-    "ok_subtle":        ("#dff6dd", "#0e2b12"),
-    "warn_subtle":      ("#fff4ce", "#3a2d0c"),
-    "error_subtle":     ("#fde7e9", "#40161a"),
-    "success":          ("#0f7b0f", "#6ccb5f"),
-    "warning":          ("#9d5d00", "#fce100"),
-    "error":            ("#c42b1c", "#ff99a4"),
+    "success":          ("#4caf50", "#66bb6a"),
+    "error":            ("#f44336", "#ef5350"),
+    "warning":          ("#ff9800", "#ffa726"),
     "info":             ("#2196f3", "#42a5f5"),
 
-    # Controls
-    "control_fill":          ("#fbfbfb", "rgba(255,255,255,15)"),
-    "control_fill_hover":    ("#f5f5f5", "rgba(255,255,255,23)"),
-    "control_fill_pressed":  ("#eeeeee", "rgba(255,255,255,10)"),
-    "control_fill_disabled": ("#f0f0f0", "rgba(255,255,255,8)"),
-    "scrollbar_thumb":       ("rgba(0,0,0,77)", "rgba(255,255,255,77)"),
-    "scrollbar_thumb_hover": ("rgba(0,0,0,115)", "rgba(255,255,255,115)"),
-    "scrollbar_hover":       ("rgba(0,0,0,115)", "rgba(255,255,255,115)"),
-
-    # SQL console / logs
-    "sql_bg":           ("#ffffff", "#1e1e1e"),
-    "sql_text":         ("#1a1a1a", "#d4d4d4"),
-    "sql_keyword":      ("#0451a5", "#569cd6"),
-    "sql_string":       ("#a31515", "#ce9178"),
-    "sql_number":       ("#098658", "#b5cea8"),
-    "sql_comment":      ("#008000", "#6a9955"),
-    "sql_function":     ("#795e26", "#dcdcaa"),
-
     # Separator
-    "separator":        ("#ebebeb", "#383838"),
+    "separator":        ("#d0d0d0", "#3f3f3f"),
 
     # Specific components
     "btn_danger_bg":    ("#d32f2f", "#c62828"),
     "btn_danger_hover": ("#b71c1c", "#a31515"),
-    "btn_flat_hover":   ("#f9f9f9", "#353535"),
+    "btn_flat_hover":   ("#e8edf5", "#3d3d3d"),
     "btn_cancel_bg":    ("#e0e0e0", "#3d3d3d"),
 
     # VNC preview
     "vnc_bg":           ("#1a1a2e", "#1a1a2e"),
 
     # Table header
-    "table_header_bg":  ("#f9f9f9", "#353535"),
-    "table_header_text":("#5c5c5c", "#b0b0b0"),
+    "table_header_bg":  ("#e4eaf5", "#333333"),
+    "table_header_text":("#1a1a2e", "#e0e0e0"),
 
     # Warning box (help dialog, notes)
     "warning_border":   ("#ffb300", "#ffb300"),
     "warning_text":     ("#795548", "#d4a574"),
     "warning_bg":       ("#fff8e1", "#3d3000"),
 }
+
+
+# ── Fluent Data Surface (ai/gpt-5.6-terra-xhigh.txt §7.1) ─────────────
+
+_COLORS.update({
+    "transparent": ("transparent", "transparent"),
+
+    "bg_primary":       ("#F7F8FA", "#1B1D21"),
+    "bg_sidebar":       ("#F1F3F6", "#202329"),
+    "bg_surface":       ("#FFFFFF", "#272A30"),
+    "bg_surface_alt":   ("#EEF1F5", "#2E3239"),
+    "bg_raised":        ("#FFFFFF", "#333840"),
+    "bg_hover":         ("#E6EEF8", "#353D48"),
+    "bg_pressed":       ("#D4E4F5", "#414C5B"),
+    "bg_selected":      ("#DDEBFA", "#173B5B"),
+    "bg_disabled":      ("#ECEEF1", "#292D33"),
+    "bg_input":         ("#FFFFFF", "#22262C"),
+    "bg_code":          ("#F5F7FA", "#1D2127"),
+
+    "text_primary":     ("#1B1F23", "#F2F4F7"),
+    "text_secondary":   ("#53606E", "#C7CFD9"),
+    "text_tertiary":    ("#66717E", "#A5AFBC"),
+    "text_disabled":    ("#5D6773", "#AAB4C0"),
+
+    "accent":           ("#005FB8", "#58A6FF"),
+    "accent_hover":     ("#004C97", "#7DBCFF"),
+    "accent_pressed":   ("#003B75", "#3E92E6"),
+    "accent_subtle":    ("#E1EFFB", "#173A5B"),
+    "text_on_accent":   ("#FFFFFF", "#081522"),
+
+    "border_primary":   ("#CDD3DA", "#484E58"),
+    "border_subtle":    ("#E3E7EB", "#363C45"),
+    "border_strong":    ("#AAB3BD", "#67717D"),
+    "border_focus":     ("#0F6CBD", "#78B9FF"),
+
+    "success":          ("#0F6B3C", "#57D38C"),
+    "success_subtle":   ("#E5F4EA", "#123A2B"),
+    "warning":          ("#875900", "#F4C64E"),
+    "warning_subtle":   ("#FFF3D6", "#443713"),
+    "danger":           ("#B42318", "#FF8983"),
+    "danger_hover":     ("#8F1B13", "#FFAAA5"),
+    "danger_pressed":   ("#75150F", "#E96E68"),
+    "danger_subtle":    ("#FDE9E7", "#4E1E1C"),
+    "text_on_danger":   ("#FFFFFF", "#250605"),
+    "info":             ("#005FB8", "#70B5FF"),
+    "info_subtle":      ("#E1EFFB", "#173A5B"),
+
+    "link":             ("#005FB8", "#70B5FF"),
+    "link_hover":       ("#004C97", "#9ACAFF"),
+
+    "scrollbar":        ("#B7C0CA", "#606A77"),
+    "scrollbar_hover":  ("#8D99A6", "#8793A2"),
+
+    "syntax_keyword":   ("#6F2DBD", "#C792EA"),
+    "syntax_string":    ("#0F6B3C", "#A5E075"),
+    "syntax_number":    ("#005FB8", "#82AAFF"),
+    "syntax_comment":   ("#66717E", "#8892A0"),
+    "syntax_operator":  ("#9A4D00", "#FFB86C"),
+})
+
+# Алиасы legacy-ключей → новая палитра (старый код продолжает работать)
+_COLORS.update({
+    "bg_secondary": _COLORS["bg_sidebar"],
+    "bg_card": _COLORS["bg_surface"],
+    "bg_elevated": _COLORS["bg_raised"],
+    "bg_tooltip": _COLORS["bg_raised"],
+    "bg_dialog": _COLORS["bg_surface"],
+    "bg_tertiary": _COLORS["bg_surface_alt"],
+    "bg_table_alt": _COLORS["bg_surface_alt"],
+    "bg_info": _COLORS["info_subtle"],
+    "bg_success": _COLORS["success_subtle"],
+    "bg_warning": _COLORS["warning_subtle"],
+    "bg_danger": _COLORS["danger_subtle"],
+    "text_heading": _COLORS["text_primary"],
+    "text_code": _COLORS["text_primary"],
+    "text_link": _COLORS["link"],
+    "accent_text": _COLORS["link"],
+    "accent_fill": _COLORS["accent"],
+    "accent_fill_hover": _COLORS["accent_hover"],
+    "accent_fill_pressed": _COLORS["accent_pressed"],
+    "accent_light": _COLORS["accent_subtle"],
+    "status_ok": _COLORS["success"],
+    "status_warn": _COLORS["warning"],
+    "status_error": _COLORS["danger"],
+    "status_neutral": _COLORS["text_tertiary"],
+    "ok_subtle": _COLORS["success_subtle"],
+    "warn_subtle": _COLORS["warning_subtle"],
+    "error_subtle": _COLORS["danger_subtle"],
+    "border_secondary": _COLORS["border_subtle"],
+    "border_input": _COLORS["border_primary"],
+    "border_light": _COLORS["border_subtle"],
+    "tab_hover_border": _COLORS["border_strong"],
+    "control_border_bottom": _COLORS["border_primary"],
+    "control_fill": ("#FBFBFB", "rgba(255,255,255,15)"),
+    "control_fill_hover": _COLORS["bg_hover"],
+    "control_fill_pressed": _COLORS["bg_pressed"],
+    "control_fill_disabled": _COLORS["bg_disabled"],
+    "scrollbar_thumb": _COLORS["scrollbar"],
+    "scrollbar_thumb_hover": _COLORS["scrollbar_hover"],
+    "sql_bg": _COLORS["bg_code"],
+    "sql_text": _COLORS["text_primary"],
+    "sql_keyword": _COLORS["syntax_keyword"],
+    "sql_string": _COLORS["syntax_string"],
+    "sql_number": _COLORS["syntax_number"],
+    "sql_comment": _COLORS["syntax_comment"],
+    "sql_function": _COLORS["accent"],
+    "separator": _COLORS["border_subtle"],
+    "btn_danger_bg": _COLORS["danger"],
+    "btn_danger_hover": _COLORS["danger_hover"],
+    "btn_flat_hover": _COLORS["bg_hover"],
+    "btn_cancel_bg": _COLORS["bg_pressed"],
+    "table_header_bg": _COLORS["bg_surface_alt"],
+    "table_header_text": _COLORS["text_secondary"],
+})
+
+
+_TOKEN_RE = re.compile(r"@([a-z][a-z0-9_]*)")
+
+
+def color_for_theme(name: str, is_dark: bool) -> str:
+    """Цвет токена для конкретной темы без изменения текущего API color()."""
+    return _COLORS[name][1 if is_dark else 0]
+
+
+def render_theme_tokens(template: str, is_dark: bool) -> str:
+    """Подставляет @accent, @bg_surface и другие токены в QSS/CSS."""
+
+    def replace(match: re.Match[str]) -> str:
+        key = match.group(1)
+        if key not in _COLORS:
+            raise KeyError(f"Unknown theme token: {key}")
+        return color_for_theme(key, is_dark)
+
+    return _TOKEN_RE.sub(replace, template)
+
+
+def set_visual_role(widget, role: str | None = None, **properties) -> None:
+    """Только визуальные dynamic-properties, без изменения логики виджета."""
+    if role is not None:
+        widget.setProperty("ccRole", role)
+
+    for key, value in properties.items():
+        qss_key = f"cc{key[:1].upper()}{key[1:]}"
+        if isinstance(value, bool):
+            value = "true" if value else "false"
+        widget.setProperty(qss_key, str(value))
+
+    style = widget.style()
+    style.unpolish(widget)
+    style.polish(widget)
+    widget.update()
 
 
 def color(name: str) -> str:

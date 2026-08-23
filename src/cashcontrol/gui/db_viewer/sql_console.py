@@ -86,7 +86,9 @@ class _SqlEdit(QPlainTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("SqlConsole")
+        from cashcontrol.gui.theme_helper import set_visual_role
+
+        set_visual_role(self, "sqlConsole")
         self.setFont(_mono())
         self._hist, self._hist_pos = [], -1
 

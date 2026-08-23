@@ -140,6 +140,9 @@ class _LogPanel(QWidget):
 
         # ── Log text area ────────────────────────────────────────────────────
         self._text = QPlainTextEdit(self)
+        from cashcontrol.gui.theme_helper import set_visual_role
+
+        set_visual_role(self._text, "logViewer")
         self._text.setReadOnly(True)
         font = QFont("Consolas", 10)
         font.setStyleHint(QFont.StyleHint.Monospace)

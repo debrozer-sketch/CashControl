@@ -40,7 +40,9 @@ _ANIM_MS     = 220
 class CashStatusBar(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("StatusBar")
+        from cashcontrol.gui.theme_helper import set_visual_role
+
+        set_visual_role(self, "statusBar")
         self._expanded   = False
         self._active_ip: str | None = None
         self._anim: QPropertyAnimation | None = None

@@ -20,10 +20,14 @@ class SidebarPanel(QWidget):
         super().__init__(parent)
         self.setFixedWidth(_SIDEBAR_WIDTH)
         self.setObjectName("CashControlSidebar")
+        from cashcontrol.gui.theme_helper import set_visual_role
+        set_visual_role(self, "sidebar")
         self._init_ui()
 
     def _make_btn(self, icon: FluentIcon, tooltip: str) -> ToolButton:
         btn = ToolButton(icon, self)
+        from cashcontrol.gui.theme_helper import set_visual_role
+        set_visual_role(btn, "button", variant="sidebar")
         btn.setFixedSize(_BTN_SIZE, _BTN_SIZE)
         btn.setIconSize(QSize(_ICON_SIZE, _ICON_SIZE))
         btn.setToolTip(tooltip)

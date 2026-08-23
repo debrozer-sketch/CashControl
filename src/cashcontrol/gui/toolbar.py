@@ -158,7 +158,6 @@ class CashToolbar(QWidget):
 
     def __init__(self, session_mgr: SessionManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("CashToolbar")
         self._session_mgr = session_mgr
         self._config = ConfigManager()
         self._kb_container: QWidget | None = None
@@ -221,6 +220,16 @@ class CashToolbar(QWidget):
         self._commands_btn = c.btn
         self._commands_btn.clicked.connect(self._on_commands_clicked)
         layout.addWidget(c)
+
+        from cashcontrol.gui.theme_helper import set_visual_role
+
+        set_visual_role(self, "toolbar")
+        for _b in (self._restart_btn, self._reboot_btn, self._vnc_btn,
+                   self._ssh_btn, self._winscp_btn, self._pg_btn,
+                   self._refresh_btn, self._commands_btn):
+            set_visual_role(_b, "button", variant="toolbar")
+        set_visual_role(self._reboot_btn, "button",
+                        variant="toolbar", tone="quietDanger")
 
         # Hover-prefetch: наведение греет TCP-маршрут до кассы (см. gui/prefetch.py)
         self._prefetch = get_prefetcher()

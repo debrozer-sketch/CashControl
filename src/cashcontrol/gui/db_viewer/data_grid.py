@@ -35,6 +35,9 @@ class _DataGrid(QTableWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        from cashcontrol.gui.theme_helper import set_visual_role
+
+        set_visual_role(self, "dbGrid")
         self._columns, self._pk, self._dirty = [], [], {}
         self._loading, self._readonly = False, False
         self.setSelectionBehavior(QAbstractItemView.SelectRows)

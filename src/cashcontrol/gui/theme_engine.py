@@ -10,120 +10,297 @@ Usage:
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QApplication
 from qfluentwidgets import Theme, isDarkTheme, setTheme, setThemeColor
 
-CORE_QSS = """            QWidget { color: @text_primary; font-family: "Segoe UI", system-ui; font-size: 9pt; }
-            QMainWindow, QDialog, QWizard { background: @bg_app; }
-            QLabel { background: transparent; }
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
-            /* === САЙДБАР === */
-            #CashControlSidebar { background: @bg_app; border-right: 1px solid @border_subtle; }
-            #CashControlSidebar QToolButton { background: transparent; border: none;
-                border-radius: 20px; margin: 2px 6px; }
-            #CashControlSidebar QToolButton:hover { background: @bg_surface_hover; }
-            #CashControlSidebar QToolButton:pressed { background: @control_fill_pressed; }
-            #CashControlSidebar QToolButton:checked { background: @accent_subtle;
-                color: @accent; border-left: 3px solid @accent; border-radius: 4px;
-                margin-left: 3px; }
-            #CashControlSidebar QToolButton:disabled { background: transparent;
-                color: @text_disabled; }
 
-            /* === TAB BAR === */
-            #CashTabBar { background: @bg_app; border-bottom: 1px solid @border_subtle; }
-            #CashTabBar::tab { background: transparent; color: @text_secondary;
-                padding: 8px 14px; border-top-left-radius: 6px;
-                border-top-right-radius: 6px; margin-right: 2px; }
-            #CashTabBar::tab:hover { background: @bg_surface_hover; }
-            #CashTabBar::tab:selected { background: @bg_surface; color: @text_primary;
-                border: 1px solid @border_subtle; border-bottom: 2px solid @accent;
-                font-weight: 600; }
+CORE_QSS = """QWidget[ccRole="appRoot"],
+QDialog[ccRole="dialogRoot"] {
+    font-family: "Segoe UI";
+    font-size: 9pt;
+    color: @text_primary;
+    background: @bg_primary;
+}
 
-            /* === ТУЛБАР И КНОПКИ === */
-            #CashToolbar { background: @bg_app; border-bottom: 1px solid @border_subtle; }
-            #CashToolbar QToolButton { background: transparent; border: none;
-                border-radius: 6px; padding: 4px; color: @text_primary; }
-            #CashToolbar QToolButton:hover { background: @control_fill_hover; }
-            #CashToolbar QToolButton:disabled { color: @text_disabled; }
-            PushButton, ToolButton { background: @control_fill;
-                border: 1px solid @border_primary; border-radius: 4px;
-                padding: 5px 12px; min-height: 24px; }
-            PushButton:hover, ToolButton:hover { background: @control_fill_hover; }
-            PushButton:pressed, ToolButton:pressed { background: @control_fill_pressed; }
-            PushButton:disabled, ToolButton:disabled { background: @control_fill;
-                color: @text_disabled; border-color: @border_subtle; }
-            PrimaryPushButton { background: @accent; color: @text_on_accent;
-                border: none; border-radius: 4px; padding: 5px 12px; }
-            PrimaryPushButton:hover { background: @accent_hover; }
-            PrimaryPushButton:pressed { background: @accent_pressed; }
-            TransparentToolButton { background: transparent; border: none;
-                border-radius: 6px; padding: 4px; }
-            TransparentToolButton:hover { background: @control_fill_hover; }
+QFrame[ccRole="surface"] {
+    background: @bg_surface;
+    border: 1px solid @border_subtle;
+    border-radius: 10px;
+}
 
-            /* === ПОЛЯ ВВОДА === */
-            LineEdit, SearchLineEdit, PlainTextEdit, TextEdit, QComboBox,
-            ComboBox, QSpinBox { background: @control_fill; color: @text_primary;
-                border: 1px solid @border_primary; border-bottom: 2px solid @border_primary;
-                border-radius: 4px; padding: 4px 8px;
-                selection-background-color: @accent_subtle; }
-            LineEdit:focus, SearchLineEdit:focus, PlainTextEdit:focus, TextEdit:focus,
-            QComboBox:focus, ComboBox:focus, QSpinBox:focus {
-                border-bottom: 2px solid @accent; background: @bg_surface; }
-            LineEdit:disabled, ComboBox:disabled { background: @control_fill;
-                color: @text_disabled; }
+QLabel[ccRole="versionText"] { color: @text_tertiary; font-size: 8pt; }
 
-            /* === ИНФО-ПАНЕЛЬ === */
-            #InfoCard { background: @bg_surface; border: 1px solid @border_subtle;
-                border-radius: 8px; padding: 12px; }
-            #InfoCard[state="warn"] { border-left: 3px solid @status_warn; }
-            #InfoCard[state="error"] { border-left: 3px solid @status_error; }
+QPushButton[ccRole="button"],
+QToolButton[ccRole="button"] {
+    min-height: 32px;
+    padding: 0 12px;
+    color: @text_primary;
+    background: @bg_surface;
+    border: 2px solid @border_primary;
+    border-radius: 8px;
+}
 
-            /* === ТАБЛИЦЫ, ДЕРЕВЬЯ, СПИСКИ === */
-            QTableView, QTreeView, QListView, QListWidget { background: @bg_surface;
-                color: @text_primary; border: 1px solid @border_subtle;
-                border-radius: 4px; outline: none; gridline-color: @border_subtle; }
-            QTableView::item, QTreeView::item, QListView::item, QListWidget::item {
-                min-height: 26px; padding: 2px 6px; border: none; border-radius: 4px; }
-            QTableView::item:hover, QTreeView::item:hover, QListView::item:hover,
-            QListWidget::item:hover { background: @bg_surface_hover; }
-            QTableView::item:selected, QTreeView::item:selected,
-            QListView::item:selected, QListWidget::item:selected {
-                background: @accent_subtle; color: @text_primary; }
-            QHeaderView::section { background: @bg_surface_hover;
-                color: @text_secondary; border: none;
-                border-bottom: 1px solid @border_primary; padding: 0 8px;
-                font-size: 8.5pt; font-weight: 600; }
+QPushButton[ccRole="button"]:hover:!disabled,
+QToolButton[ccRole="button"]:hover:!disabled {
+    background: @bg_hover; border-color: @border_strong;
+}
 
-            /* === МЕНЮ === */
-            RoundMenu, QMenu { background: @bg_elevated; color: @text_primary;
-                border: 1px solid @border_primary; border-radius: 8px; padding: 4px; }
-            RoundMenu::item, QMenu::item { border-radius: 4px;
-                padding: 6px 28px 6px 30px; min-height: 24px; }
-            RoundMenu::item:selected, QMenu::item:selected {
-                background: @control_fill_hover; }
-            RoundMenu::separator, QMenu::separator { height: 1px;
-                background: @border_subtle; margin: 4px 8px; }
+QPushButton[ccRole="button"]:pressed:!disabled,
+QToolButton[ccRole="button"]:pressed:!disabled {
+    background: @bg_pressed; border-color: @border_strong;
+}
 
-            /* === СТАТУС-БАР === */
-            #StatusBar { background: @bg_surface; border-top: 1px solid @border_subtle; }
+QPushButton[ccRole="button"]:focus:!disabled,
+QToolButton[ccRole="button"]:focus:!disabled { border-color: @border_focus; }
 
-            /* === SQL / ЛОГИ === */
-            #SqlConsole { background: @sql_bg; color: @sql_text;
-                font-family: "Cascadia Mono", "Consolas", monospace; font-size: 9pt;
-                border: none; border-top: 1px solid @border_subtle; padding: 6px; }
+QPushButton[ccRole="button"]:disabled,
+QToolButton[ccRole="button"]:disabled {
+    color: @text_disabled; background: @bg_disabled; border-color: @border_subtle;
+}
 
-            /* === СКРОЛЛБАР === */
-            QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
-            QScrollBar::handle:vertical { background: @scrollbar_thumb;
-                border-radius: 4px; min-height: 30px; }
-            QScrollBar::handle:vertical:hover { background: @scrollbar_hover; }
-            QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px; }
-            QScrollBar::handle:horizontal { background: @scrollbar_thumb;
-                border-radius: 4px; min-width: 30px; }
-            QScrollBar::add-line, QScrollBar::sub-line { background: none;
-                border: none; height: 0; width: 0; }
+QPushButton[ccRole="button"]:checked:!disabled,
+QToolButton[ccRole="button"]:checked:!disabled {
+    color: @accent; background: @bg_selected; border-color: @accent;
+}
+
+QPushButton[ccRole="button"][ccTone="primary"],
+QToolButton[ccRole="button"][ccTone="primary"] {
+    color: @text_on_accent; background: @accent; border-color: @accent;
+}
+
+QPushButton[ccRole="button"][ccTone="primary"]:hover:!disabled {
+    background: @accent_hover; border-color: @accent_hover;
+}
+
+QPushButton[ccRole="button"][ccTone="primary"]:pressed:!disabled {
+    background: @accent_pressed; border-color: @accent_pressed;
+}
+
+QToolButton[ccRole="button"][ccVariant="toolbar"] {
+    min-width: 88px; min-height: 56px; padding: 4px 12px 5px 12px; border-radius: 8px;
+}
+
+QToolButton[ccRole="button"][ccVariant="sidebar"] {
+    min-width: 40px; max-width: 40px; min-height: 40px; max-height: 40px;
+    padding: 0; color: @text_secondary; background: @transparent;
+    border-color: @transparent; border-radius: 20px;
+}
+
+QToolButton[ccRole="button"][ccVariant="sidebar"]:hover:!disabled {
+    color: @text_primary; background: @bg_hover; border-color: @transparent;
+}
+
+QToolButton[ccRole="button"][ccVariant="sidebar"]:pressed:!disabled {
+    background: @bg_pressed; border-color: @transparent;
+}
+
+QToolButton[ccRole="button"][ccVariant="sidebar"]:checked:!disabled {
+    color: @accent; background: @bg_selected; border-color: @transparent;
+}
+
+QToolButton[ccRole="button"][ccTone="quietDanger"] {
+    color: @danger; background: @bg_surface; border-color: @border_primary;
+}
+
+QToolButton[ccRole="button"][ccTone="quietDanger"]:hover:!disabled {
+    color: @danger; background: @danger_subtle; border-color: @danger;
+}
+
+QToolButton[ccRole="button"][ccTone="quietDanger"]:pressed:!disabled {
+    color: @text_on_danger; background: @danger; border-color: @danger;
+}
+
+QLineEdit[ccRole="field"],
+QTextEdit[ccRole="field"],
+QPlainTextEdit[ccRole="field"],
+QComboBox[ccRole="field"] {
+    min-height: 32px; padding: 0 10px; color: @text_primary;
+    background: @bg_input; border: 2px solid @border_primary; border-radius: 6px;
+    selection-background-color: @bg_selected; selection-color: @text_primary;
+}
+
+QTextEdit[ccRole="field"], QPlainTextEdit[ccRole="field"] { padding: 8px 10px; }
+
+QLineEdit[ccRole="field"]:hover:!disabled,
+QTextEdit[ccRole="field"]:hover:!disabled,
+QPlainTextEdit[ccRole="field"]:hover:!disabled,
+QComboBox[ccRole="field"]:hover:!disabled { border-color: @border_strong; }
+
+QLineEdit[ccRole="field"]:focus:!disabled,
+QTextEdit[ccRole="field"]:focus:!disabled,
+QPlainTextEdit[ccRole="field"]:focus:!disabled,
+QComboBox[ccRole="field"]:focus:!disabled { border-color: @border_focus; }
+
+QLineEdit[ccRole="field"]:disabled,
+QTextEdit[ccRole="field"]:disabled,
+QPlainTextEdit[ccRole="field"]:disabled,
+QComboBox[ccRole="field"]:disabled {
+    color: @text_disabled; background: @bg_disabled; border-color: @border_subtle;
+}
+
+QLineEdit[ccRole="field"][ccState="error"],
+QTextEdit[ccRole="field"][ccState="error"],
+QPlainTextEdit[ccRole="field"][ccState="error"],
+QComboBox[ccRole="field"][ccState="error"] { border-color: @danger; }
+
+QFrame[ccRole="sidebar"] {
+    min-width: 64px; max-width: 64px; background: @bg_sidebar;
+    border: none; border-right: 1px solid @border_subtle;
+}
+
+QWidget[ccRole="tabStrip"] {
+    min-height: 40px; max-height: 40px; background: @bg_primary;
+    border-bottom: 1px solid @border_subtle;
+}
+
+QToolButton[ccRole="tabClose"] {
+    min-width: 24px; max-width: 24px; min-height: 24px; max-height: 24px;
+    padding: 0; color: @text_secondary; background: @transparent;
+    border: 1px solid @transparent; border-radius: 6px;
+}
+
+QToolButton[ccRole="tabClose"]:hover:!disabled {
+    color: @danger; background: @danger_subtle; border-color: @transparent;
+}
+
+QFrame[ccRole="toolbar"] {
+    min-height: 72px; max-height: 72px; background: @bg_surface;
+    border: none; border-bottom: 1px solid @border_subtle;
+}
+
+QFrame[ccRole="keyboardPanel"] {
+    background: @bg_surface_alt; border: 1px solid @border_subtle; border-radius: 8px;
+}
+
+QFrame[ccRole="infoCard"] {
+    background: @bg_surface; border: 1px solid @border_subtle; border-radius: 10px;
+}
+
+QFrame[ccRole="infoCard"]:hover { border-color: @border_primary; }
+
+QFrame[ccRole="infoCard"][ccState="loading"] { border-color: @info; }
+
+QFrame[ccRole="infoCard"][ccState="timeout"] {
+    background: @warning_subtle; border-color: @warning;
+}
+
+QFrame[ccRole="infoCard"][ccState="error"] {
+    background: @danger_subtle; border-color: @danger;
+}
+
+QLabel[ccRole="infoCardTitle"] { color: @text_primary; font-size: 10pt; font-weight: 600; }
+
+QStatusBar[ccRole="statusBar"] {
+    min-height: 32px; max-height: 32px; color: @text_secondary;
+    background: @bg_surface; border: none; border-top: 1px solid @border_subtle;
+}
+
+QMenu {
+    padding: 6px; color: @text_primary; background: @bg_raised;
+    border: 1px solid @border_primary; border-radius: 10px;
+}
+
+QMenu::item {
+    min-height: 32px; padding: 0 26px 0 10px; color: @text_primary;
+    background: @transparent; border-radius: 6px;
+}
+
+QMenu::item:selected { background: @bg_hover; }
+
+QMenu::item:checked { color: @accent; background: @bg_selected; }
+
+QMenu::item:disabled { color: @text_disabled; background: @bg_disabled; }
+
+QMenu::separator { height: 1px; margin: 6px 4px; background: @border_subtle; }
+
+QListView, QTreeView, QListWidget {
+    color: @text_primary; background: @bg_surface;
+    border: 1px solid @border_subtle; border-radius: 8px; outline: none;
+}
+
+QListView::item, QTreeView::item, QListWidget::item {
+    min-height: 32px; padding: 0 8px; color: @text_primary;
+    background: @transparent; border-radius: 6px;
+}
+
+QListView::item:hover, QTreeView::item:hover, QListWidget::item:hover {
+    background: @bg_hover;
+}
+
+QListView::item:selected, QTreeView::item:selected, QListWidget::item:selected {
+    color: @text_primary; background: @bg_selected;
+}
+
+QTableView {
+    color: @text_primary; background: @bg_surface;
+    alternate-background-color: @bg_surface_alt; gridline-color: @border_subtle;
+    border: 1px solid @border_subtle; border-radius: 8px;
+    selection-background-color: @bg_selected; selection-color: @text_primary;
+}
+
+QTableView::item { min-height: 32px; padding: 0 8px;
+    border-bottom: 1px solid @border_subtle; }
+
+QTableView::item:hover { background: @bg_hover; }
+
+QTableView::item:selected { color: @text_primary; background: @bg_selected; }
+
+QHeaderView::section {
+    min-height: 34px; padding: 0 8px; color: @text_secondary;
+    background: @bg_surface_alt; border: none;
+    border-right: 1px solid @border_subtle;
+    border-bottom: 1px solid @border_primary; font-weight: 600;
+}
+
+QHeaderView::section:hover { color: @text_primary; background: @bg_hover; }
+
+QPlainTextEdit[ccRole="logViewer"],
+QPlainTextEdit[ccRole="sqlConsole"] {
+    padding: 10px 12px; color: @text_primary; background: @bg_code;
+    border: 1px solid @border_subtle; border-radius: 8px;
+    selection-background-color: @bg_selected; selection-color: @text_primary;
+    font-family: "Cascadia Mono", "Consolas"; font-size: 9pt;
+}
+
+QPlainTextEdit[ccRole="logViewer"]:focus,
+QPlainTextEdit[ccRole="sqlConsole"]:focus { border-color: @border_focus; }
+
+QTextBrowser { color: @text_primary; background: @bg_surface; border: none; }
+
+QScrollBar:vertical { width: 12px; margin: 4px 2px; background: @transparent; }
+
+QScrollBar::handle:vertical { min-height: 28px; background: @scrollbar;
+    border-radius: 4px; }
+
+QScrollBar::handle:vertical:hover { background: @scrollbar_hover; }
+
+QScrollBar:horizontal { height: 12px; margin: 2px 4px; background: @transparent; }
+
+QScrollBar::handle:horizontal { min-width: 28px; background: @scrollbar;
+    border-radius: 4px; }
+
+QScrollBar::handle:horizontal:hover { background: @scrollbar_hover; }
+
+QScrollBar::add-line, QScrollBar::sub-line,
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: @transparent; border: none;
+}
+
+QSplitter::handle { background: @border_subtle; }
+
+QSplitter::handle:hover { background: @border_strong; }
+
+QToolTip {
+    padding: 6px 8px; color: @text_primary; background: @bg_raised;
+    border: 1px solid @border_primary; border-radius: 6px;
+}
 """
 
 
@@ -156,27 +333,228 @@ class ThemeEngine(QObject):
         return "dark" if isDarkTheme() else "light"
 
     def _apply_stylesheet(self) -> None:
-        from cashcontrol.gui.theme_helper import color as _tc
+        from cashcontrol.gui.theme_helper import (
+            color as _tc,
+        )
+        from cashcontrol.gui.theme_helper import (
+            render_theme_tokens,
+        )
         qss = self._build_qss(_tc)
+        qss = render_theme_tokens(qss, isDarkTheme())
         app = QApplication.instance()
         if app:
             app.setStyleSheet(qss)
 
-    def _build_qss(self, _tc) -> str:
-        """Ядро 'Fluent 2 Compact Density' (ai/qwen3.6-max-preview.txt) +
-        удержанные правила; @токены подставляются по активной теме."""
-        from cashcontrol.gui.theme_helper import _COLORS
-
+    def _build_qss(self, _tc: Callable[[str], str]) -> str:
+        from qfluentwidgets import isDarkTheme
         dark = isDarkTheme()
-        qss = CORE_QSS
 
-        for key, (light, dark_v) in _COLORS.items():
-            qss = qss.replace("@" + key, dark_v if dark else light)
-
-        qss += f"""
-            QSplitter::handle {{ background-color: {_tc('border_subtle')}; }}
-            QFrame[frameShape="5"] {{ background-color: {_tc('border_subtle')}; }}
-            QMessageBox {{ background-color: {_tc('bg_elevated')}; }}
-            QScrollArea {{ background-color: {_tc('bg_app')}; border: none; }}
+        # ── Общий блок — работает для обеих тем ──────────────────────────
+        common = f"""
+            QToolTip {{
+                background-color: {_tc('bg_tooltip')};
+                color: {_tc('text_primary')};
+                border: 1px solid {_tc('border_primary')};
+                padding: 4px 8px;
+                border-radius: 3px;
+                font-size: 12px;
+            }}
+            QSplitter::handle {{
+                background-color: {_tc('border_primary')};
+            }}
+            QMenu {{
+                background-color: {_tc('bg_surface')};
+                color: {_tc('text_primary')};
+                border: 1px solid {_tc('border_primary')};
+                border-radius: 4px;
+                padding: 2px;
+            }}
+            QMenu::item {{
+                padding: 4px 20px 4px 12px;
+                border-radius: 3px;
+            }}
+            QMenu::item:selected {{
+                background-color: {_tc('accent')};
+                color: {_tc('text_on_accent')};
+            }}
+            QMenu::item:disabled {{
+                color: {_tc('text_tertiary')};
+            }}
+            QMenu::separator {{
+                background-color: {_tc('border_primary')};
+                height: 1px;
+                margin: 3px 8px;
+            }}
+            QMessageBox {{
+                background-color: {_tc('bg_primary')};
+            }}
+            QMessageBox QLabel {{
+                color: {_tc('text_primary')};
+            }}
+            QDialog {{
+                background-color: {_tc('bg_primary')};
+            }}
         """
-        return qss
+
+        if dark:
+            theme_style = f"""
+                QMainWindow {{
+                    background-color: {_tc('bg_primary')};
+                }}
+                QWidget#CashControlMainWindow {{
+                    background-color: {_tc('bg_primary')};
+                }}
+                QFrame[frameShape="5"] {{
+                    background-color: {_tc('border_primary')};
+                }}
+                QLabel {{
+                    color: {_tc('text_primary')};
+                }}
+                QStatusBar {{
+                    background-color: {_tc('bg_primary')};
+                    color: {_tc('text_secondary')};
+                }}
+                QScrollArea {{
+                    background-color: {_tc('bg_primary')};
+                    border: none;
+                }}
+                QScrollArea > QWidget > QWidget {{
+                    background-color: {_tc('bg_primary')};
+                }}
+                QGroupBox {{
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                    border-radius: 4px;
+                    margin-top: 8px;
+                }}
+                QGroupBox::title {{
+                    color: {_tc('text_primary')};
+                }}
+                QPlainTextEdit {{
+                    background-color: {_tc('bg_surface')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                }}
+                QSpinBox {{
+                    background-color: {_tc('bg_surface')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                }}
+                QCheckBox {{
+                    color: {_tc('text_primary')};
+                }}
+                QListWidget {{
+                    background-color: {_tc('bg_surface')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                }}
+                QListWidget::item:selected {{
+                    background-color: {_tc('accent')};
+                    color: {_tc('text_on_accent')};
+                }}
+                QListWidget::item:hover {{
+                    background-color: {_tc('bg_hover')};
+                }}
+                QPushButton {{
+                    background-color: {_tc('bg_surface')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                    border-radius: 4px;
+                    padding: 4px 12px;
+                }}
+                QPushButton:hover {{
+                    background-color: {_tc('bg_hover')};
+                }}
+                QPushButton:pressed {{
+                    background-color: {_tc('bg_pressed')};
+                }}
+                TabBar {{
+                    background-color: {_tc('bg_secondary')};
+                    border-bottom: 1px solid {_tc('border_primary')};
+                }}
+                TabBar::tab {{
+                    background-color: {_tc('bg_tertiary')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                    border-bottom: none;
+                    border-top-left-radius: 4px;
+                    border-top-right-radius: 4px;
+                    padding: 6px 16px;
+                    margin-right: 2px;
+                    margin-top: 2px;
+                }}
+                TabBar::tab:selected {{
+                    background-color: {_tc('bg_primary')};
+                    color: {_tc('text_primary')};
+                    border: 2px solid {_tc('accent')};
+                    border-bottom: none;
+                    margin-top: 0px;
+                    padding: 7px 17px;
+                    font-weight: bold;
+                }}
+                TabBar::tab:hover:!selected {{
+                    background-color: {_tc('bg_hover')};
+                    border-color: {_tc('tab_hover_border')};
+                }}
+            """
+        else:
+            theme_style = f"""
+                QMainWindow {{
+                    background-color: {_tc('bg_secondary')};
+                }}
+                QFrame[frameShape="5"] {{
+                    background-color: {_tc('border_primary')};
+                }}
+                QLabel {{
+                    color: {_tc('text_primary')};
+                }}
+                QListWidget {{
+                    background-color: {_tc('bg_surface')};
+                    color: {_tc('text_primary')};
+                    border: 1px solid {_tc('border_primary')};
+                }}
+                QListWidget::item:selected {{
+                    background-color: {_tc('accent')};
+                    color: {_tc('text_on_accent')};
+                }}
+                QListWidget::item:hover {{
+                    background-color: {_tc('bg_hover')};
+                }}
+                QGroupBox {{
+                    border: 1px solid {_tc('border_primary')};
+                    border-radius: 4px;
+                    margin-top: 8px;
+                }}
+                TabBar {{
+                    background-color: {_tc('bg_secondary')};
+                    border-bottom: 1px solid {_tc('border_input')};
+                }}
+                TabBar::tab {{
+                    background-color: {_tc('bg_hover')};
+                    border: 1px solid {_tc('border_input')};
+                    border-bottom: none;
+                    border-top-left-radius: 4px;
+                    border-top-right-radius: 4px;
+                    padding: 6px 16px;
+                    margin-right: 2px;
+                    margin-top: 2px;
+                }}
+                TabBar::tab:selected {{
+                    background-color: {_tc('bg_primary')};
+                    border: 2px solid {_tc('accent')};
+                    border-bottom: none;
+                    margin-top: 0px;
+                    padding: 7px 17px;
+                    font-weight: bold;
+                }}
+                TabBar::tab:hover:!selected {{
+                    background-color: {_tc('bg_pressed')};
+                    border-color: {_tc('tab_hover_border')};
+                }}
+            """
+
+        # ── Fluent Data Surface (ai/gpt-5.6-terra-xhigh.txt §5) ──────
+        qss = common + theme_style + CORE_QSS
+        from cashcontrol.gui.theme_helper import render_theme_tokens
+
+        return render_theme_tokens(qss, dark)
