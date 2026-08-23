@@ -41,8 +41,8 @@ class PasswordManager:
     - Thread-safe for concurrent connections
     """
 
-    def __init__(self) -> None:
-        self._config = ConfigManager()
+    def __init__(self, config: ConfigManager | None = None) -> None:
+        self._config = config or ConfigManager()
         # Cache: IP -> successful password (plaintext, in memory only)
         self._success_cache: dict[str, str] = {}
 

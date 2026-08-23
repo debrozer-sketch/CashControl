@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import time
-from enum import auto, StrEnum
-from typing import Any, Callable
 from dataclasses import dataclass, field
+from enum import StrEnum, auto
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from cashcontrol.infrastructure.config_manager import ConfigManager
 
 
 class CollectionStatus(StrEnum):
@@ -118,23 +123,22 @@ class BaseCollector:
         return {}
 
 
-# Section name → (module, class) inside collectors package.
-# Imported lazily to keep application startup fast.
-_COLLECTOR_SPECS: dict[str, tuple[str, str]] = {
-    "cash_type": ("cashcontrol.core.info.collectors.cash_type", "CashTypeCollector"),
-    "os": ("cashcontrol.core.info.collectors.os_info", "OSInfoCollector"),
-    "cpu": ("cashcontrol.core.info.collectors.cpu_info", "CPUInfoCollector"),
-    "software": ("cashcontrol.core.info.collectors.cash_software", "CashSoftwareCollector"),
-    "fiscal_printer": ("cashcontrol.core.info.collectors.fiscal_printer", "FiscalPrinterCollector"),
-    "customer_display": ("cashcontrol.core.info.collectors.customer_display", "CustomerDisplayCollector"),
-    "scanners": ("cashcontrol.core.info.collectors.barcode_scanner", "BarcodeScannerCollector"),
-    "scales": ("cashcontrol.core.info.collectors.scales", "ScalesCollector"),
-    "keyboard": ("cashcontrol.core.info.collectors.keyboard", "KeyboardCollector"),
-    "bank_terminal": ("cashcontrol.core.info.collectors.bank_terminal", "BankTerminalCollector"),
-    "dns": ("cashcontrol.core.info.collectors.dns_info", "DNSInfoCollector"),
-    "loymax": ("cashcontrol.core.info.collectors.loymax", "LoymaxCollector"),
-    "qrid": ("cashcontrol.core.info.collectors.qrid", "QRIDCollector"),
-}
+# UI section names — collector imports resolve via core.info.registry
+_SECTIONS: tuple[str, ...] = (
+    "cash_type",
+    "os",
+    "cpu",
+    "software",
+    "fiscal_printer",
+    "customer_display",
+    "scanners",
+    "scales",
+    "keyboard",
+    "bank_terminal",
+    "dns",
+    "loymax",
+    "qrid",
+)
 
 
 class InfoCollector:
@@ -147,10 +151,10 @@ class InfoCollector:
 
     TASK_TIMEOUT = 10.0
 
-    def __init__(self) -> None:
+    def __init__(self, config: ConfigManager | None = None) -> None:
         from cashcontrol.infrastructure.config_manager import ConfigManager
 
-        self._config = ConfigManager()
+        self._config = config or ConfigManager()
         self._cache_ttl = self._config.settings.general.info_cache_ttl
         self._cache: dict[str, tuple[float, CashInfoSnapshot]] = {}
         self._collectors: dict[str, Any] = {}
@@ -163,14 +167,15 @@ class InfoCollector:
         self._extra_collectors.append(collector)
 
     def _build_collectors(self) -> dict[str, Any]:
-        """Build section → collector mapping (lazy imports)."""
-        import importlib
+        """Build section → collector mapping (lazy imports via registry)."""
+        from cashcontrol.core.info.registry import get_collector_for_section
 
         collectors: dict[str, Any] = {}
-        for section, (module_path, cls_name) in _COLLECTOR_SPECS.items():
+        for section in _SECTIONS:
             try:
-                module = importlib.import_module(module_path)
-                collectors[section] = getattr(module, cls_name)()
+                collector = get_collector_for_section(section)
+                if collector is not None:
+                    collectors[section] = collector
             except Exception:
                 import logging
 
@@ -219,7 +224,7 @@ class InfoCollector:
 
         # Phase A: cash_type first (sequential)
         ct_section = await self._collect_one(session, "cash_type", collectors["cash_type"])
-        setattr(snapshot, "cash_type", ct_section)
+        snapshot.cash_type = ct_section
         if on_section_ready:
             on_section_ready(ct_section)
 

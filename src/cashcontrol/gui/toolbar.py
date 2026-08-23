@@ -655,11 +655,11 @@ class CashToolbar(QWidget):
 
         type_id = choice.split(" — ")[0].strip()
         resolved = registry.resolve(type_id)
-        if not resolved or not session_widget.session:
+        if not resolved or session_widget.session is None:
             return
 
-        session_widget._session.cash_type = resolved
-        session_widget._session.cash_type_source = "manual"
+        session_widget.session.cash_type = resolved
+        session_widget.session.cash_type_source = "manual"
         logger.info(f"Manual cash type for {session_widget.ip}: {resolved}")
         asyncio.ensure_future(session_widget.load_info(force=True))
 
@@ -739,7 +739,7 @@ class CashToolbar(QWidget):
         if not session:
             return
 
-        keyboard_model = getattr(session, "_keyboard_model", None)
+        keyboard_model = session.keyboard_model
 
         from cashcontrol.gui.widgets.virtual_keyboard import (
             LAYOUTS,
@@ -754,7 +754,7 @@ class CashToolbar(QWidget):
                 f"[Keyboard] no layout for '{keyboard_model}', using {layout_stem}"
             )
 
-        cash_session = getattr(session, "_session", None)
+        cash_session = session.session
         if not cash_session:
             return
         kb = VirtualKeyboardWindow(session=cash_session, layout_stem=layout_stem, parent=self)
@@ -766,7 +766,7 @@ class CashToolbar(QWidget):
         if self._session_mgr.active_ip:
             session = self._session_mgr.get_session(self._session_mgr.active_ip)
             if session:
-                keyboard_model = getattr(session, "_keyboard_model", None)
+                keyboard_model = session.keyboard_model
 
         from cashcontrol.gui.widgets.virtual_keyboard import (
             LAYOUTS,

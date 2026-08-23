@@ -107,6 +107,10 @@ class CashSessionWidget(QWidget):
         return self._session
 
     @property
+    def keyboard_model(self) -> str | None:
+        return getattr(self, "_keyboard_model", None)
+
+    @property
     def os_type(self) -> str:
         return self._os_type
 
@@ -764,11 +768,7 @@ class CashSessionWidget(QWidget):
 
         if self._session:
             try:
-                conn = getattr(self._session.ssh, "_conn", None)
-                if conn and not conn.is_closed():
-                    conn.abort()
-                self._session.ssh._conn = None
-                self._session._is_connected = False
+                await self._session.abort()
             except Exception:
                 # ожидаемо: abort() может упасть, если соединения уже нет
                 pass

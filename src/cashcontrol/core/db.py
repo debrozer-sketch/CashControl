@@ -46,7 +46,13 @@ class DBSession:
     and query execution.
     """
 
-    def __init__(self, host: str, port: int | None = None, database: str | None = None) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int | None = None,
+        database: str | None = None,
+        config: ConfigManager | None = None,
+    ) -> None:
         """
         Initialize DB session.
 
@@ -54,9 +60,10 @@ class DBSession:
             host: Target hostname or IP
             port: PostgreSQL port (defaults to config value)
             database: Database name (defaults to config value)
+            config: Optional injected ConfigManager (DI)
         """
         self.host = host
-        self._config = ConfigManager()
+        self._config = config or ConfigManager()
         self.port = port or self._config.settings.connection.db_port
         self.login = self._config.settings.connection.db_login
         self.database = database  # must be passed explicitly; no global default

@@ -111,7 +111,7 @@ class SessionManager(QObject):
                 return None
 
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             elapsed = await loop.run_in_executor(None, _tcp_ping, ip)
             if elapsed is None:
                 return "timeout"

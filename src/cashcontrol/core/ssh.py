@@ -80,16 +80,20 @@ class SSHSession:
     command execution, and file transfers.
     """
 
-    def __init__(self, host: str, port: int | None = None) -> None:
+    def __init__(
+        self, host: str, port: int | None = None,
+        config: ConfigManager | None = None,
+    ) -> None:
         """
         Initialize SSH session.
 
         Args:
             host: Target hostname or IP
             port: SSH port (defaults to config value)
+            config: Optional injected ConfigManager (DI)
         """
         self.host = host
-        self._config = ConfigManager()
+        self._config = config or ConfigManager()
         self.port = port or self._config.settings.connection.ssh_port
         self.login = self._config.settings.connection.ssh_login
         self.timeout = self._config.settings.connection.timeout

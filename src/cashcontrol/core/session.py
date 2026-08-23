@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 
 from cashcontrol.core.db import DBSession
+from cashcontrol.core.session_interface import ExecResult, SessionInterface
 from cashcontrol.core.ssh import CommandResult, SSHConnectionError, SSHSession
 from cashcontrol.infrastructure.audit_logger import get_logger
 from cashcontrol.infrastructure.config_manager import ConfigManager
@@ -11,7 +12,7 @@ from cashcontrol.infrastructure.config_manager import ConfigManager
 logger = get_logger()
 
 
-class CashSession:
+class CashSession(SessionInterface):
     """
     Connection session to a cash register.
 
@@ -20,14 +21,16 @@ class CashSession:
     interface consumed by the GUI and collectors.
     """
 
-    def __init__(self, ip: str) -> None:
+    def __init__(self, ip: str, config: ConfigManager | None = None) -> None:
         self._ip = ip
-        self._config = ConfigManager()
-        self._ssh = SSHSession(ip)
+        self._config = config or ConfigManager()
+        self._ssh = SSHSession(ip, config=self._config)
         self._db: DBSession | None = None
         self._is_connected = False
         self._db_connected = False
         self._error_message: str | None = None
+        self.cash_type: str = "unknown"
+        self.cash_type_source: str = "unknown"
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -80,7 +83,7 @@ class CashSession:
         timeout = self._config.settings.connection.connect_timeout
         try:
             await asyncio.wait_for(self._ssh.connect(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._error_message = f"SSH timeout connecting to {self._ip}"
             logger.warning(f"SSH timeout connecting to {self._ip}")
             return False
@@ -137,17 +140,55 @@ class CashSession:
 
     async def run(self, command: str, timeout: float = 30.0) -> tuple[int, str, str]:
         """Execute a shell command; returns (exit_code, stdout, stderr)."""
+        result = await self.exec(command, timeout=timeout)
+        return result.exit_code, result.stdout, result.stderr
+
+    async def exec(self, command: str, timeout: float = 30.0) -> ExecResult:
+        """Execute a shell command (SessionInterface)."""
         if not self._is_connected:
-            return -1, "", "Not connected"
+            return ExecResult(-1, "", "Not connected")
         try:
             result: CommandResult = await self._ssh.execute(command, timeout=int(timeout))
-            return result.exit_code, result.stdout, result.stderr
-        except asyncio.TimeoutError:
-            return -1, "", "Command timed out"
-        except SSHConnectionError as e:
-            return -1, "", str(e)
+            return ExecResult(result.exit_code, result.stdout, result.stderr)
+        except TimeoutError:
+            return ExecResult(-1, "", "Command timed out")
         except Exception as e:
-            return -1, "", str(e)
+            return ExecResult(-1, "", str(e))
+
+    async def ping(self, timeout: float = 1.5) -> bool:
+        """TCP probe of the SSH port — no authentication involved."""
+        try:
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(
+                    self._ip, self._config.settings.connection.ssh_port
+                ),
+                timeout=timeout,
+            )
+            writer.close()
+            return True
+        except Exception:
+            return False
+
+    async def upload(self, local: object, remote: str) -> bool:
+        try:
+            await self._ssh.upload_file(str(local), remote)
+            return True
+        except Exception as e:
+            logger.warning(f"Upload to {self._ip} failed: {e}")
+            return False
+
+    async def download(self, remote: str, local: object) -> bool:
+        try:
+            await self._ssh.download_file(remote, str(local))
+            return True
+        except Exception as e:
+            logger.warning(f"Download from {self._ip} failed: {e}")
+            return False
+
+    async def reboot(self) -> bool:
+        """Best-effort terminal reboot over SSH."""
+        result = await self.exec("reboot -f || reboot", timeout=15.0)
+        return result.ok
 
     # ── Context manager ──────────────────────────────────────────────────
 

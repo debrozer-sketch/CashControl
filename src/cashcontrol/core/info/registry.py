@@ -32,6 +32,15 @@ _COLLECTOR_SPECS: dict[str, tuple[str, str]] = {
 
 _cache: dict[str, object] = {}
 
+# UI section name → canonical collector key
+SECTION_ALIASES: dict[str, str] = {
+    "os": "os_info",
+    "cpu": "cpu_info",
+    "dns": "dns_info",
+    "software": "cash_software",
+    "scanners": "barcode_scanner",
+}
+
 
 def get_collector(name: str):
     """Get collector instance by name (lazy — imports on first call)."""
@@ -45,3 +54,15 @@ def get_collector(name: str):
 
 def available_collectors() -> list[str]:
     return list(_COLLECTOR_SPECS.keys())
+
+
+def resolve_section(section: str) -> str | None:
+    """Map a UI section name to a collector key from this registry."""
+    key = SECTION_ALIASES.get(section, section)
+    return key if key in _COLLECTOR_SPECS else None
+
+
+def get_collector_for_section(section: str):
+    """Collector instance for a UI section name (None if unknown)."""
+    key = resolve_section(section)
+    return get_collector(key) if key else None
