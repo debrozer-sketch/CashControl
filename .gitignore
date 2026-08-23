@@ -5,6 +5,7 @@ __pycache__/
 .venv/
 build/
 dist/
+.build_cache/
 
 # Runtime data (keystore, passwords, sessions — never commit)
 data/
