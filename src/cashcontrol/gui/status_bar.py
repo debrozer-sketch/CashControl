@@ -224,7 +224,7 @@ class CashStatusBar(QWidget):
     # ── Clear ─────────────────────────────────────────────────────────────
 
     def _on_clear(self) -> None:
-        dlg = MessageBox("Очистка", "Очистить все записи?", self)
+        dlg = MessageBox("Очистка", "Очистить все записи?", self.window())
         dlg.yesButton.setText("Очистить")
         if not dlg.exec():
             return

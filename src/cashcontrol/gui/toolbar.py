@@ -298,7 +298,7 @@ class CashToolbar(QWidget):
         ip = self._require_active_tab()
         if ip:
             dlg = MessageBox("Перезагрузка кассы",
-                             f"Перезагрузить кассу {ip}?\nСистема будет перезагружена.", self)
+                             f"Перезагрузить кассу {ip}?\nСистема будет перезагружена.", self.window())
             dlg.yesButton.setText("Перезагрузить")
             if dlg.exec():
                 asyncio.ensure_future(self._exec_action(ip, "reboot_cash", title="Перезагрузка кассы"))
@@ -484,7 +484,7 @@ class CashToolbar(QWidget):
         if not password:
             MessageBox("Нет пароля",
                        f"Не удалось получить пароль для {ip}.\nПроверьте настройки подключения.",
-                       self).exec()
+                       self.window()).exec()
             return
 
         protocol = "sftp" if os_type.lower() == "ubuntu" else "scp"
@@ -620,7 +620,7 @@ class CashToolbar(QWidget):
             action_obj = mw.registry.get_action(action_name)
             if action_obj and action_obj.requires_confirmation:
                 dlg = MessageBox("Подтверждение",
-                                 f"Выполнить {action_obj.description} на кассе {session.ip}?", self)
+                                 f"Выполнить {action_obj.description} на кассе {session.ip}?", self.window())
                 dlg.yesButton.setText("Выполнить")
                 if not dlg.exec():
                     return
@@ -688,7 +688,7 @@ class CashToolbar(QWidget):
 
         session_widget = self._session_mgr.get_session(ip)
         if not session_widget or not session_widget.session:
-            MessageBox("Ошибка", "Касса не подключена", self).exec()
+            MessageBox("Ошибка", "Касса не подключена", self.window()).exec()
             return
 
         mw = self._get_main_window()
@@ -718,11 +718,11 @@ class CashToolbar(QWidget):
                 dlg.exec()
             else:
                 if not result.success:
-                    MessageBox("Ошибка команды", result.message, self).exec()
+                    MessageBox("Ошибка команды", result.message, self.window()).exec()
             self._add_history(ip, title, result.success, result.message)
         except Exception as e:
             logger.error(f"Action '{action_name}' exception: {e}")
-            MessageBox("Ошибка", f"Неожиданная ошибка: {e}", self).exec()
+            MessageBox("Ошибка", f"Неожиданная ошибка: {e}", self.window()).exec()
             self._add_history(ip, title, False, str(e))
         finally:
             self._set_toolbar_busy(False)
