@@ -10,113 +10,120 @@ Usage:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QApplication
 from qfluentwidgets import Theme, isDarkTheme, setTheme, setThemeColor
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-
-CORE_QSS = """            * { font-family: "Segoe UI", "Segoe UI Variable Display", sans-serif;
-                font-size: 13px; }
-
-            QMainWindow, QDialog { background-color: @bg_app; color: @text_primary; }
+CORE_QSS = """            QWidget { color: @text_primary; font-family: "Segoe UI", system-ui; font-size: 9pt; }
+            QMainWindow, QDialog, QWizard { background: @bg_app; }
             QLabel { background: transparent; }
 
-            /* ── САЙДБАР ── */
-            #CashControlSidebar { background-color: @bg_app;
-                border-right: 1px solid @border_light; }
-            #CashControlSidebar QToolButton { border-radius: 6px;
-                margin: 2px 4px; padding: 6px; background: transparent; border: none; }
-            #CashControlSidebar QToolButton:hover { background-color: @bg_surface_hover; }
-            #CashControlSidebar QToolButton:checked { background-color: @bg_surface;
-                border-left: 3px solid @accent; }
+            /* === САЙДБАР === */
+            #CashControlSidebar { background: @bg_app; border-right: 1px solid @border_subtle; }
+            #CashControlSidebar QToolButton { background: transparent; border: none;
+                border-radius: 20px; margin: 2px 6px; }
+            #CashControlSidebar QToolButton:hover { background: @bg_surface_hover; }
+            #CashControlSidebar QToolButton:pressed { background: @control_fill_pressed; }
+            #CashControlSidebar QToolButton:checked { background: @accent_subtle;
+                color: @accent; border-left: 3px solid @accent; border-radius: 4px;
+                margin-left: 3px; }
+            #CashControlSidebar QToolButton:disabled { background: transparent;
+                color: @text_disabled; }
 
-            /* ── TAB BAR ── */
-            #CashTabBar { background-color: @bg_app;
-                border-bottom: 1px solid @border_light; }
+            /* === TAB BAR === */
+            #CashTabBar { background: @bg_app; border-bottom: 1px solid @border_subtle; }
+            #CashTabBar::tab { background: transparent; color: @text_secondary;
+                padding: 8px 14px; border-top-left-radius: 6px;
+                border-top-right-radius: 6px; margin-right: 2px; }
+            #CashTabBar::tab:hover { background: @bg_surface_hover; }
+            #CashTabBar::tab:selected { background: @bg_surface; color: @text_primary;
+                border: 1px solid @border_subtle; border-bottom: 2px solid @accent;
+                font-weight: 600; }
 
-            /* ── TOOLBAR ── */
-            #CashToolbar { background-color: @bg_surface;
-                border-bottom: 1px solid @border_light; }
-            #CashToolbar QToolButton { color: @text_primary; border-radius: 4px;
-                padding: 4px; background: transparent; border: none; }
-            #CashToolbar QToolButton:hover { background-color: @bg_app; }
-            #CashToolbar QToolButton:disabled { color: @text_secondary; }
-
-            /* ── ИНФО-КАРТОЧКИ ── */
-            #InfoCard { background-color: @bg_surface;
-                border: 1px solid @border_light; border-radius: 8px; padding: 12px; }
-
-            /* ── КНОПКИ ── */
-            QPushButton { background-color: @bg_surface; color: @text_primary;
-                border: 1px solid @border_light; border-radius: 4px; padding: 5px 12px; }
-            QPushButton:hover { background-color: @bg_surface_hover; }
-            QPushButton:pressed { background-color: @bg_app; }
-            QPushButton:disabled { color: @text_secondary; }
-            PushButton { background-color: @bg_surface; color: @text_primary;
-                border: 1px solid @border_light; border-radius: 4px; padding: 5px 12px; }
-            PushButton:hover { background-color: @bg_surface_hover; }
-            PrimaryPushButton { background-color: @accent; color: #FFFFFF;
+            /* === ТУЛБАР И КНОПКИ === */
+            #CashToolbar { background: @bg_app; border-bottom: 1px solid @border_subtle; }
+            #CashToolbar QToolButton { background: transparent; border: none;
+                border-radius: 6px; padding: 4px; color: @text_primary; }
+            #CashToolbar QToolButton:hover { background: @control_fill_hover; }
+            #CashToolbar QToolButton:disabled { color: @text_disabled; }
+            PushButton, ToolButton { background: @control_fill;
+                border: 1px solid @border_primary; border-radius: 4px;
+                padding: 5px 12px; min-height: 24px; }
+            PushButton:hover, ToolButton:hover { background: @control_fill_hover; }
+            PushButton:pressed, ToolButton:pressed { background: @control_fill_pressed; }
+            PushButton:disabled, ToolButton:disabled { background: @control_fill;
+                color: @text_disabled; border-color: @border_subtle; }
+            PrimaryPushButton { background: @accent; color: @text_on_accent;
                 border: none; border-radius: 4px; padding: 5px 12px; }
-            PrimaryPushButton:hover { background-color: @accent_hover; }
+            PrimaryPushButton:hover { background: @accent_hover; }
+            PrimaryPushButton:pressed { background: @accent_pressed; }
             TransparentToolButton { background: transparent; border: none;
-                border-radius: 4px; }
-            TransparentToolButton:hover { background-color: @bg_surface_hover; }
+                border-radius: 6px; padding: 4px; }
+            TransparentToolButton:hover { background: @control_fill_hover; }
 
-            /* ── ПОЛЯ ── */
+            /* === ПОЛЯ ВВОДА === */
             LineEdit, SearchLineEdit, PlainTextEdit, TextEdit, QComboBox,
-            ComboBox, QSpinBox {
-                background: @bg_surface; color: @text_primary;
-                border: 1px solid @border_light; border-radius: 4px; padding: 4px 8px;
-                selection-background-color: @accent; selection-color: #FFFFFF; }
-            LineEdit:focus, SearchLineEdit:focus, PlainTextEdit:focus,
+            ComboBox, QSpinBox { background: @control_fill; color: @text_primary;
+                border: 1px solid @border_primary; border-bottom: 2px solid @border_primary;
+                border-radius: 4px; padding: 4px 8px;
+                selection-background-color: @accent_subtle; }
+            LineEdit:focus, SearchLineEdit:focus, PlainTextEdit:focus, TextEdit:focus,
             QComboBox:focus, ComboBox:focus, QSpinBox:focus {
-                border: 1px solid @accent; }
+                border-bottom: 2px solid @accent; background: @bg_surface; }
+            LineEdit:disabled, ComboBox:disabled { background: @control_fill;
+                color: @text_disabled; }
 
-            /* ── МЕНЮ ── */
-            QMenu, RoundMenu { background-color: @bg_surface; color: @text_primary;
-                border: 1px solid @border_light; border-radius: 8px; padding: 4px; }
-            QMenu::item { border-radius: 4px; padding: 6px 24px 6px 28px;
-                min-height: 20px; }
-            QMenu::item:selected { background-color: @bg_surface_hover; }
-            QMenu::separator { height: 1px; background-color: @border_light;
-                margin: 4px 8px; }
+            /* === ИНФО-ПАНЕЛЬ === */
+            #InfoCard { background: @bg_surface; border: 1px solid @border_subtle;
+                border-radius: 8px; padding: 12px; }
+            #InfoCard[state="warn"] { border-left: 3px solid @status_warn; }
+            #InfoCard[state="error"] { border-left: 3px solid @status_error; }
 
-            /* ── СПИСКИ / ДЕРЕВЬЯ / ТАБЛИЦЫ ── */
-            QTreeView, QListView, QListWidget {
-                background-color: @bg_surface; color: @text_primary;
-                border: 1px solid @border_light; border-radius: 4px; outline: none; }
-            QTreeView::item, QListView::item, QListWidget::item {
-                min-height: 24px; border-radius: 4px; }
-            QTreeView::item:hover, QListView::item:hover, QListWidget::item:hover {
-                background-color: @bg_surface_hover; }
-            QTreeView::item:selected, QListView::item:selected,
-            QListWidget::item:selected { background-color: @accent;
-                color: #FFFFFF; }
-            QTableView { background-color: @bg_surface;
-                alternate-background-color: @bg_surface_hover;
-                border: 1px solid @border_light; gridline-color: @border_light;
-                selection-background-color: transparent; color: @text_primary; }
-            QTableView::item { padding: 2px 4px;
-                border-bottom: 1px solid transparent; min-height: 24px; }
-            QTableView::item:selected { background-color: @accent_subtle;
-                color: @text_primary; border: 1px solid @accent; }
-            QHeaderView::section { background-color: @bg_app;
+            /* === ТАБЛИЦЫ, ДЕРЕВЬЯ, СПИСКИ === */
+            QTableView, QTreeView, QListView, QListWidget { background: @bg_surface;
+                color: @text_primary; border: 1px solid @border_subtle;
+                border-radius: 4px; outline: none; gridline-color: @border_subtle; }
+            QTableView::item, QTreeView::item, QListView::item, QListWidget::item {
+                min-height: 26px; padding: 2px 6px; border: none; border-radius: 4px; }
+            QTableView::item:hover, QTreeView::item:hover, QListView::item:hover,
+            QListWidget::item:hover { background: @bg_surface_hover; }
+            QTableView::item:selected, QTreeView::item:selected,
+            QListView::item:selected, QListWidget::item:selected {
+                background: @accent_subtle; color: @text_primary; }
+            QHeaderView::section { background: @bg_surface_hover;
                 color: @text_secondary; border: none;
-                border-right: 1px solid @border_light;
-                border-bottom: 1px solid @border_light;
-                padding: 4px; font-weight: 600; }
-            QTableCornerButton::section { background-color: @bg_app; border: none; }
+                border-bottom: 1px solid @border_primary; padding: 0 8px;
+                font-size: 8.5pt; font-weight: 600; }
 
-            /* ── СТАТУС-БАР ── */
-            #StatusBar { background-color: @accent; color: #FFFFFF;
-                border-top: 1px solid @border_light; }
-            #StatusBar QLabel { color: #FFFFFF; }
+            /* === МЕНЮ === */
+            RoundMenu, QMenu { background: @bg_elevated; color: @text_primary;
+                border: 1px solid @border_primary; border-radius: 8px; padding: 4px; }
+            RoundMenu::item, QMenu::item { border-radius: 4px;
+                padding: 6px 28px 6px 30px; min-height: 24px; }
+            RoundMenu::item:selected, QMenu::item:selected {
+                background: @control_fill_hover; }
+            RoundMenu::separator, QMenu::separator { height: 1px;
+                background: @border_subtle; margin: 4px 8px; }
+
+            /* === СТАТУС-БАР === */
+            #StatusBar { background: @bg_surface; border-top: 1px solid @border_subtle; }
+
+            /* === SQL / ЛОГИ === */
+            #SqlConsole { background: @sql_bg; color: @sql_text;
+                font-family: "Cascadia Mono", "Consolas", monospace; font-size: 9pt;
+                border: none; border-top: 1px solid @border_subtle; padding: 6px; }
+
+            /* === СКРОЛЛБАР === */
+            QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
+            QScrollBar::handle:vertical { background: @scrollbar_thumb;
+                border-radius: 4px; min-height: 30px; }
+            QScrollBar::handle:vertical:hover { background: @scrollbar_hover; }
+            QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px; }
+            QScrollBar::handle:horizontal { background: @scrollbar_thumb;
+                border-radius: 4px; min-width: 30px; }
+            QScrollBar::add-line, QScrollBar::sub-line { background: none;
+                border: none; height: 0; width: 0; }
 """
 
 
@@ -156,7 +163,7 @@ class ThemeEngine(QObject):
             app.setStyleSheet(qss)
 
     def _build_qss(self, _tc) -> str:
-        """Ядро 'Pro Fluent Density' (ai/gemini-3.1-pro-preview.txt) +
+        """Ядро 'Fluent 2 Compact Density' (ai/qwen3.6-max-preview.txt) +
         удержанные правила; @токены подставляются по активной теме."""
         from cashcontrol.gui.theme_helper import _COLORS
 
@@ -167,9 +174,9 @@ class ThemeEngine(QObject):
             qss = qss.replace("@" + key, dark_v if dark else light)
 
         qss += f"""
-            QSplitter::handle {{ background-color: {_tc('border_light')}; }}
-            QFrame[frameShape="5"] {{ background-color: {_tc('border_light')}; }}
-            QMessageBox {{ background-color: {_tc('bg_surface')}; }}
+            QSplitter::handle {{ background-color: {_tc('border_subtle')}; }}
+            QFrame[frameShape="5"] {{ background-color: {_tc('border_subtle')}; }}
+            QMessageBox {{ background-color: {_tc('bg_elevated')}; }}
             QScrollArea {{ background-color: {_tc('bg_app')}; border: none; }}
         """
         return qss

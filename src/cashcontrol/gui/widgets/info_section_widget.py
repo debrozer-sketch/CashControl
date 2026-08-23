@@ -49,13 +49,6 @@ class InfoGroupWidget(QFrame):
 
     def show_loading(self) -> None:
         self._show_skeleton()
-        if getattr(self, "_ring", None) is None:
-            from qfluentwidgets import IndeterminateProgressRing
-
-            self._ring = IndeterminateProgressRing(self)
-            self._ring.setFixedSize(18, 18)
-            self._layout.insertWidget(1, self._ring)
-        self._ring.show()
         self.setStyleSheet("")
 
     # ── Skeleton (placeholder bars while collecting) ──────────────────────
@@ -79,9 +72,6 @@ class InfoGroupWidget(QFrame):
         self._skeleton = sk
 
     def _clear_skeleton(self) -> None:
-        ring = getattr(self, "_ring", None)
-        if ring is not None:
-            ring.hide()
         if self._skeleton is not None:
             self._skeleton.setParent(None)
             self._skeleton.deleteLater()
