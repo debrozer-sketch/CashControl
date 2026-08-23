@@ -20,6 +20,7 @@ class InfoGroupWidget(QFrame):
 
     def __init__(self, title: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("InfoCard")
         self._title_text = title
         self._fields: list[InfoField] = []
 
@@ -47,8 +48,15 @@ class InfoGroupWidget(QFrame):
         self.show_loading()
 
     def show_loading(self) -> None:
+        self._set_card_state("loading")
         self._show_skeleton()
         self.setStyleSheet("")
+
+    def _set_card_state(self, state: str | None) -> None:
+        """QSS-состояние #InfoCard[state=...] (loading/warn/error)."""
+        self.setProperty("state", state or "")
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     # ── Skeleton (placeholder bars while collecting) ──────────────────────
 
@@ -78,11 +86,13 @@ class InfoGroupWidget(QFrame):
         self._body.show()
 
     def show_timeout(self) -> None:
+        self._set_card_state("warn")
         self._clear_skeleton()
         self._body.setText("<i>Таймаут</i>")
         self.setStyleSheet("")
 
     def show_error(self, error: str | None = None) -> None:
+        self._set_card_state("error")
         self._clear_skeleton()
         text = f"<i>{error or 'Ошибка'}</i>"
         self._body.setText(text)
@@ -90,6 +100,7 @@ class InfoGroupWidget(QFrame):
 
     def add_items(self, fields: list[InfoField]) -> None:
         """Append multiple InfoFields to this group and refresh display."""
+        self._set_card_state(None)
         self._clear_skeleton()
         self._fields.extend(fields)
         self._render_body()

@@ -21,8 +21,10 @@ def is_dark() -> bool:
 # Semantic color pairs: (light_value, dark_value)
 _COLORS = {
     # Backgrounds
-    "bg_primary":       ("#ffffff", "#202020"),
-    "bg_secondary":     ("#f3f3f3", "#2b2b2b"),
+    "bg_primary":       ("#f3f3f3", "#202020"),
+    "bg_secondary":     ("#fafafa", "#272727"),
+    "bg_card":          ("#ffffff", "#2b2b2b"),
+    "bg_elevated":      ("#f9f9f9", "#2d2d2d"),
     "bg_tertiary":      ("#e8edf5", "#333333"),
     "bg_surface":       ("#ffffff", "#2b2b2b"),
     "bg_hover":         ("#e0e0e0", "#3d3d3d"),
@@ -39,31 +41,64 @@ _COLORS = {
     "bg_table_alt":     ("#f4f6f9", "#2f2f2f"),
 
     # Text
-    "text_primary":     ("#1a1a2e", "#e0e0e0"),
-    "text_secondary":   ("#555555", "#aaaaaa"),
-    "text_tertiary":    ("#888888", "#666666"),
-    "text_on_accent":   ("#ffffff", "#ffffff"),
-    "text_link":        ("#1565c0", "#5ba3e6"),
-    "text_heading":     ("#1a1a2e", "#e0e0e0"),
+    "text_primary":     ("#1b1b1b", "#ffffff"),
+    "text_secondary":   ("#5c5c5c", "#c3c3c3"),
+    "text_tertiary":    ("#767676", "#9d9d9d"),
+    "text_disabled":    ("#a6a6a6", "#6d6d6d"),
+    "text_on_accent":   ("#ffffff", "#1b1b1b"),
+    "text_link":        ("#005a9e", "#4cc2ff"),
+    "text_heading":     ("#1b1b1b", "#ffffff"),
     "text_code":        ("#333333", "#d4d4d4"),
 
     # Borders
     "border_primary":   ("#d0d0d0", "#3f3f3f"),
+    "border_subtle":    ("#e4e4e4", "#333333"),
     "border_secondary": ("#e0e0e0", "#333333"),
     "border_input":     ("#c0c0c0", "#3f3f3f"),
-    "border_focus":     ("#0078d4", "#0078d4"),
+    "border_focus":     ("#0078d4", "#4cc2ff"),
     "tab_hover_border": ("#909090", "#555555"),
+    "control_border_bottom": ("#8a8a8a", "#9a9a9a"),
 
     # Accent
-    "accent":           ("#0078d4", "#0078d4"),
+    "accent":           ("#0078d4", "#4cc2ff"),
+    "accent_text":      ("#005a9e", "#4cc2ff"),
+    "accent_fill":      ("#0078d4", "#4cc2ff"),
+    "accent_fill_hover": ("#106ebe", "#6bceff"),
+    "accent_fill_pressed": ("#005a9e", "#8fd8ff"),
+    "accent_subtle":    ("#e5f1fb", "#1c3547"),
+    "accent_subtle_hover": ("#d9ecfc", "#25465e"),
     "accent_hover":     ("#106ebe", "#1a8ae6"),
     "accent_light":     ("#e6f1fb", "#0a3a6b"),
 
     # Status
-    "success":          ("#4caf50", "#66bb6a"),
-    "error":            ("#f44336", "#ef5350"),
-    "warning":          ("#ff9800", "#ffa726"),
+    "status_ok":        ("#107c10", "#6ccb5f"),
+    "status_warn":      ("#9d5d00", "#ffc83d"),
+    "status_error":     ("#c42b1c", "#ff99a4"),
+    "status_neutral":   ("#6b6b6b", "#9d9d9d"),
+    "ok_subtle":        ("#dff6dd", "#0e2b12"),
+    "warn_subtle":      ("#fff4ce", "#3a2d0c"),
+    "error_subtle":     ("#fde7e9", "#40161a"),
+    "success":          ("#107c10", "#6ccb5f"),
+    "error":            ("#c42b1c", "#ff99a4"),
+    "warning":          ("#9d5d00", "#ffc83d"),
     "info":             ("#2196f3", "#42a5f5"),
+
+    # Controls (Fluent layered fills)
+    "control_fill":          ("#fbfbfb", "rgba(255,255,255,15)"),
+    "control_fill_hover":    ("#f5f5f5", "rgba(255,255,255,23)"),
+    "control_fill_pressed":  ("#eeeeee", "rgba(255,255,255,10)"),
+    "control_fill_disabled": ("#f0f0f0", "rgba(255,255,255,8)"),
+    "scrollbar_thumb":       ("rgba(0,0,0,87)", "rgba(255,255,255,82)"),
+    "scrollbar_thumb_hover": ("rgba(0,0,0,128)", "rgba(255,255,255,128)"),
+
+    # SQL console / logs (VS Code palette)
+    "sql_bg":           ("#ffffff", "#1b1b1b"),
+    "sql_text":         ("#1b1b1b", "#d4d4d4"),
+    "sql_keyword":      ("#0451a5", "#569cd6"),
+    "sql_string":       ("#a31515", "#ce9178"),
+    "sql_number":       ("#098658", "#b5cea8"),
+    "sql_comment":      ("#008000", "#6a9955"),
+    "sql_function":     ("#795e26", "#dcdcaa"),
 
     # Separator
     "separator":        ("#d0d0d0", "#3f3f3f"),
@@ -71,15 +106,15 @@ _COLORS = {
     # Specific components
     "btn_danger_bg":    ("#d32f2f", "#c62828"),
     "btn_danger_hover": ("#b71c1c", "#a31515"),
-    "btn_flat_hover":   ("#e8edf5", "#3d3d3d"),
+    "btn_flat_hover":   ("#f5f5f5", "#3d3d3d"),
     "btn_cancel_bg":    ("#e0e0e0", "#3d3d3d"),
 
     # VNC preview
     "vnc_bg":           ("#1a1a2e", "#1a1a2e"),
 
     # Table header
-    "table_header_bg":  ("#e4eaf5", "#333333"),
-    "table_header_text":("#1a1a2e", "#e0e0e0"),
+    "table_header_bg":  ("#fafafa", "#272727"),
+    "table_header_text":("#5c5c5c", "#c3c3c3"),
 
     # Warning box (help dialog, notes)
     "warning_border":   ("#ffb300", "#ffb300"),

@@ -38,3 +38,8 @@ data.*.bak/
 
 modules.stale.bak/
 installer/
+
+# Local AI design drafts
+ai/
+# Design rollback backups
+backups/

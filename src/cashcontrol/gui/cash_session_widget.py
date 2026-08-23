@@ -226,6 +226,18 @@ class CashSessionWidget(QWidget):
         self.loading_label.setStyleSheet(
             f"font-size: 14px; color: {_tc('text_secondary')};"
         )
+        from qfluentwidgets import IndeterminateProgressRing
+
+        self._loading_ring = IndeterminateProgressRing(self)
+        self._loading_ring.setFixedSize(56, 56)
+        ring_wrap = QWidget()
+        ring_lay = QHBoxLayout(ring_wrap)
+        ring_lay.setContentsMargins(0, 0, 0, 0)
+        ring_lay.addStretch(1)
+        ring_lay.addWidget(self._loading_ring)
+        ring_lay.addStretch(1)
+        self._loading_ring.hide()
+        self.info_layout.addWidget(ring_wrap)
         self.info_layout.addWidget(self.loading_label)
         self.info_layout.addStretch()
 
@@ -238,6 +250,11 @@ class CashSessionWidget(QWidget):
         return panel
 
     # ── Connection ──────────────────────────────────────────────────────────
+
+
+    def _set_loading_visible(self, visible: bool) -> None:
+        self.loading_label.setVisible(visible)
+        self._loading_ring.setVisible(visible)
 
     def start_connecting(self) -> asyncio.Task | None:
         """Start SSH connection in background. Returns task for awaiting.
@@ -324,7 +341,7 @@ class CashSessionWidget(QWidget):
             return
         self._reconnect_btn_shown = True
         self._clear_sections()
-        self.loading_label.show()
+        self._set_loading_visible(True)
         self.loading_label.setText(message)
 
         btn = PrimaryPushButton("Переподключить", self._info_content)
@@ -339,7 +356,7 @@ class CashSessionWidget(QWidget):
         self._loading = False
         self._clear_sections()
         self.loading_label.setText("Подключение...")
-        self.loading_label.show()
+        self._set_loading_visible(True)
         self.start_connecting()
 
     def _clear_sections(self) -> None:
@@ -404,7 +421,7 @@ class CashSessionWidget(QWidget):
             return
 
         self._loading = True
-        self.loading_label.show()
+        self._set_loading_visible(True)
         self.loading_label.setText("Сбор информации...")
 
         if self._info_task and not self._info_task.done():
@@ -415,7 +432,7 @@ class CashSessionWidget(QWidget):
     async def _collect_info(self, force: bool) -> None:
         try:
             self._show_skeletons()
-            self.loading_label.hide()
+            self._set_loading_visible(False)
 
             collector = InfoCollector()
             snapshot = await collector.collect_all(
@@ -448,7 +465,7 @@ class CashSessionWidget(QWidget):
             logger.debug(f"Info collection cancelled for {self._ip}")
             self._loading = False
         except Exception as e:
-            self.loading_label.show()
+            self._set_loading_visible(True)
             self.loading_label.setText(f"Ошибка: {e}")
             logger.error(f"Failed to load info for {self._ip}: {e}")
             self._loading = False
@@ -802,7 +819,7 @@ class CashSessionWidget(QWidget):
         self._loading = False
         self._clear_sections()
         self.loading_label.setText("Подключение...")
-        self.loading_label.show()
+        self._set_loading_visible(True)
         self.start_connecting()
 
     def cleanup(self) -> None:

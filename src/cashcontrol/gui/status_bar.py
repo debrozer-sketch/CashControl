@@ -40,6 +40,7 @@ _ANIM_MS     = 220
 class CashStatusBar(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("StatusBar")
         self._expanded   = False
         self._active_ip: str | None = None
         self._anim: QPropertyAnimation | None = None
