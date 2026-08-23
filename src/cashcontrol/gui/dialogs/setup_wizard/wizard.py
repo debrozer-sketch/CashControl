@@ -61,6 +61,11 @@ class CashControlSetupWizard(QWizard):
         self._conn_page.db_passwords.setPlainText("\n".join(db_pwds))
 
     def _on_finished(self) -> None:
+        from PySide6.QtWidgets import QDialog
+
+        if self.result() != QDialog.Accepted:
+            logger.info("Setup wizard cancelled, no config changes")
+            return
         try:
             ssh_pwds = self._conn_page.ssh_passwords.toPlainText().strip().splitlines()
             db_pwds = self._conn_page.db_passwords.toPlainText().strip().splitlines()

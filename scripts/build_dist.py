@@ -71,6 +71,24 @@ PTH_CONTENT = """python312.zip
 ..\\app
 """
 
+# Qt modules actually used by the app (GUI + qasync network loop).
+# Everything else (WebEngine/QML/Quick/3D/Multimedia/Pdf/Designer/...)
+# is pruned after dependency installation.
+KEEP_QT_DLLS = {
+    "Qt6Core", "Qt6Gui", "Qt6Widgets", "Qt6Network", "Qt6Svg",
+    "Qt6Concurrent", "Qt6OpenGL", "Qt6Xml", "Qt6SvgWidgets",
+}
+KEEP_QT_PYDS = {
+    "QtCore", "QtGui", "QtWidgets", "QtNetwork", "QtSvg", "QtXml",
+    "QtSvgWidgets",
+}
+KEEP_PLUGIN_DIRS = {"platforms", "imageformats", "iconengines", "styles"}
+DELETE_PYSIDE_DIRS = [
+    "qml", "metatypes", "include", "doc", "glue", "scripts", "QtAsyncio",
+    "__pycache__",
+]
+DELETE_ROOT_EXTS = {".exe": None, ".lib": None, ".pyi": None}
+
 
 def log(msg: str) -> None:
     print(f"[build_dist] {msg}")
@@ -155,6 +173,71 @@ def place_win32_dlls(out: Path) -> None:
         shutil.copy2(f, dst / f.name)
 
 
+def _rmtree(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path, ignore_errors=True)
+
+
+def prune_runtime(out: Path) -> None:
+    """Drop Qt modules and dev artifacts the app never loads (§8 size notes)."""
+    lib = out / "runtime" / "lib"
+
+    # caches and test suites inside binary packages
+    for pkg in lib.iterdir():
+        if not pkg.is_dir():
+            continue
+        for cache in list(pkg.rglob("__pycache__")):
+            _rmtree(cache)
+        for tests in list(pkg.rglob("tests")):
+            if tests.is_dir():
+                _rmtree(tests)
+
+    pyside = lib / "PySide6"
+    if not pyside.is_dir():
+        return
+
+    for d in DELETE_PYSIDE_DIRS:
+        _rmtree(pyside / d)
+    for f in pyside.iterdir():
+        if f.is_file() and (
+            f.suffix in DELETE_ROOT_EXTS or f.suffix == ".typed"
+        ):
+            f.unlink()
+
+    def stem(f: Path) -> str:
+        return f.name.split(".")[0]
+
+    def keep_dll(f: Path) -> bool:
+        if f.stem.endswith(".abi3"):   # pyside6.abi3.dll, shiboken6.abi3.dll
+            return True
+        return f.name.split(".")[0] in KEEP_QT_DLLS
+
+    for f in list(pyside.glob("*.dll")):
+        if not keep_dll(f):
+            f.unlink()
+    for f in list(pyside.glob("*.pyd")):
+        if stem(f) not in KEEP_QT_PYDS:
+            f.unlink()
+
+    plugins = pyside / "plugins"
+    if plugins.is_dir():
+        for d in list(plugins.iterdir()):
+            if d.is_dir() and d.name not in KEEP_PLUGIN_DIRS:
+                _rmtree(d)
+
+    translations = pyside / "translations"
+    if translations.is_dir():
+        for f in translations.iterdir():
+            if f.is_file() and not f.name.endswith("_ru.qm"):
+                f.unlink()
+            elif f.is_dir():
+                for sub in f.iterdir():
+                    if sub.is_file() and not sub.name.endswith("_ru.qm"):
+                        sub.unlink()
+
+    log("runtime pruned")
+
+
 def copy_app_code(out: Path) -> None:
     app_pkg = out / "runtime" / "app" / "cashcontrol"
 
@@ -223,6 +306,7 @@ def main() -> int:
     clean_out(args.output)
     install_runtime_python(args.output)
     install_deps(args.output)
+    prune_runtime(args.output)
     place_win32_dlls(args.output)
     copy_app_code(args.output)
     build_modules_overlay(args.output)
