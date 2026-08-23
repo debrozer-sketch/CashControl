@@ -42,23 +42,55 @@ class InfoGroupWidget(QFrame):
         self._body.linkActivated.connect(self._on_link_activated)
         self._layout.addWidget(self._body)
 
+        self._skeleton: QWidget | None = None
+
         self.show_loading()
 
     def show_loading(self) -> None:
-        self._body.setText("<i>Загрузка...</i>")
+        self._show_skeleton()
         self.setStyleSheet("")
 
+    # ── Skeleton (placeholder bars while collecting) ──────────────────────
+
+    def _show_skeleton(self, rows: int = 3) -> None:
+        self._clear_skeleton()
+        self._body.hide()
+        sk = QWidget(self)
+        v = QVBoxLayout(sk)
+        v.setContentsMargins(12, 2, 8, 4)
+        v.setSpacing(6)
+        for width in (190, 150, 110)[:rows]:
+            bar = QFrame()
+            bar.setFixedSize(width, 9)
+            bar.setStyleSheet(
+                f"background: {_tc('bg_tertiary')}; border-radius: 4px;"
+            )
+            v.addWidget(bar)
+        v.addStretch(1)
+        self._layout.addWidget(sk)
+        self._skeleton = sk
+
+    def _clear_skeleton(self) -> None:
+        if self._skeleton is not None:
+            self._skeleton.setParent(None)
+            self._skeleton.deleteLater()
+            self._skeleton = None
+        self._body.show()
+
     def show_timeout(self) -> None:
+        self._clear_skeleton()
         self._body.setText("<i>Таймаут</i>")
         self.setStyleSheet("")
 
     def show_error(self, error: str | None = None) -> None:
+        self._clear_skeleton()
         text = f"<i>{error or 'Ошибка'}</i>"
         self._body.setText(text)
         self.setStyleSheet("")
 
     def add_items(self, fields: list[InfoField]) -> None:
         """Append multiple InfoFields to this group and refresh display."""
+        self._clear_skeleton()
         self._fields.extend(fields)
         self._render_body()
 

@@ -1,0 +1,329 @@
+Отвечаю по формату §8. Одна оговорка: приложённые файлы к брифу не дошли, поэтому диффы привязаны к «якорям» из §3–§5 (`_COLORS`, `color()`, `theme_engine`, имена файлов) — вставлять по месту, сигнатуры не трогаем.
+
+## 1. Концепция
+
+**«Fluent 2 Compact» (операторский Fluent)** — эволюция уже встроенного qfluentwidgets к языку Windows 11, а не смена стиля: слоистость вместо теней (QSS теней не умеет — и не надо), радиусы 4/8, тонкие 1px-бордеры, сетка 4px. Инструмент «много касс + много данных» должен быть хроматически тихим: весь интерфейс нейтральный, и единственный «громкий» цвет — семантика статусов (пинг ok/slow/timeout, ошибки групп, SQL-ошибки), чтобы глаз цеплялся за состояние, а не за рамки. Плотность компактная (строка грида 26 px, инфо-строка 24 px), потому что целевой минимум — 1366×768. Данные (IP, версии, SQL, счётчики, время) переводятся в моноширинный шрифт — это бесплатно повышает сканируемость таблиц и вкладок. Акцент-филл разведён по темам как в Win11 (тёмная тема — светлый акцент с тёмным текстом), что автоматически даёт AA на primary-кнопках. Паритет тем — жёсткий: каждый токен — пара, переключение на лету остаётся за `theme_engine`.
+
+## 2. Таблица токенов
+
+Существующие ключи (`bg_primary`, `text_primary`, `accent`, `border_primary` и остальные из файла) **не переименовываются** — ниже ядро с уточнёнными значениями + новые токены (`★`).
+
+| Ключ | Light | Dark | Назначение |
+|---|---|---|---|
+| bg_primary | `#f3f3f3` | `#202020` | фон окна (был #ffffff в light) |
+| ★ bg_secondary | `#fafafa` | `#272727` | сайдбар, статус-панель, левая панель DB, header грида |
+| ★ bg_card | `#ffffff` | `#2b2b2b` | карточки групп, грид, активная вкладка |
+| ★ bg_elevated | `#f9f9f9` | `#2d2d2d` | меню, MessageBox, автокомплит, flyout |
+| ★ bg_scrim | `rgba(0,0,0,97)` | `rgba(0,0,0,140)` | подложка модалок |
+| text_primary | `#1b1b1b` | `#ffffff` | основной текст |
+| ★ text_secondary | `#5c5c5c` | `#c3c3c3` | value-подписи, второй план |
+| ★ text_tertiary | `#767676` | `#9d9d9d` | label в «label → value», время, счётчики (≥4.5 на обеих темах) |
+| ★ text_disabled | `#a6a6a6` | `#6d6d6d` | disabled (WCAG-исключение) |
+| ★ text_on_accent | `#ffffff` | `#1b1b1b` | текст на accent_fill |
+| accent | `#0078d4` | `#4cc2ff` | пилюли, фокус, checked, иконки (dark обновлён — старый #0078d4 давал 3.6:1) |
+| ★ accent_text | `#005a9e` | `#4cc2ff` | ссылки, мелкий акцентный текст (6.5:1 / 7.6:1) |
+| ★ accent_fill | `#0078d4` | `#4cc2ff` | PrimaryPushButton |
+| ★ accent_fill_hover | `#106ebe` | `#6bceff` | hover primary |
+| ★ accent_fill_pressed | `#005a9e` | `#8fd8ff` | pressed primary |
+| ★ accent_subtle | `#e5f1fb` | `#1c3547` | selected (вкладка, строка, пункт списка) |
+| ★ accent_subtle_hover | `#d9ecfc` | `#25465e` | hover по selected |
+| ★ status_ok | `#107c10` | `#6ccb5f` | пинг ok, успех (4.9:1 light) |
+| ★ status_warn | `#9d5d00` | `#ffc83d` | пинг slow, предупреждения (4.7:1 light) |
+| ★ status_error | `#c42b1c` | `#ff99a4` | пинг timeout, ошибки (5.0:1 light) |
+| ★ status_neutral | `#6b6b6b` | `#9d9d9d` | unknown / connecting |
+| ★ ok_subtle / warn_subtle / error_subtle | `#dff6dd` / `#fff4ce` / `#fde7e9` | `#0e2b12` / `#3a2d0c` / `#40161a` | фон чипов и строк статусов |
+| border_primary | `#d0d0d0` | `#3f3f3f` | бордер контролов/карточек (значения сохранены) |
+| ★ border_subtle | `#e4e4e4` | `#333333` | разделители, линии грида |
+| ★ control_border_bottom | `#8a8a8a` | `#9a9a9a` | нижняя линия LineEdit (Fluent) |
+| ★ control_fill | `#fbfbfb` | `rgba(255,255,255,15)` | фон полей/кнопок |
+| ★ control_fill_hover | `#f5f5f5` | `rgba(255,255,255,23)` | hover |
+| ★ control_fill_pressed | `#eeeeee` | `rgba(255,255,255,10)` | pressed |
+| ★ control_fill_disabled | `#f0f0f0` | `rgba(255,255,255,8)` | disabled |
+| ★ scrollbar_thumb / _hover | `rgba(0,0,0,87)` / `rgba(0,0,0,128)` | `rgba(255,255,255,82)` / `rgba(255,255,255,128)` | overlay-скроллбар |
+| ★ sql_bg / sql_text | `#ffffff` / `#1b1b1b` | `#1b1b1b` / `#d4d4d4` | SQL-консоль, логи |
+| ★ sql_keyword / string / number / comment / function | `#0451a5` / `#a31515` / `#098658` / `#008000` / `#795e26` | `#569cd6` / `#ce9178` / `#b5cea8` / `#6a9955` / `#dcdcaa` | подсветка (палитра VS Code, все пары ≥4.5 на sql_bg) |
+
+**Метрики (тоже токены, константами в theme_helper):** сетка 4 px → `sp1..sp6 = 4/8/12/16/20/24`; `r_control=4`, `r_card=8`, `r_flyout=8`; control 32 px (compact 28); шрифт Segoe UI 9 pt, mono — `"Cascadia Mono","Consolas"`, заголовок карточки 10 pt bold.
+
+## 3. Спецификация компонентов
+
+**Сайдбар.** Ширина 56 (была ~48 — круглые кнопки 40×40 не влезали с воздухом), `bg_secondary`, правый бордер `border_subtle`. Кнопка 40×40, radius 20, иконка 20 px: normal transparent / hover `control_fill_hover` / pressed `control_fill_pressed` / checked `accent_subtle` + иконка `accent_text` / disabled — иконка `text_disabled`. Между кнопками 8 px, от края 8 px. Версия внизу: 8 pt `text_tertiary`, над ней divider 1 px на ширину 32. Отличие: checked-состояние раньше не было выражено — теперь есть.
+
+**TabBar касс.** Высота бара 36, вкладка: высота 28, radius 6, padding 10/8, gap 6; IP — моноширинный 9 pt (выравнивает вкладки). Активная: `bg_card` + нижняя пилюля 2.5 px `accent` (скруглённая), текст `text_primary`; неактивная: transparent, hover `control_fill_hover`; текст неактивной `text_secondary`. Точка пинга 8 px: ok/slow/timeout/unknown → `status_ok/warn/error/neutral`; timeout — полое кольцо (бордер 1.5 px `status_error`, заливки нет) — отличается формой, а не только цветом (дальтония). Close-button 16×16, виден на hover вкладки и всегда на активной; hover — `control_fill_hover` radius 3, danger-hover — `error_subtle`. Контекстное меню: см. «Меню». Цвета точек — только через `color()` в paint (патч 6).
+
+**Тулбар действий.** Высота 64, фон `bg_primary`, нижний бордер `border_subtle`. Кнопка «иконка над подписью»: min 64×48 (запас под русские подписи ~20 %: «Команды», «Перезапуск»), padding 6/4, radius 6, иконка 20, подпись 8 pt `text_secondary`; состояния — как у сайдбара, checked не используется. Группы разделяются divider 1×24 `border_subtle` с margin 8. Блок вирт. клавиатуры POS: после divider, слева чип «POS» — `accent_subtle`, текст `accent_text`, h=20, radius 10, padding 8/2. Кнопка «Команды» — DropDownToolButton со стрелкой 10 px; никаких primary-заливок в тулбаре (акцент — только в диалогах/экране ошибки), иначе 7 синих кнопок конкурируют со статусами.
+
+**Инфо-панель.** Скролл без бордера, padding 16, gap между карточками 12. Карточка: `bg_card`, radius 8, бордер `border_subtle`, padding 12/16. Заголовок: 10 pt bold + справа статус-чип (h=20, radius 10, padding 8/2, 8 pt): Загрузка… `accent_subtle`/`accent_text`; Таймаут `warn_subtle`/`status_warn`; Ошибка `error_subtle`/`status_error`. Строки «label → value»: высота 24, label — `text_tertiary`, колонка 150 px; value — `text_primary`, IP/MAC/версии/пути — mono; hover строки — `control_fill_hover` на всю ширину (radius 4). Отличие: раньше состояния группы были только текстом — теперь чип + цветная левая кромка карточки 3 px того же статуса (только при warn/error, в normal кромки нет).
+
+**Экран подключения.** Центрированная колонка: ProgressRing (патч 4) 56 px, под ним «Подключение к 10.x.x.x…» 12 pt, подпись-стейт 9 pt `text_tertiary`. Ошибка: иконка-точка `status_error`, текст ошибки mono 8.5 pt в рамке `error_subtle` radius 8 (max 3 строки, elide), кнопка «Повторить» — PrimaryPushButton min 120×32, secondary «Настройки…» рядом.
+
+**Статус-бар.** Схлопнут: высота 26, `bg_secondary`, верхний бордер `border_subtle`; слева dot 8 px (цвет последнего статуса) + текст с elide; справа бейдж счётчика уведомлений (min 16×16, radius 8, `accent_fill`/`text_on_accent`, 8 pt) + chevron. Раскрыт: панель 240 px вверх, два списка с заголовками 8.5 pt bold `text_tertiary` («ИСТОРИЯ ДЕЙСТВИЙ» / «УВЕДОМЛЕНИЯ»); строка 26 px: время mono 8 pt `text_tertiary` + текст; иконка уровня 12 px из status_*; кнопка очистки — TransparentToolButton (Delete), hover danger. Возвышение — только бордером (теней нет, см. §6 ответа).
+
+**Меню команд.** `bg_elevated`, radius 8, бордер `border_primary`, padding 4; item h=32, radius 4, padding 10/0/0/12... фактически: иконка 16 + gap 8 + текст; hover `control_fill_hover`; checkable «тип кассы» — галка `accent_text` слева; разделитель `border_subtle` margin 4; горячая клавиша/хинт справа `text_tertiary`. Пункт ручного выбора — после divider, иконка Edit.
+
+**Настройки.** Левый список: ширина 200 (русские «Подключение»/«Программы» влезают без elide), item 36 px, radius 4, selected = `accent_subtle` + левая пилюля 3×16 `accent`. Контент: те же карточки, что в инфо-панели (переиспользование `#InfoCard`-стиля), padding страницы 20/16. Низ: справа «Сохранить» Primary min 96, «Отмена» min 88, gap 8.
+
+**Мастер.** Заголовок страницы 16 pt bold, подзаголовок `text_secondary`; контент padding 24; кнопки min 88 («Далее», «Назад», «Готово», «Отмена») — запас есть. Страница теста: ProgressBar h=4 (`accent`, track `border_subtle`, radius 2) + строки результатов с dot-иконками status_*; финиш — большой ok-dot 48 px `ok_subtle`. Опциональный однострочный патч — ModernStyle (патч 7).
+
+**Редактор команд.** Форма слева / предпросмотр справа — карточка `bg_secondary`, тело команды mono в `sql_bg`. Ошибка валидации: бордер поля `status_error` + inline InfoBar.error сверху (уже в стеке). Предпросмотр подстановок `{...}` — `accent_text`.
+
+**Логи.** Тулбар: ComboBox уровня + SearchLineEdit (оба 32) + справа «Обновить»/«Копировать» TransparentToolButton. Текст mono 8.5 pt на `sql_bg`; уровни окрашены status_* только в колонке LEVEL (не весь текст — меньше шума).
+
+**Помощь.** Дерево 240 px, item 28, selected как в настройках. HTML (патч 8): body `text_primary` на `bg_card`, h2 14 pt, code/pre mono на `control_fill` radius 4, таблицы — `border_subtle`, ссылки `accent_text`, весь CSS генерируется из `color()` — голых hex нет.
+
+**DB Viewer.** Левая панель 280 (splitter): ComboBox баз 32 → SearchLineEdit 32 (gap 8) → дерево: item 26, иконка 16, счётчик строк справа mono `text_tertiary`; selected — `accent_subtle` + пилюля. Грид: header 32 `bg_secondary`, 8.5 pt, `text_secondary`, бордер снизу `border_primary`; строки 26 px, без zebra; линии `border_subtle` только горизонтальные; hover `control_fill_hover`; selection `accent_subtle`, текст не инвертируется; read-only PK — `text_tertiary`; editor — LineEdit с bottom 2 px `accent`. Пагинация справа внизу: TransparentToolButton ‹ ›, поле страницы 56×28 mono, «из N» `text_tertiary`. Активный серверный фильтр — чип над гридом («Фильтр: …» + HyperlinkButton «Сбросить» `accent_text`). SQL-консоль: схлопнута — граббер 32 («SQL», chevron, «Выполнить Ctrl+Enter» Primary h=28, история DropDownToolButton, «Очистить»); раскрыта 220 px; editor mono 9 pt, line-height 1.35, `sql_bg`, автокомплит = стиль меню (item 24); статус-строка результата: «12 400 строк · 380 мс» mono `text_tertiary`, ошибка — `error_subtle` + `status_error`, max 2 строки. Импорт/экспорт — DropDownToolButton в тулбаре грида.
+
+## 4. QSS (ядро; плейсхолдеры `@key` подставляет `theme_engine` из карты токенов)
+
+Каскад: наш QSS ставится на app **после** смены темы qfluentwidgets (theme_engine уже пере-рендерит — точка есть); для перебивания их per-widget стилей используются objectName/класс-селекторы, специфичность выше — без `!important` (в Qt его нет).
+
+```css
+/* ── База ─────────────────────────────────────────── */
+QWidget { color: @text_primary; font-family: "Segoe UI"; font-size: 9pt; }
+QMainWindow, QDialog, QWizard { background: @bg_primary; }
+QLabel { background: transparent; }
+QToolTip { background: @bg_elevated; color: @text_primary;
+           border: 1px solid @border_primary; border-radius: 4px; padding: 6px 8px; }
+
+/* ── Сайдбар ──────────────────────────────────────── */
+#Sidebar { background: @bg_secondary; border-right: 1px solid @border_subtle; }
+#Sidebar QToolButton { background: transparent; border: none; border-radius: 20px; }
+#Sidebar QToolButton:hover { background: @control_fill_hover; }
+#Sidebar QToolButton:pressed { background: @control_fill_pressed; }
+#Sidebar QToolButton:checked { background: @accent_subtle; }
+#Sidebar QToolButton:disabled { background: transparent; }
+#Sidebar QLabel { color: @text_tertiary; font-size: 8pt; }
+
+/* ── Кнопки (qfluentwidgets, класс-селекторы) ─────── */
+PushButton, ToolButton { background: @control_fill; border: 1px solid @border_primary;
+  border-radius: 4px; padding: 5px 12px; min-height: 20px; }
+PushButton:hover, ToolButton:hover { background: @control_fill_hover; }
+PushButton:pressed, ToolButton:pressed { background: @control_fill_pressed;
+  color: @text_secondary; }
+PushButton:disabled, ToolButton:disabled { background: @control_fill_disabled;
+  color: @text_disabled; border-color: @border_subtle; }
+PrimaryPushButton { background: @accent_fill; color: @text_on_accent;
+  border: 1px solid transparent; border-radius: 4px; padding: 5px 12px; }
+PrimaryPushButton:hover { background: @accent_fill_hover; }
+PrimaryPushButton:pressed { background: @accent_fill_pressed; }
+PrimaryPushButton:disabled { background: @control_fill_disabled; color: @text_disabled; }
+PrimaryPushButton:focus, PushButton:focus { border: 2px solid @accent; padding: 4px 11px; }
+TransparentToolButton, TransparentPushButton, TransparentDropDownToolButton {
+  background: transparent; border: none; border-radius: 6px; }
+TransparentToolButton:hover, TransparentDropDownToolButton:hover {
+  background: @control_fill_hover; }
+TransparentToolButton:pressed { background: @control_fill_pressed; }
+HyperlinkButton { color: @accent_text; background: transparent; border: none; }
+
+/* ── Тулбар кассы ─────────────────────────────────── */
+#CashToolbar { background: @bg_primary; border-bottom: 1px solid @border_subtle; }
+#CashToolbar ToolButton, #CashToolbar DropDownToolButton {
+  background: transparent; border: none; border-radius: 6px;
+  min-width: 64px; min-height: 48px; padding: 4px 6px; font-size: 8pt; }
+#CashToolbar ToolButton:hover { background: @control_fill_hover; }
+#CashToolbar ToolButton:pressed { background: @control_fill_pressed; }
+#CashToolbar ToolButton:disabled { color: @text_disabled; }
+#ToolbarDivider { background: @border_subtle; max-width: 1px; }
+#PosChip { background: @accent_subtle; color: @accent_text;
+  border-radius: 10px; padding: 2px 8px; font-size: 8pt; }
+
+/* ── Поля ввода (Fluent bottom-line) ──────────────── */
+LineEdit, SearchLineEdit, PlainTextEdit, TextEdit, QComboBox, ComboBox, QSpinBox {
+  background: @control_fill; border: 1px solid @border_primary;
+  border-bottom: 1px solid @control_border_bottom;
+  border-radius: 4px; padding: 4px 8px; selection-background-color: @accent_subtle;
+  selection-color: @text_primary; }
+LineEdit:focus, SearchLineEdit:focus, PlainTextEdit:focus, QComboBox:focus,
+ComboBox:focus, QSpinBox:focus { border-bottom: 2px solid @accent; background: @bg_card; }
+LineEdit:disabled, PlainTextEdit:disabled { background: @control_fill_disabled;
+  color: @text_disabled; }
+LineEdit[invalid="true"] { border-bottom: 2px solid @status_error; }
+
+/* ── Меню / flyout ────────────────────────────────── */
+QMenu, RoundMenu { background: @bg_elevated; border: 1px solid @border_primary;
+  border-radius: 8px; padding: 4px; }
+QMenu::item { border-radius: 4px; padding: 6px 28px 6px 34px; min-height: 20px; }
+QMenu::item:selected { background: @control_fill_hover; }
+QMenu::item:disabled { color: @text_disabled; }
+QMenu::indicator { width: 14px; height: 14px; left: 10px; }
+QMenu::separator { height: 1px; background: @border_subtle; margin: 4px 8px; }
+
+/* ── Списки / деревья / грид (DB Viewer, помощь, статус) ── */
+QTreeView, QListView, QTableView { background: @bg_card; alternate-background-color: @bg_card;
+  border: 1px solid @border_subtle; border-radius: 4px; outline: none; }
+QTreeView::item, QListView::item { min-height: 24px; border-radius: 4px; }
+QTreeView::item:hover, QListView::item:hover { background: @control_fill_hover; }
+QTreeView::item:selected, QListView::item:selected { background: @accent_subtle;
+  color: @text_primary; }
+QHeaderView::section { background: @bg_secondary; color: @text_secondary;
+  border: none; border-bottom: 1px solid @border_primary;
+  padding: 0 8px; min-height: 30px; font-size: 8.5pt; }
+QTableView { gridline-color: @border_subtle; font-family: "Cascadia Mono","Consolas"; }
+QTableView::item { min-height: 24px; border: none; border-bottom: 1px solid @border_subtle; }
+QTableView::item:hover { background: @control_fill_hover; }
+QTableView::item:selected { background: @accent_subtle; color: @text_primary; }
+QTableCornerButton::section { background: @bg_secondary; border: none; }
+
+/* ── SQL-консоль / логи ───────────────────────────── */
+#SqlConsole { background: @sql_bg; color: @sql_text;
+  font-family: "Cascadia Mono","Consolas"; font-size: 9pt;
+  border: none; border-top: 1px solid @border_subtle; }
+#SqlErrorBar { background: @error_subtle; color: @status_error;
+  font-family: "Cascadia Mono","Consolas"; padding: 4px 8px; }
+
+/* ── Карточки / чипы / статус-бар ─────────────────── */
+#InfoCard { background: @bg_card; border: 1px solid @border_subtle; border-radius: 8px; }
+#InfoCard[state="warn"] { border-left: 3px solid @status_warn; }
+#InfoCard[state="error"] { border-left: 3px solid @status_error; }
+#CardTitle { font-size: 10pt; font-weight: bold; }
+#FieldLabel { color: @text_tertiary; }
+#FieldValueMono { font-family: "Cascadia Mono","Consolas"; }
+#StatusChip { border-radius: 10px; padding: 2px 8px; font-size: 8pt; }
+#StatusChip[state="loading"] { background: @accent_subtle; color: @accent_text; }
+#StatusChip[state="timeout"] { background: @warn_subtle; color: @status_warn; }
+#StatusChip[state="error"]   { background: @error_subtle; color: @status_error; }
+#StatusBar { background: @bg_secondary; border-top: 1px solid @border_subtle; }
+#Badge { background: @accent_fill; color: @text_on_accent;
+  border-radius: 8px; min-width: 16px; min-height: 16px; font-size: 8pt; }
+
+/* ── Скроллбар (overlay) ──────────────────────────── */
+QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
+QScrollBar::handle:vertical { background: @scrollbar_thumb; border-radius: 4px;
+  min-height: 30px; }
+QScrollBar::handle:vertical:hover { background: @scrollbar_thumb_hover; }
+QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px; }
+QScrollBar::handle:horizontal { background: @scrollbar_thumb; border-radius: 4px;
+  min-width: 30px; }
+QScrollBar::add-line, QScrollBar::sub-line, QScrollBar::add-page,
+QScrollBar::sub-page { background: none; border: none; width: 0; height: 0; }
+
+/* ── Прогресс ─────────────────────────────────────── */
+ProgressBar, QProgressBar { background: @border_subtle; border: none;
+  border-radius: 2px; max-height: 4px; }
+QProgressBar::chunk { background: @accent; border-radius: 2px; }
+```
+
+TabBar, InfoBar, ProgressRing, MessageBox qfluentwidgets рисуют себя сами — их красит `setThemeColor()` (патч 2) + правила выше по фонам; пилюлю активной вкладки и точку пинга красит код (патч 6).
+
+## 5. Точечные патчи
+
+```diff
+# 1) gui/theme_helper.py — только добавление ключей, старые не переименованы
+ _COLORS = {
+     ...
++    "bg_secondary": ("#fafafa", "#272727"),
++    "bg_card": ("#ffffff", "#2b2b2b"),
++    "bg_elevated": ("#f9f9f9", "#2d2d2d"),
++    "text_secondary": ("#5c5c5c", "#c3c3c3"),
++    "text_tertiary": ("#767676", "#9d9d9d"),
++    "text_disabled": ("#a6a6a6", "#6d6d6d"),
++    "text_on_accent": ("#ffffff", "#1b1b1b"),
++    "accent_text": ("#005a9e", "#4cc2ff"),
++    "accent_fill": ("#0078d4", "#4cc2ff"),
++    "accent_fill_hover": ("#106ebe", "#6bceff"),
++    "accent_fill_pressed": ("#005a9e", "#8fd8ff"),
++    "accent_subtle": ("#e5f1fb", "#1c3547"),
++    "accent_subtle_hover": ("#d9ecfc", "#25465e"),
++    "status_ok": ("#107c10", "#6ccb5f"),
++    "status_warn": ("#9d5d00", "#ffc83d"),
++    "status_error": ("#c42b1c", "#ff99a4"),
++    "status_neutral": ("#6b6b6b", "#9d9d9d"),
++    "ok_subtle": ("#dff6dd", "#0e2b12"),
++    "warn_subtle": ("#fff4ce", "#3a2d0c"),
++    "error_subtle": ("#fde7e9", "#40161a"),
++    "border_subtle": ("#e4e4e4", "#333333"),
++    "control_border_bottom": ("#8a8a8a", "#9a9a9a"),
++    "control_fill": ("#fbfbfb", "rgba(255,255,255,15)"),
++    "control_fill_hover": ("#f5f5f5", "rgba(255,255,255,23)"),
++    "control_fill_pressed": ("#eeeeee", "rgba(255,255,255,10)"),
++    "control_fill_disabled": ("#f0f0f0", "rgba(255,255,255,8)"),
++    "scrollbar_thumb": ("rgba(0,0,0,87)", "rgba(255,255,255,82)"),
++    "scrollbar_thumb_hover": ("rgba(0,0,0,128)", "rgba(255,255,255,128)"),
++    "sql_bg": ("#ffffff", "#1b1b1b"),
++    "sql_text": ("#1b1b1b", "#d4d4d4"),
++    "sql_keyword": ("#0451a5", "#569cd6"),
++    ...  # остальные sql_* — по таблице §2
+ }
++# обновлённые значения существующих:
+-    "bg_primary": ("#ffffff", "#202020"),
+-    "accent": ("#0078d4", "#0078d4"),
++    "bg_primary": ("#f3f3f3", "#202020"),
++    "accent": ("#0078d4", "#4cc2ff"),
+```
+
+```diff
+# 2) gui/theme_engine.py — акцент в qfluentwidgets + подстановка @токенов
++from qfluentwidgets import setThemeColor
++from PySide6.QtGui import QColor
+ # в функции применения темы, до app.setStyleSheet:
++setThemeColor(QColor(color("accent")))
+-qs = COMMON_QSS + theme_qss
++qs = COMMON_QSS + theme_qss
++for k, (l, d) in _COLORS.items():
++    qs = qs.replace(f"@{k}", l if is_light else d)
+```
+
+```diff
+# 3) Якоря стилей — по одной строке, поведение не меняется
+# gui/sidebar.py            + self.setObjectName("Sidebar")
+# gui/toolbar.py/cash_toolbar.py + self.setObjectName("CashToolbar")
+# gui/status_bar.py         + self.setObjectName("StatusBar")
+# gui/widgets/info_section_widget.py (карточка) + card.setObjectName("InfoCard")
+# gui/db_viewer/* (SQL editor) + editor.setObjectName("SqlConsole")
+# динамические состояния — property, QSS выше уже на них ссылается:
++ card.setProperty("state", "error")   # "warn" | "loading" | None
++ card.style().unpolish(card); card.style().polish(card)
+```
+
+```diff
+# 4) Экран подключения — замена виджета из той же библиотеки
+-from qfluentwidgets import ...
++from qfluentwidgets import IndeterminateProgressRing
+-self.spinner = <текущий спиннер>(self)
++self.spinner = IndeterminateProgressRing(self)
++self.spinner.setFixedSize(56, 56)
+```
+
+```diff
+# 5) DB Viewer — нативный комбо → fluent (та же библиотека)
+-from PySide6.QtWidgets import QComboBox
++from qfluentwidgets import ComboBox
+-self.db_combo = QComboBox(self)
++self.db_combo = ComboBox(self)
+```
+
+```diff
+# 6) gui/tab_bar.py — точка пинга токенами (если там hex)
+-{"ok": "#4caf50", "slow": "#ff9800", "timeout": "#f44336"}
++{"ok": color("status_ok"), "slow": color("status_warn"),
++ "timeout": color("status_error"), "unknown": color("status_neutral")}
+```
+
+```diff
+# 7) Опционально: мастер — современный вид (одна строка, оформление)
++self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+```
+
+```diff
+# 8) gui/dialogs/help_css.py — CSS из токенов, hex запрещены
+-body {{ background: #ffffff; color: #1a1a2e; }}
++body {{ background: {color("bg_card")}; color: {color("text_primary")}; }}
++a {{ color: {color("accent_text")}; }}
++code, pre {{ background: {color("control_fill")}; border-radius: 4px;
++            font-family: "Cascadia Mono","Consolas"; }}
+```
+
+**Опциональный микровиджет (§7 разрешает):** `PingRingWidget` — QPainter-кольцо 10×10 с hollow-состоянием для timeout; рисует `color("status_*")`, без таймеров и сигналов; вставка в `tab_bar` — 2 строки вместо залитого эллипса. Берём, только если точка 8 px из патча 6 покажется недостаточно выразительной — по умолчанию достаточно патча 6.
+
+## 6. Чего сознательно НЕ делаю
+
+- **Настоящий Mica/Acrylic (DWM blur).** Вне QSS, платформенно хрупко, мерцает при переключении темы на лету; слоистость `bg_*`-токенами даёт 90 % эффекта бесплатно.
+- **Тени и анимации** (QGraphicsDropShadowEffect, QPropertyAnimation). QSS их не носит, эффекты тормозят перерисовку гридов, а анимация = поведение/таймеры, которые трогать запрещено. Возвышение — бордером + `bg_elevated`.
+- **Zebra-строки в гриде.** При 26 px строках и горизонтальных линиях это визуальный шум; трекинг строки решают hover + `accent_subtle`-selection.
+- **Перестройка навигации** (настройки → NavigationInterface, TabBar → Pivot). Это структурная замена, выходит за «только оформление».
+- **Пульс точки пинга.** Нужен таймер — поведение. Различимость состояний решена формой (кольцо для timeout), что ещё и доступнее.
+- **Density-переключатель и Segoe UI Variable с fallback-логикой в коде.** Scope creep; плотность зашита в метрики, шрифт — только `font-family` в QSS.
+- **Инверсия текста в selection** (белый на синем). Ломает читаемость mono-данных и контрасты статусных колонок; `accent_subtle` + сохранённый `text_primary` даёт AA в обеих темах.
+- **Свои SVG-иконки.** Бриф фиксирует FluentIcon — различия состояний делаем цветом/заливкой, а не новым набором.
+
+Контрольные контрасты (AA, обычный текст ≥ 4.5): `text_tertiary` 4.5:1 (light) / 6.3:1 (dark); `accent_text` 6.5:1 / 7.6:1; `status_error` 5.0:1 / 7.7:1; `text_on_accent` 4.7:1 (light) / 9.3:1 (dark); primary-кнопка dark — светлый филл + тёмный текст, впритык не проходим нигде.

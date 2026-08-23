@@ -34,6 +34,7 @@ from qfluentwidgets import (
 )
 
 from cashcontrol.core.cash_types import get_cash_type_registry, has_feature
+from cashcontrol.gui.prefetch import get_prefetcher
 from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
 from cashcontrol.infrastructure.config_manager import ConfigManager
 
@@ -220,7 +221,31 @@ class CashToolbar(QWidget):
         self._commands_btn.clicked.connect(self._on_commands_clicked)
         layout.addWidget(c)
 
+        # Hover-prefetch: наведение греет TCP-маршрут до кассы (см. gui/prefetch.py)
+        self._prefetch = get_prefetcher()
+        for btn in (
+            self._restart_btn, self._reboot_btn, self._vnc_btn,
+            self._ssh_btn, self._winscp_btn, self._pg_btn,
+            self._commands_btn, self._refresh_btn,
+        ):
+            btn.installEventFilter(self)
+            btn.setMouseTracking(True)
+
         layout.addStretch()
+
+    def eventFilter(self, obj, event) -> bool:
+        from PySide6.QtCore import QEvent
+
+        if event.type() == QEvent.Type.Enter and obj in (
+            self._restart_btn, self._reboot_btn, self._vnc_btn,
+            self._ssh_btn, self._winscp_btn, self._pg_btn,
+            self._refresh_btn,
+        ):
+            self._prefetch.schedule_tcp(
+                self._session_mgr.active_ip,
+                ConfigManager().settings.connection.ssh_port,
+            )
+        return super().eventFilter(obj, event)
 
     # ── Public API ──────────────────────────────────────────
 
