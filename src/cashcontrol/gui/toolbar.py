@@ -535,7 +535,7 @@ class CashToolbar(QWidget):
 
             try:
                 from cashcontrol.core.security.password_manager import PasswordManager
-                from cashcontrol.gui.db_viewer_widget import PostgresToolWindow
+                from cashcontrol.gui.db_viewer import PostgresToolWindow
             except ImportError as e:
                 get_notification_manager().notify(f"Ошибка загрузки DB Viewer: {e!s}", level="error")
                 logger.error(f"[DB] Import error: {e}")

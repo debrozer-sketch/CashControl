@@ -42,7 +42,13 @@ BIN_EXTS = {".pyd", ".dll", ".so"}
 COPY_EXTS = {".py", ".pyw", ".json", ".ico", ".png", ".svg", ".qss", ".txt", ".toml"}
 
 HOT_FILES = [
-    ("gui", ["toolbar.py", "vnc_preview.py", "db_viewer_widget.py"]),
+    ("gui", ["toolbar.py", "vnc_preview.py"]),
+    ("gui/db_viewer", [
+        "__init__.py",
+        "constants.py", "formatting.py", "storage.py", "workers.py", "sql.py",
+        "data_grid.py", "data_panel.py", "csv_import.py",
+        "sql_console.py", "tables_panel.py", "widget.py",
+    ]),
     ("gui/dialogs", [
         "command_editor.py", "command_result_dialog.py", "logs_viewer.py",
         "help_dialog.py", "alias_editor.py", "add_cash_dialog.py",

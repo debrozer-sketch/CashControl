@@ -22,7 +22,7 @@ logger = get_logger()
 _HOT_PACKAGE_PREFIXES = frozenset({
     "cashcontrol.gui.toolbar",
     "cashcontrol.gui.vnc_preview",
-    "cashcontrol.gui.db_viewer_widget",
+    "cashcontrol.gui.db_viewer",
     "cashcontrol.gui.dialogs",
     "cashcontrol.gui.widgets",
 })
