@@ -2,6 +2,75 @@
 
 ---
 
+## v3.8.0 — 2026-08-23 (ветка proto, рефакторинг по gap-отчёту)
+
+Серия изменений v3.4–v3.8 выполнена в ветке `proto` (копия проекта
+`D:\Project\CashControl4`); `main` не затронут.
+
+### v3.8 — Диагностика на классах
+
+- `PROBLEM_RULES` (список dict с lambda) переведены на ABC
+  `DiagnosticCheck` (`core/info/rules.py`): BankUsbModeCheck,
+  PaymentRanksCheck, DrawerCloseCheck; применимость — через фичи типов
+  (`drawer_close` добавлена в pos/touch). API `ProblemChecker` не менялся.
+
+### v3.7 — DB Viewer разбит из монолита
+
+- 2070-строчный `db_viewer_widget.py` → пакет `gui/db_viewer/`
+  (constants/formatting/storage/workers/sql/data_grid/data_panel/
+  csv_import/sql_console/tables_panel/widget). Hot-оверлей и префикс
+  в module_loader переключены на пакет.
+
+### v3.6 — Session API (ADR-004) и DI
+
+- `core/session_interface.py`: ABC SessionInterface + ExecResult;
+  CashSession реализует его, фасадные ping/exec/upload/download/reboot.
+- Убраны обращения GUI к приватным атрибутам сессии
+  (`_conn`/`_is_connected`): используется `session.abort()`,
+  публичные свойства `session`/`keyboard_model`/`successful_password`.
+- ConfigManager внедряется опциональным параметром (ssh/db/session/
+  password_manager/info_manager); единый реестр коллекторов
+  (`core/info/registry.py`, SECTION_ALIASES), info_manager больше не
+  дублирует таблицу.
+- `asyncio.get_event_loop()` → `get_running_loop()` в пинге.
+
+### v3.5 — Система типов касс cash_types (ADR-003/005)
+
+- Новое ядро `core/cash_types/`: Pydantic-модели, deep-merge extends
+  (union/replace, детект циклов), реестр bundled+overlay
+  (`cash_types/*.toml` рядом с программой перекрывают встроенные),
+  TypeDetector со стратегиями xml_keywords/regex_file/shell и правилами
+  из `detection/*.toml`.
+- Встроенные типы pos/touch/sco/sco3 (+ detection/default.toml).
+- Хардкоды переведены на фичи: barcode/scales from_db, payment_ranks,
+  keyboard (коллектор+тулбар), customer_display, qrid, fiscal_register,
+  авто-подключение БД через connection.db, секции инфопанели.
+- HOT: типы перечитываются при открытии меню «Команды»; ручной выбор
+  типа при unknown («Команды → Тип кассы: выбрать вручную…»).
+- Тесты: tests/test_cash_types.py (14).
+
+### v3.4 — Безопасность и гигиена
+
+- SSH: проверка host key через data/known_hosts (TOFU при первом
+  контакте, громкая ошибка при подмене ключа), алгоритмы ed25519/ecdsa
+  добавлены (ревью #18/#19).
+- Мастер-ключ шифрования защищён DPAPI; legacy plaintext .keystore
+  мигрирует автоматически; повреждённый keystore → понятная ошибка
+  вместо тихой регенерации (ревью #16/#17).
+- Возвращены data/usb_id_mapping.json и port_mapping.json; удалены
+  мёртвые core/mover|reinstall; зависимости loguru/sqlalchemy[asyncio]/
+  nuitka вычищены; sync_version.py обновляет и `__init__.py`.
+
+### Упаковка
+
+- `scripts/build_dist.py` собирает portable-раскладку без Nuitka:
+  embedded Python в `runtime/python`, бинарные пакеты папками +
+  site-packages.zip в `runtime/lib`, код `.py` в `runtime/app`.
+  Лаунчер `CashControl.cmd`. Проверено: запуск, перенос на другой диск,
+  переименование папки.
+
+---
+
 ## v3.3.0 — 2026-08-22
 
 ### Что нового
