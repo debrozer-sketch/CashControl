@@ -9,6 +9,7 @@ Applicable to: all cash types
 
 from __future__ import annotations
 
+import contextlib
 import json as _json
 import re
 from typing import TYPE_CHECKING
@@ -134,6 +135,10 @@ class ScalesCollector:
 
     async def _collect_from_db(self, session: CashSession) -> list[str]:
         """Read scales ports from hw_property table (sco3)."""
+        task = getattr(session, "db_connect_task", None)
+        if task is not None:
+            with contextlib.suppress(Exception):
+                await task
         try:
             rows = await session.db.execute(_SCO3_QUERY)
         except Exception as e:

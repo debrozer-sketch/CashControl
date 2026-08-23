@@ -13,6 +13,7 @@ Applicable to: all cash types (pos, touch, sco, sco3)
 
 from __future__ import annotations
 
+import contextlib
 import re
 from typing import TYPE_CHECKING
 
@@ -136,6 +137,11 @@ class BarcodeScannerCollector:
     async def _collect_from_db(self, session: CashSession) -> list[str]:
         """Read scanner ports from hw_property table (sco3)."""
         import json as _json
+
+        task = getattr(session, "db_connect_task", None)
+        if task is not None:
+            with contextlib.suppress(Exception):
+                await task
 
         try:
             rows = await session.db.execute(_SCO3_QUERY)

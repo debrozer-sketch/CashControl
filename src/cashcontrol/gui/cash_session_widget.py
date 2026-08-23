@@ -82,6 +82,7 @@ class CashSessionWidget(QWidget):
         self._ip = ip
         self._session: CashSession | None = None
         self._info_loaded = False
+        self._last_info_ok = 0.0
         self._loading = False
         self._connect_task: asyncio.Task | None = None
         self._info_task: asyncio.Task | None = None
@@ -294,24 +295,11 @@ class CashSessionWidget(QWidget):
             if ctype_def and ctype_def.connection.db.enabled:
                 database = ctype_def.connection.db.database or "sco_v3"
                 self._session.setup_db(database=database)
-                try:
-                    await self._session.connect_db()
-                    logger.info(f"DB connected to {self._ip} (db={database})")
-                    with contextlib.suppress(RuntimeError):
-                        get_notification_manager().notify(
-                            f"БД: {self._ip}: Подключено к {database}",
-                            level="success",
-                        )
-                except Exception as db_err:
-                    logger.warning(
-                        f"DB connection failed for {self._ip}: {db_err}"
-                    )
-                    err_short = str(db_err).split("\n")[0][:100]
-                    with contextlib.suppress(RuntimeError):
-                        get_notification_manager().notify(
-                            f"БД: {self._ip}: {err_short or 'Ошибка подключения'}",
-                            level="warning",
-                        )
+                # БД подключается фоном параллельно с волной коллекторов;
+                # коллекторы с *_from_db дождутся db_connect_task.
+                self._session.db_connect_task = asyncio.ensure_future(
+                    self._connect_db_notified(database)
+                )
 
             await self.load_info()
 
@@ -366,6 +354,46 @@ class CashSessionWidget(QWidget):
             widget.deleteLater()
         self._extra_widgets.clear()
 
+    async def _connect_db_notified(self, database: str) -> bool:
+        ok = await self._session.connect_db()
+        if ok:
+            logger.info(f"DB connected to {self._ip} (db={database})")
+            with contextlib.suppress(RuntimeError):
+                get_notification_manager().notify(
+                    f"БД: {self._ip}: Подключено к {database}",
+                    level="success",
+                )
+        else:
+            err_short = (self._session.error_message or "").split("\n")[0][:100]
+            logger.warning(f"DB connection failed for {self._ip}: {err_short}")
+            with contextlib.suppress(RuntimeError):
+                get_notification_manager().notify(
+                    f"БД: {self._ip}: {err_short or 'Ошибка подключения'}",
+                    level="warning",
+                )
+        return ok
+
+    def maybe_refresh_in_background(self) -> None:
+        """Stale-while-revalidate: панель остаётся со старыми данными,
+        пока фоновая пересборка обновляет секции по одной."""
+        import time
+
+        from cashcontrol.infrastructure.config_manager import ConfigManager
+
+        if self._loading or not self._info_loaded:
+            return
+        if not (self._session and self._session.is_connected):
+            return
+        ttl = ConfigManager().settings.general.info_cache_ttl
+        if time.monotonic() - self._last_info_ok < ttl * 0.8:
+            return
+        logger.debug(f"Background info refresh for {self._ip}")
+        self._loading = True
+        self._info_loaded = False
+        if self._info_task and not self._info_task.done():
+            self._info_task.cancel()
+        self._info_task = asyncio.create_task(self._collect_info(True))
+
     async def load_info(self, force: bool = False) -> None:
         if self._loading:
             return
@@ -404,6 +432,9 @@ class CashSessionWidget(QWidget):
             )
             self._info_loaded = True
             self._loading = False
+            import time
+
+            self._last_info_ok = time.monotonic()
             cash_type = snapshot.cash_type.data.get("cash_type") or ""
             self.info_loaded.emit(cash_type)
 

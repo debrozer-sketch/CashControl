@@ -31,6 +31,9 @@ class CashSession(SessionInterface):
         self._error_message: str | None = None
         self.cash_type: str = "unknown"
         self.cash_type_source: str = "unknown"
+        # Фоновая задача автоподключения БД (стартует раньше, чем коллекторы
+        # с фичей *_from_db); последние ждут её через await.
+        self.db_connect_task: asyncio.Task | None = None
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -132,6 +135,7 @@ class CashSession(SessionInterface):
                 await self._db.disconnect()
             self._db = None
             self._db_connected = False
+        self.db_connect_task = None
 
     async def abort(self) -> None:
         """Hard-abort underlying connections (used on IP change)."""
@@ -141,6 +145,7 @@ class CashSession(SessionInterface):
                 await self._db.disconnect()
             self._db = None
             self._db_connected = False
+        self.db_connect_task = None
         self._is_connected = False
 
     # ── Commands ─────────────────────────────────────────────────────────

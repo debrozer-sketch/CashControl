@@ -171,6 +171,8 @@ class TabManager(QWidget):
         self._start_ping(ip)
         cash_type = getattr(session, "cash_type", None) if session else None
         self._cash_toolbar.update_for_cash_type(cash_type)
+        if session:
+            session.maybe_refresh_in_background()
 
     def _on_tab_ip_changed(self, old_ip: str, new_ip: str) -> None:
         if new_ip:
