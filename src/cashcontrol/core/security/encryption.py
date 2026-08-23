@@ -2,20 +2,14 @@
 Encryption module — secure password storage using Fernet symmetric encryption.
 
 Passwords are stored encrypted in settings.json. Master key is stored in
-data/.keystore (base64-encoded). On first use, master key is generated.
-
-Usage:
-    from cashcontrol.core.security.encryption import encrypt_password, decrypt_password
-
-    encrypted = encrypt_password("my_secret_password")
-    # Store encrypted in config
-
-    decrypted = decrypt_password(encrypted)
-    # Use decrypted password
+data/.keystore: on Windows the Fernet key is sealed with DPAPI
+(win32crypt.CryptProtectData); a legacy plaintext base64 key found there is
+migrated on first load. On first use, master key is generated.
 """
 
 from __future__ import annotations
 
+import platform
 from typing import TYPE_CHECKING
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -27,6 +21,35 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 logger = get_logger()
+
+_DPAPI_ENTROPY = b"CashControl.keystore.v1"
+
+
+def _dpapi_available() -> bool:
+    if platform.system() != "Windows":
+        return False
+    try:
+        import win32crypt  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _dpapi_protect(data: bytes) -> bytes:
+    import win32crypt
+
+    return win32crypt.CryptProtectData(data, "CashControl", _DPAPI_ENTROPY, None, None, 0)
+
+
+def _dpapi_unprotect(blob: bytes) -> bytes | None:
+    try:
+        import win32crypt
+
+        _, data = win32crypt.CryptUnprotectData(blob, _DPAPI_ENTROPY, None, None, 0)
+        return data
+    except Exception:
+        return None
 
 
 class EncryptionManager:
@@ -58,41 +81,80 @@ class EncryptionManager:
         """
         Load master key from keystore or create new one.
 
+        Keystore formats: DPAPI-sealed blob (current) or raw base64 Fernet
+        key (legacy, migrated on load). A corrupted existing keystore raises
+        loudly instead of silently regenerating (which would make all stored
+        passwords undecryptable).
+
         Returns:
             Fernet instance with master key
+
+        Raises:
+            RuntimeError: If an existing keystore cannot be decrypted
         """
         if self._keystore_path.exists():
-            try:
-                key_data = self._keystore_path.read_bytes()
-                # Validate key format
-                Fernet(key_data)
-                logger.debug("Master key loaded from keystore")
-                return Fernet(key_data)
-            except Exception as e:
-                logger.warning(f"Corrupted keystore, regenerating: {e}")
-                # Fallthrough to create new key
+            return Fernet(self._load_key_bytes())
 
-        # Generate new key
         key = Fernet.generate_key()
-        self._keystore_path.parent.mkdir(parents=True, exist_ok=True)
-        self._keystore_path.write_bytes(key)
+        self._write_key_bytes(key)
+        logger.info("New master key generated and stored")
+        return Fernet(key)
 
-        # Protect keystore file (hide on Windows)
+    def _load_key_bytes(self) -> bytes:
+        raw = self._keystore_path.read_bytes()
+
+        if _dpapi_available():
+            key = _dpapi_unprotect(raw)
+            if key is not None:
+                try:
+                    Fernet(key)
+                except Exception as e:
+                    raise RuntimeError(self._corrupt_message()) from e
+                logger.debug("Master key loaded from DPAPI-protected keystore")
+                return key
+
+        # Legacy plaintext base64 key — migrate to DPAPI
         try:
-            import platform
+            Fernet(raw)
+        except Exception as e:
+            raise RuntimeError(self._corrupt_message()) from e
 
+        if _dpapi_available():
+            logger.info("Migrating legacy plaintext keystore to DPAPI")
+            self._write_key_bytes(raw)
+        else:
+            logger.warning(
+                "DPAPI unavailable, master key kept in legacy plaintext form"
+            )
+        return raw
+
+    def _write_key_bytes(self, key: bytes) -> None:
+        blob = _dpapi_protect(key) if _dpapi_available() else key
+        self._keystore_path.parent.mkdir(parents=True, exist_ok=True)
+        self._set_keystore_hidden(False)
+        self._keystore_path.write_bytes(blob)
+        self._set_keystore_hidden(True)
+
+    def _set_keystore_hidden(self, hidden: bool) -> None:
+        try:
             if platform.system() == "Windows":
                 import ctypes
 
-                FILE_ATTRIBUTE_HIDDEN = 0x02
+                attribute = 0x02 if hidden else 0x80  # HIDDEN / NORMAL
                 ctypes.windll.kernel32.SetFileAttributesW(
-                    str(self._keystore_path), FILE_ATTRIBUTE_HIDDEN
+                    str(self._keystore_path), attribute
                 )
         except Exception as e:
-            logger.debug(f"Could not hide keystore file: {e}")
+            logger.debug(f"Could not update keystore file attributes: {e}")
 
-        logger.info("New master key generated and stored")
-        return Fernet(key)
+    @staticmethod
+    def _corrupt_message() -> str:
+        return (
+            "Файл data/.keystore повреждён или не расшифровывается. "
+            "Сохранённые пароли станут нечитаемы при замене ключа. "
+            "Если это ожидаемо — удалите .keystore и заново введите пароли; "
+            "иначе восстановите файл из резервной копии."
+        )
 
     def encrypt(self, plaintext: str) -> str:
         """

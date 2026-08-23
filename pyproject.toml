@@ -17,12 +17,9 @@ dependencies = [
     "asyncpg>=0.30",
     # Data / Config
     "pydantic>=2.9",
-    "sqlalchemy[asyncio]>=2.0",
     # Security
     "cryptography>=43",
     "psycopg2-binary>=2.9",
-    # Logging
-    "loguru>=0.7",
     # VNC pixel conversion
     "numpy>=1.26",
     # Safe XML parsing
@@ -37,7 +34,6 @@ dev = [
     "pytest-asyncio>=0.24,<1",
     "pytest-qt>=4.4",
     "ruff>=0.7",
-    "nuitka>=2.4",
 ]
 
 [build-system]

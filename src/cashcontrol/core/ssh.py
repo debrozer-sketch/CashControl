@@ -23,14 +23,27 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import asyncssh
 
 from cashcontrol.core.security.password_manager import PasswordManager
 from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
 from cashcontrol.infrastructure.config_manager import ConfigManager
+from cashcontrol.infrastructure.path_resolver import get_data_dir
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = get_logger()
+
+SERVER_HOST_KEY_ALGS = [
+    "ssh-ed25519",
+    "ecdsa-sha2-nistp256",
+    "rsa-sha2-512",
+    "rsa-sha2-256",
+    "ssh-rsa",
+]
 
 
 @dataclass
@@ -87,6 +100,53 @@ class SSHSession:
         # Лимит одновременных SSH-каналов — предотвращает ChannelOpenError
         self._channel_semaphore = asyncio.Semaphore(4)
 
+    def _known_hosts_entry(self) -> tuple[Path, str]:
+        kh_path = get_data_dir() / "known_hosts"
+        host_expr = f"[{self.host}]:{self.port}" if self.port != 22 else self.host
+        return kh_path, host_expr
+
+    def _is_host_known(self) -> bool:
+        """TOFU-проверка: есть ли запись для этого хоста в data/known_hosts."""
+        kh_path, host_expr = self._known_hosts_entry()
+        if not kh_path.exists():
+            return False
+        for line in kh_path.read_text(encoding="utf-8").splitlines():
+            parts = line.split()
+            if parts and parts[0] == host_expr:
+                return True
+        return False
+
+    def _record_host_key(self) -> None:
+        """Сохранить ключ сервера текущего соединения (Trust On First Use)."""
+        assert self._conn is not None
+        key = self._conn.get_server_host_key()
+        if key is None:
+            raise SSHConnectionError(
+                f"Server did not present a host key ({self.host})"
+            )
+        kh_path, host_expr = self._known_hosts_entry()
+        kh_path.parent.mkdir(parents=True, exist_ok=True)
+        entry = f"{host_expr} {key.export_public_key().decode('ascii')}"
+        with kh_path.open("a", encoding="utf-8") as f:
+            f.write(entry + "\n")
+        logger.info(f"Host key recorded for {self.host} (TOFU)")
+
+    async def _dial(
+        self, password: str, verify_host_key: bool
+    ) -> asyncssh.SSHClientConnection:
+        kwargs: dict = {
+            "host": self.host,
+            "port": self.port,
+            "username": self.login,
+            "password": password,
+            "server_host_key_algs": SERVER_HOST_KEY_ALGS,
+        }
+        if verify_host_key:
+            kwargs["known_hosts"] = str(self._known_hosts_entry()[0])
+        else:
+            kwargs["known_hosts"] = None
+        return await asyncio.wait_for(asyncssh.connect(**kwargs), timeout=self.timeout)
+
     async def connect(self) -> None:
         """
         Establish SSH connection with automatic password iteration.
@@ -102,6 +162,11 @@ class SSHSession:
 
         logger.info(f"Connecting to {self.host}:{self.port} as {self.login}")
 
+        # Trust On First Use: при первом контакте ключ сервера записывается
+        # в data/known_hosts, дальше соединение всегда с проверкой.
+        first_contact = not self._is_host_known()
+        verify_host_key = not first_contact
+
         # Try passwords in order
         last_error = None
         attempt = 0
@@ -111,17 +176,22 @@ class SSHSession:
             try:
                 logger.debug(f"SSH attempt {attempt} for {self.host}")
 
-                self._conn = await asyncio.wait_for(
-                    asyncssh.connect(
-                        self.host,
-                        port=self.port,
-                        username=self.login,
-                        password=password,
-                        known_hosts=None,  # Skip host key verification
-                        server_host_key_algs=["ssh-rsa", "rsa-sha2-256", "rsa-sha2-512"],
-                    ),
-                    timeout=self.timeout,
-                )
+                conn = await self._dial(password, verify_host_key)
+
+                if first_contact:
+                    self._conn = conn
+                    try:
+                        self._record_host_key()
+                    finally:
+                        conn.close()
+                        await conn.wait_closed()
+                    logger.info(
+                        f"First contact with {self.host}: host key recorded, "
+                        "reconnecting with verification"
+                    )
+                    conn = await self._dial(password, verify_host_key=True)
+
+                self._conn = conn
 
                 # Success!
                 self._successful_password = password
@@ -145,6 +215,24 @@ class SSHSession:
                 logger.debug(f"SSH auth failed for {self.host}: {e}")
                 last_error = e
                 continue
+
+            except asyncssh.HostKeyNotVerifiable as e:
+                host_expr = self._known_hosts_entry()[1]
+                msg = (
+                    f"Host key verification failed for {host_expr}: ключ сервера "
+                    "не совпадает с сохранённым в data/known_hosts. Возможна "
+                    "подмена (MITM) либо устройство перешито. Проверьте ключ и "
+                    "при подтверждении удалите строку хоста из known_hosts."
+                )
+                logger.error(msg)
+                audit_log(
+                    action_type="connection",
+                    action_name="ssh_connect",
+                    target=self.host,
+                    result="failure",
+                    error_message="host key mismatch (possible MITM)",
+                )
+                raise SSHConnectionError(msg) from e
 
             except TimeoutError as e:
                 # Network timeout
