@@ -9,7 +9,7 @@ QWidget or QImage: it posts small events through a Qt signal bridge and the GUI
 thread owns the framebuffer and paints it.
 """
 
-# ruff: noqa: E402 — numpy is imported lazily in conversion methods
+
 from __future__ import annotations
 
 import asyncio
@@ -134,7 +134,7 @@ class _VNCError(RuntimeError):
     """A user-presentable RFB protocol or connection error."""
 
 
-class _WorkerStopped(Exception):
+class _WorkerStoppedError(Exception):
     """Internal non-error path used when the GUI asks a worker to stop."""
 
 
@@ -270,7 +270,7 @@ class _VNCWorker(threading.Thread):
             sock = self._socket_or_raise()
             sock.settimeout(self.SOCK_TIMEOUT)
             self._main_loop()
-        except _WorkerStopped:
+        except _WorkerStoppedError:
             pass
         except Exception as exc:
             if not self._stop_event.is_set():
@@ -295,7 +295,7 @@ class _VNCWorker(threading.Thread):
             sock.settimeout(self.CONNECT_TIMEOUT)
         except OSError as exc:
             if self._stop_event.is_set():
-                raise _WorkerStopped from exc
+                raise _WorkerStoppedError from exc
             raise _VNCError(f"Нет соединения: {exc}") from exc
 
         # ``stop()`` may have run while create_connection() was blocking.
@@ -306,7 +306,7 @@ class _VNCWorker(threading.Thread):
         if stopped:
             with contextlib.suppress(OSError):
                 sock.close()
-            raise _WorkerStopped
+            raise _WorkerStoppedError
 
     def _handshake(self) -> None:
         version = self._recv_required(12, "версии RFB")
@@ -676,7 +676,7 @@ class _VNCWorker(threading.Thread):
             sock = self._sock
         if sock is None:
             if self._stop_event.is_set():
-                raise _WorkerStopped
+                raise _WorkerStoppedError
             raise OSError("Сокет VNC закрыт")
         return sock
 
@@ -686,7 +686,7 @@ class _VNCWorker(threading.Thread):
             self._socket_or_raise().sendall(data)
         except OSError as exc:
             if self._stop_event.is_set():
-                raise _WorkerStopped from exc
+                raise _WorkerStoppedError from exc
             raise _VNCError(f"Ошибка отправки данных VNC: {exc}") from exc
 
     def _recv(
@@ -720,11 +720,11 @@ class _VNCWorker(threading.Thread):
                 if allow_idle_timeout and len(self._buf) == initial_buffered:
                     raise
                 if time.monotonic() - last_progress >= self.PARTIAL_READ_TIMEOUT:
-                    raise _VNCError("Таймаут при получении неполного сообщения VNC")
+                    raise _VNCError("Таймаут при получении неполного сообщения VNC") from None
                 continue
             except OSError as exc:
                 if self._stop_event.is_set():
-                    raise _WorkerStopped from exc
+                    raise _WorkerStoppedError from exc
                 raise _VNCError(f"Ошибка чтения данных VNC: {exc}") from exc
 
             if not chunk:
@@ -743,7 +743,7 @@ class _VNCWorker(threading.Thread):
             raise _VNCError(f"Таймаут при получении {what}") from exc
         if data is None:
             if self._stop_event.is_set():
-                raise _WorkerStopped
+                raise _WorkerStoppedError
             raise _VNCError(f"Сервер закрыл соединение при получении {what}")
         return data
 
@@ -751,7 +751,7 @@ class _VNCWorker(threading.Thread):
         data = self._recv(count)
         if data is None:
             if self._stop_event.is_set():
-                raise _WorkerStopped
+                raise _WorkerStoppedError
             raise OSError("VNC-сервер закрыл соединение")
         return data
 
@@ -763,7 +763,7 @@ class _VNCWorker(threading.Thread):
 
     def _raise_if_stopped(self) -> None:
         if self._stop_event.is_set():
-            raise _WorkerStopped
+            raise _WorkerStoppedError
 
     def _close_socket(self) -> None:
         with self._socket_lock:

@@ -117,8 +117,8 @@ class TabManager(QWidget):
 
     def _init_toolbar(self) -> None:
         from cashcontrol.infrastructure.module_loader import get_class
-        _CashToolbar = get_class("cashcontrol.gui.toolbar", "CashToolbar")
-        self._cash_toolbar = _CashToolbar(self._session_mgr, self)
+        toolbar_cls = get_class("cashcontrol.gui.toolbar", "CashToolbar")
+        self._cash_toolbar = toolbar_cls(self._session_mgr, self)
         self._cash_toolbar.hide()
 
     @property

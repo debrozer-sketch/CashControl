@@ -33,7 +33,7 @@ from qfluentwidgets import (
     ToolButton,
 )
 
-from cashcontrol.core.cash_types import has_feature
+from cashcontrol.core.cash_types import get_cash_type_registry, has_feature
 from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
 from cashcontrol.infrastructure.config_manager import ConfigManager
 

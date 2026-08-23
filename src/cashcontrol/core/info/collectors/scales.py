@@ -14,12 +14,12 @@ import re
 from typing import TYPE_CHECKING
 
 from cashcontrol.core.aliases.alias_manager import AliasManager
+from cashcontrol.core.cash_types import has_feature
 from cashcontrol.core.info.collectors._usb_mapper import (
     check_usb_connected,
     load_usb_mapping,
     lookup_device_by_path,
 )
-from cashcontrol.core.cash_types import has_feature
 from cashcontrol.infrastructure.audit_logger import get_logger
 
 if TYPE_CHECKING:

@@ -107,7 +107,7 @@ def _parse_value(text, coltype):
         if k == 'json':
             return json.loads(s)
     except (ValueError, InvalidOperation) as e:
-        raise ValueError(f'«{text}» не разобрать как {coltype}: {e}')
+        raise ValueError(f'«{text}» не разобрать как {coltype}: {e}') from e
     return text
 
 

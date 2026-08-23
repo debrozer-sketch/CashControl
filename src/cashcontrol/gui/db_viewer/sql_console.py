@@ -439,7 +439,7 @@ class _SqlConsole(QWidget):  # Выдвижная консоль: редакто
                 names = [c['name'] for c in columns]
                 with open(path, 'w', encoding='utf-8') as f:
                     f.write(json.dumps(
-                        [{nm: _json_value(v) for nm, v in zip(names, r)}
+                        [{nm: _json_value(v) for nm, v in zip(names, r, strict=False)}
                          for r in rows], ensure_ascii=False))
             return len(rows)
         self._lbl_res_progress.show()

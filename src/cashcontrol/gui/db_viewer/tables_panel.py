@@ -1,6 +1,8 @@
 """CashControl DB viewer: tables_panel."""
 from __future__ import annotations
 
+from typing import ClassVar
+
 from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QFont,
@@ -27,7 +29,7 @@ from cashcontrol.gui.db_viewer.workers import _Worker
 class _TablesPanel(QWidget):
     openTable = Signal(str, str, str)   # database, schema, table
 
-    _KIND_ICON = {'r': 'GRID', 'p': 'GRID', 'v': 'VIEW', 'm': 'ALBUM'}
+    _KIND_ICON: ClassVar[dict[str, str]] = {'r': 'GRID', 'p': 'GRID', 'v': 'VIEW', 'm': 'ALBUM'}
 
     def __init__(self, factory, parent=None):
         super().__init__(parent)
@@ -202,7 +204,7 @@ class _TablesPanel(QWidget):
             self._info_worker.requestInterruption()
 
     def _on_activate(self, it):
-        name, kind = it.data(Qt.UserRole)
+        name, _kind = it.data(Qt.UserRole)
         self.openTable.emit(self._database, self._schema, name)
 
     def _menu(self, pos):

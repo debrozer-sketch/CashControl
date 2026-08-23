@@ -273,12 +273,10 @@ class CashSessionWidget(QWidget):
             from datetime import datetime as _dt
 
             from cashcontrol.gui.history_manager import HistoryEntry, get_history_manager
-            try:
+            with contextlib.suppress(Exception):
                 get_history_manager().add(self._ip, HistoryEntry(
                     timestamp=_dt.now(), action_name="Подключение",
                     result="success", details=f"SSH {self._ip}", ip=self._ip))
-            except Exception:
-                pass
             self._vnc_widget.set_session(self._session)
 
             if getattr(self, "_vnc_resume", False):
@@ -299,13 +297,11 @@ class CashSessionWidget(QWidget):
                 try:
                     await self._session.connect_db()
                     logger.info(f"DB connected to {self._ip} (db={database})")
-                    try:
+                    with contextlib.suppress(RuntimeError):
                         get_notification_manager().notify(
                             f"БД: {self._ip}: Подключено к {database}",
                             level="success",
                         )
-                    except RuntimeError:
-                        pass
                 except Exception as db_err:
                     logger.warning(
                         f"DB connection failed for {self._ip}: {db_err}"
@@ -326,13 +322,11 @@ class CashSessionWidget(QWidget):
             msg = f"Ошибка: {e}"
             self.loading_label.setText(msg)
             logger.error(f"Tab connection error for {self._ip}: {e}")
-            try:
+            with contextlib.suppress(RuntimeError):
                 get_notification_manager().notify(
                     f"Ошибка подключения к {self._ip}: {str(e)[:120]}",
                     level="error",
                 )
-            except RuntimeError:
-                pass
             self._show_reconnect_button(msg)
 
     # ── Info loading ────────────────────────────────────────────────────────
@@ -759,19 +753,15 @@ class CashSessionWidget(QWidget):
 
         # VNC отключаем ДО разрыва SSH, иначе воркер зависает на мёртвом сокете
         vnc_resume = False
-        try:
+        with contextlib.suppress(Exception):
             if self._vnc_widget.state() == "connected":
                 vnc_resume = True
                 self._vnc_widget.disconnect_vnc()
-        except Exception:
-            pass
 
         if self._session:
-            try:
+            # ожидаемо: abort() может упасть, если соединения уже нет
+            with contextlib.suppress(Exception):
                 await self._session.abort()
-            except Exception:
-                # ожидаемо: abort() может упасть, если соединения уже нет
-                pass
             self._session = None
 
         self._ip = new_ip

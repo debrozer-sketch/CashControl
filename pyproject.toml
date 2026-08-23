@@ -68,7 +68,13 @@ ignore = [
     "RUF001", # ambiguous char — legitimate Cyrillic in Russian UI
     "RUF002", # ambiguous char in docstring — legitimate Cyrillic
     "RUF003", # ambiguous char in comment — legitimate Cyrillic
+    "RUF006", # fire-and-forget asyncio.ensure_future is intentional for GUI actions
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Qt API requires camelCase overrides (paintEvent, keyPressEvent, ...) and
+# mixedCase Signal attributes — renaming would break the framework contract.
+"src/cashcontrol/gui/**" = ["N802", "N815", "N801"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["cashcontrol"]

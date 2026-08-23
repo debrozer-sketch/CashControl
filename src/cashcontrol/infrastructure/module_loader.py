@@ -7,11 +7,15 @@ get_class() simply imports the regular package module.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
 import importlib
 import importlib.abc
 import importlib.util
 import sys
-from pathlib import Path
 
 from cashcontrol.infrastructure.audit_logger import get_logger
 from cashcontrol.infrastructure.path_resolver import _is_production

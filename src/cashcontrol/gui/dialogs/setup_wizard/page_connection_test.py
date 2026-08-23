@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWizardPage
@@ -101,10 +102,8 @@ class ConnectionTestPage(QWizardPage):
             self.result_label.setText(f"Ошибка: {e}")
             logger.exception(f"Connection test failed for {ip}")
         finally:
-            try:
+            # ожидаемо: disconnect может упасть, если соединения уже нет
+            with contextlib.suppress(Exception):
                 await session.disconnect()
-            except Exception:
-                # ожидаемо: disconnect может упасть, если соединения уже нет
-                pass
             self.test_btn.setEnabled(True)
             self.test_btn.setText("Проверить")

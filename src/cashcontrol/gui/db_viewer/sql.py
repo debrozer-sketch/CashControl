@@ -41,7 +41,7 @@ def _load_meta(conn, worker, schema, table):
     qname = _qtable(schema, table)
     cur = conn.cursor()
     cur.execute(_SQL_COLUMNS, (qname,))
-    columns = [dict(zip(('name', 'type', 'nullable', 'default', 'comment'), r))
+    columns = [dict(zip(('name', 'type', 'nullable', 'default', 'comment'), r, strict=False))
                for r in cur.fetchall()]
     cur.execute(_SQL_PK, (qname,))
     pk = [r[0] for r in cur.fetchall()]
@@ -235,7 +235,7 @@ def _export_rows(conn, worker, schema, table, columns, where, order, path, fmt):
                     break
                 for r in batch:
                     f.write(('' if first else ',\n') + json.dumps(
-                        {nm: _json_value(v) for nm, v in zip(names, r)},
+                        {nm: _json_value(v) for nm, v in zip(names, r, strict=False)},
                         ensure_ascii=False))
                     first = False
                 n += len(batch)

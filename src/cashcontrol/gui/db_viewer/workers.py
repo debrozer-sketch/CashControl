@@ -1,6 +1,8 @@
 """CashControl DB viewer: workers."""
 from __future__ import annotations
 
+import contextlib
+
 import psycopg2
 from PySide6.QtCore import QThread, Signal
 
@@ -51,10 +53,8 @@ class _Worker(QThread):  # Выполняет fn(conn, worker) в отдельн
                 self.failed.emit(_human(e))
         finally:
             if conn is not None:
-                try:
+                with contextlib.suppress(Exception):
                     conn.close()
-                except Exception:
-                    pass
 
     def cancel(self, wait_ms=1500):
         self.requestInterruption()

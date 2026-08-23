@@ -159,14 +159,13 @@ class CashTabBar(QWidget):
         menu = QMenu(self)
         menu.setToolTipsVisible(True)
 
-        from qfluentwidgets import FluentIcon as _FI
 
-        a_close = QAction(_FI.CLOSE.icon(), f"Закрыть вкладку  {ip}", self)
+        a_close = QAction(FluentIcon.CLOSE.icon(), f"Закрыть вкладку  {ip}", self)
         a_close.setToolTip("Закрыть вкладку и отключиться от кассы")
-        a_ip = QAction(_FI.EDIT.icon(), "Изменить IP", self)
+        a_ip = QAction(FluentIcon.EDIT.icon(), "Изменить IP", self)
         menu.addSeparator()
-        a_refr = QAction(_FI.SYNC.icon(), "Обновить данные", self)
-        a_copy = QAction(_FI.COPY.icon(), "Копировать IP", self)
+        a_refr = QAction(FluentIcon.SYNC.icon(), "Обновить данные", self)
+        a_copy = QAction(FluentIcon.COPY.icon(), "Копировать IP", self)
         menu.addAction(a_close)
         menu.addSeparator()
         menu.addAction(a_ip)
@@ -181,7 +180,7 @@ class CashTabBar(QWidget):
             self.tab_ip_changed.emit(ip, "")
         elif chosen == a_refr:
             self.tab_refresh_requested.emit(ip)
-        elif chosen == action_copy:
+        elif chosen == a_copy:
             from PySide6.QtWidgets import QApplication
             QApplication.clipboard().setText(ip)
             self.tab_copy_ip_requested.emit(ip)
