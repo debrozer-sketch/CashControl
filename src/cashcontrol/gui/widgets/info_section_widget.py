@@ -48,15 +48,15 @@ class InfoGroupWidget(QFrame):
         self.show_loading()
 
     def show_loading(self) -> None:
-        self._set_card_state("loading")
         self._show_skeleton()
-        self.setStyleSheet("")
+        if getattr(self, "_ring", None) is None:
+            from qfluentwidgets import IndeterminateProgressRing
 
-    def _set_card_state(self, state: str | None) -> None:
-        """QSS-состояние #InfoCard[state=...] (loading/warn/error)."""
-        self.setProperty("state", state or "")
-        self.style().unpolish(self)
-        self.style().polish(self)
+            self._ring = IndeterminateProgressRing(self)
+            self._ring.setFixedSize(18, 18)
+            self._layout.insertWidget(1, self._ring)
+        self._ring.show()
+        self.setStyleSheet("")
 
     # ── Skeleton (placeholder bars while collecting) ──────────────────────
 
@@ -79,6 +79,9 @@ class InfoGroupWidget(QFrame):
         self._skeleton = sk
 
     def _clear_skeleton(self) -> None:
+        ring = getattr(self, "_ring", None)
+        if ring is not None:
+            ring.hide()
         if self._skeleton is not None:
             self._skeleton.setParent(None)
             self._skeleton.deleteLater()
@@ -86,13 +89,11 @@ class InfoGroupWidget(QFrame):
         self._body.show()
 
     def show_timeout(self) -> None:
-        self._set_card_state("warn")
         self._clear_skeleton()
         self._body.setText("<i>Таймаут</i>")
         self.setStyleSheet("")
 
     def show_error(self, error: str | None = None) -> None:
-        self._set_card_state("error")
         self._clear_skeleton()
         text = f"<i>{error or 'Ошибка'}</i>"
         self._body.setText(text)
@@ -100,7 +101,6 @@ class InfoGroupWidget(QFrame):
 
     def add_items(self, fields: list[InfoField]) -> None:
         """Append multiple InfoFields to this group and refresh display."""
-        self._set_card_state(None)
         self._clear_skeleton()
         self._fields.extend(fields)
         self._render_body()

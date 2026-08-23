@@ -158,7 +158,6 @@ class CashToolbar(QWidget):
 
     def __init__(self, session_mgr: SessionManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("CashToolbar")
         self._session_mgr = session_mgr
         self._config = ConfigManager()
         self._kb_container: QWidget | None = None
