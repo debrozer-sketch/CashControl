@@ -586,6 +586,10 @@ class CashToolbar(QWidget):
 
         mw.registry.reload_commands()
 
+        from cashcontrol.core.cash_types import get_cash_type_registry
+
+        get_cash_type_registry().reload()
+
         from PySide6.QtWidgets import QMenu
 
         menu = QMenu(self)
@@ -605,7 +609,15 @@ class CashToolbar(QWidget):
                 act.setToolTip(action.description or action.name)
                 act.setData(action.name)
 
+        menu.addSeparator()
+        act_manual = menu.addAction("Тип кассы: выбрать вручную…")
+        act_manual.setData("__select_cash_type__")
+
         chosen = menu.exec(self.commands_btn_center())
+
+        if chosen and chosen.data() == "__select_cash_type__":
+            self._on_select_cash_type(session)
+            return
 
         if chosen and chosen.data():
             action_name = chosen.data()
@@ -627,6 +639,29 @@ class CashToolbar(QWidget):
         ip = session_widget.ip
         logger.info(f"Refresh requested for {ip}, doing full reconnect")
         asyncio.ensure_future(session_widget.reconnect_to(ip))
+
+    def _on_select_cash_type(self, session_widget) -> None:
+        """Ручной выбор типа кассы (когда автоопределение дало unknown)."""
+        from PySide6.QtWidgets import QInputDialog
+
+        registry = get_cash_type_registry()
+        definitions = sorted(registry.all(), key=lambda d: d.id)
+        items = [f"{d.id} — {d.name}" for d in definitions]
+        choice, ok = QInputDialog.getItem(
+            self, "Тип кассы", "Выберите тип (сохранится вручную):", items, 0, False
+        )
+        if not ok:
+            return
+
+        type_id = choice.split(" — ")[0].strip()
+        resolved = registry.resolve(type_id)
+        if not resolved or not session_widget.session:
+            return
+
+        session_widget._session.cash_type = resolved
+        session_widget._session.cash_type_source = "manual"
+        logger.info(f"Manual cash type for {session_widget.ip}: {resolved}")
+        asyncio.ensure_future(session_widget.load_info(force=True))
 
     # ── Action execution ────────────────────────────────────
 

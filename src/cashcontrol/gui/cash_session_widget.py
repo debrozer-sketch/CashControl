@@ -23,7 +23,7 @@ from qfluentwidgets import (
     ToolButton,
 )
 
-from cashcontrol.core.cash_types import get_cash_type_registry
+from cashcontrol.core.cash_types import get_cash_type_registry, has_feature
 from cashcontrol.core.info import InfoCollector, ProblemChecker
 from cashcontrol.core.info.info_manager import CollectionStatus, InfoField
 from cashcontrol.core.session import CashSession
@@ -464,7 +464,7 @@ class CashSessionWidget(QWidget):
         elif section.name == "fiscal_printer":
             items = self._build_fr_items(section)
         elif section.name == "customer_display":
-            if self._cash_type != "pos":
+            if not has_feature(self._cash_type, "customer_display"):
                 return
             items = self._build_display_items(section)
         elif section.name == "scanners":
@@ -472,7 +472,7 @@ class CashSessionWidget(QWidget):
         elif section.name == "scales":
             items = self._build_scales_items(section)
         elif section.name == "keyboard":
-            if self._cash_type != "pos":
+            if not has_feature(self._cash_type, "keyboard"):
                 return
             items = self._build_keyboard_items(section)
         elif section.name == "bank_terminal":
@@ -482,7 +482,7 @@ class CashSessionWidget(QWidget):
         elif section.name == "loymax":
             items = self._build_loymax_items(section)
         elif section.name == "qrid":
-            if self._cash_type != "pos":
+            if not has_feature(self._cash_type, "qrid"):
                 return
             items = self._build_qrid_items(section)
         else:

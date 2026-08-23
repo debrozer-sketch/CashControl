@@ -53,9 +53,13 @@ class CashTypeCollector:
         }
 
         existing = getattr(session, "cash_type", None)
+        manual = getattr(session, "cash_type_source", "") == "manual"
         if existing and existing != "unknown":
             info["cash_type"] = existing
-            logger.debug(f"cash_type already set for {session.host}: {existing}")
+            logger.debug(
+                f"cash_type already set for {session.host}: {existing}"
+                f" ({'manual' if manual else 'auto'})"
+            )
             await self._fill_sw_version(session, info)
             return info
 
@@ -80,6 +84,7 @@ class CashTypeCollector:
 
         # Store in session for other collectors
         session.cash_type = info["cash_type"]
+        session.cash_type_source = "auto" if detected else "unknown"
 
         logger.info(
             f"Cash type on {session.host}: {info['cash_type']} "
