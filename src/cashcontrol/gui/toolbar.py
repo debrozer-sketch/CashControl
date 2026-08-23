@@ -33,6 +33,7 @@ from qfluentwidgets import (
     ToolButton,
 )
 
+from cashcontrol.core.cash_types import has_feature
 from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
 from cashcontrol.infrastructure.config_manager import ConfigManager
 
@@ -225,7 +226,7 @@ class CashToolbar(QWidget):
 
     def update_for_cash_type(self, cash_type: str | None) -> None:
         if self._kb_container:
-            self._kb_container.setVisible(cash_type == "pos")
+            self._kb_container.setVisible(has_feature(cash_type, "keyboard"))
 
     def set_busy(self, busy: bool, message: str = "") -> None:
         btns = [

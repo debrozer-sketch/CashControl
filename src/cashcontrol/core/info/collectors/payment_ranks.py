@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from cashcontrol.core.cash_types import has_feature
 from cashcontrol.infrastructure.audit_logger import get_logger
 
 if TYPE_CHECKING:
@@ -32,7 +33,7 @@ class PaymentRanksCollector:
         }
 
         cash_type = getattr(session, "cash_type", None) or ""
-        if cash_type != "sco3":
+        if not has_feature(session, "payment_ranks"):
             info["payment_ranks_skipped"] = "1"
             return info
 

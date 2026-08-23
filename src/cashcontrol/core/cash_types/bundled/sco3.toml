@@ -1,0 +1,22 @@
+features = [
+    "db",
+    "payment_ranks",
+    "barcode_from_db",
+    "scales_from_db",
+]
+
+[type]
+id = "sco3"
+name = "SCO v3"
+extends = "sco"
+aliases = ["sco3", "sco_v3", "scov3"]
+icon = "sco"
+os_hints = ["ubuntu"]
+features_mode = "union"
+
+[connection.db]
+enabled = true
+database = "sco_v3"
+
+[extra]
+reinstall_subdir = "sco3"

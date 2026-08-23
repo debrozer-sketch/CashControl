@@ -1,0 +1,16 @@
+features = [
+    "fiscal_register",
+    "barcode_from_xml",
+    "scales_from_xml",
+]
+
+[type]
+id = "touch"
+name = "Touch POS"
+aliases = ["touch"]
+icon = "pos"
+os_hints = ["ubuntu"]
+
+[connection.db]
+enabled = false
+

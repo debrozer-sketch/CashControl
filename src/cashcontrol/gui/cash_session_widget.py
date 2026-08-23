@@ -23,6 +23,7 @@ from qfluentwidgets import (
     ToolButton,
 )
 
+from cashcontrol.core.cash_types import get_cash_type_registry
 from cashcontrol.core.info import InfoCollector, ProblemChecker
 from cashcontrol.core.info.info_manager import CollectionStatus, InfoField
 from cashcontrol.core.session import CashSession
@@ -287,8 +288,9 @@ class CashSessionWidget(QWidget):
             type_data = await CashTypeCollector().collect(self._session)
             cash_type = type_data.get("cash_type", "unknown")
 
-            if cash_type == "sco3":
-                self._session.setup_db(database="sco_v3")
+            ctype_def = get_cash_type_registry().get(cash_type)
+            if ctype_def and ctype_def.connection.db.enabled:
+                self._session.setup_db(database=ctype_def.connection.db.database or "sco_v3")
                 try:
                     await self._session.db.connect()
                     self._session.db_connected = True

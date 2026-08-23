@@ -1,0 +1,16 @@
+features = [
+    "fiscal_register",
+    "barcode_from_xml",
+    "scales_from_xml",
+]
+
+[type]
+id = "sco"
+name = "SCO"
+aliases = ["sco", "selfcheckout", "self_checkout"]
+icon = "sco"
+os_hints = ["ubuntu"]
+
+[connection.db]
+enabled = false
+

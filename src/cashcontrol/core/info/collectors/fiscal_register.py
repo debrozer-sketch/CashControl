@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from cashcontrol.core.cash_types import has_feature
 from cashcontrol.infrastructure.audit_logger import get_logger
 
 if TYPE_CHECKING:
@@ -44,8 +45,6 @@ def _port_to_human(raw: str) -> str:
 class FiscalRegisterCollector:
     """Collects fiscal register connection info from ComProxy.ini."""
 
-    SUPPORTED_TYPES = {"pos", "touch", "sco", "sco3"}
-
     async def collect(self, session: CashSession) -> dict[str, str | None]:
         """
         Returns:
@@ -62,7 +61,7 @@ class FiscalRegisterCollector:
         }
 
         cash_type = (session.cash_type or "").lower()
-        if cash_type and cash_type not in self.SUPPORTED_TYPES:
+        if cash_type and not has_feature(session, "fiscal_register"):
             return info
 
         try:

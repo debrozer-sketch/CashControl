@@ -16,6 +16,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from cashcontrol.core.cash_types import has_feature
 from cashcontrol.infrastructure.audit_logger import get_logger
 
 if TYPE_CHECKING:
@@ -28,7 +29,6 @@ XML_PATH = (
     "customerDisplay-firich-config.xml"
 )
 
-APPLICABLE_TYPES = {"pos"}
 
 
 class CustomerDisplayCollector:
@@ -56,7 +56,7 @@ class CustomerDisplayCollector:
 
         # Skip for non-POS types
         cash_type = getattr(session, "cash_type", None) or ""
-        if cash_type and cash_type not in APPLICABLE_TYPES:
+        if cash_type and not has_feature(session, "customer_display"):
             info["display_skipped"] = "1"
             return info
 

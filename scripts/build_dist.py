@@ -184,7 +184,7 @@ def copy_user_content(out: Path) -> None:
     icon = SRC_PKG / "gui" / "resources" / "icon.ico"
     if icon.exists():
         shutil.copy2(icon, out / "icon.ico")
-    for d in ("docs", "commands", "collectors", "soft"):
+    for d in ("docs", "commands", "collectors", "soft", "cash_types", "detection"):
         src = REPO_ROOT / d
         if src.exists():
             shutil.copytree(src, out / d)

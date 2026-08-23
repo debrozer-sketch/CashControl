@@ -11,6 +11,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from typing import TYPE_CHECKING
 
+from cashcontrol.core.cash_types import has_feature
 from cashcontrol.infrastructure.audit_logger import get_logger
 
 if TYPE_CHECKING:
@@ -24,7 +25,6 @@ XML_PATH = (
 )
 XML_NS = {"ns": "http://crystals.ru/cash/settings"}
 
-APPLICABLE_TYPES = {"pos"}
 
 
 class QRIDCollector:
@@ -47,7 +47,7 @@ class QRIDCollector:
         }
 
         cash_type = getattr(session, "cash_type", None) or ""
-        if cash_type and cash_type not in APPLICABLE_TYPES:
+        if cash_type and not has_feature(session, "qrid"):
             info["qrid_skipped"] = "1"
             return info
 

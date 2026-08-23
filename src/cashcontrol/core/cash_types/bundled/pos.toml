@@ -1,0 +1,21 @@
+features = [
+    "keyboard",
+    "customer_display",
+    "qrid",
+    "fiscal_register",
+    "barcode_from_xml",
+    "scales_from_xml",
+]
+
+[type]
+id = "pos"
+name = "POS"
+aliases = ["pos"]
+icon = "pos"
+os_hints = ["ubuntu", "tinycore"]
+
+[connection.db]
+enabled = false
+
+[extra]
+reinstall_subdir = "pos"

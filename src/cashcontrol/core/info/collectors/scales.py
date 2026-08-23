@@ -19,6 +19,7 @@ from cashcontrol.core.info.collectors._usb_mapper import (
     load_usb_mapping,
     lookup_device_by_path,
 )
+from cashcontrol.core.cash_types import has_feature
 from cashcontrol.infrastructure.audit_logger import get_logger
 
 if TYPE_CHECKING:
@@ -67,7 +68,7 @@ class ScalesCollector:
         mapping = load_usb_mapping("scale")
 
         try:
-            if cash_type == "sco3":
+            if has_feature(session, "scales_from_db"):
                 port_values = await self._collect_from_db(session)
             else:
                 port_values = await self._collect_from_xml(session)

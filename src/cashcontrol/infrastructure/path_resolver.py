@@ -98,6 +98,16 @@ def get_collectors_dir() -> Path:
     return get_app_root() / "collectors"
 
 
+def get_cash_types_dir() -> Path:
+    d = get_app_root() / "cash_types"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def get_detection_dir() -> Path:
+    return get_app_root() / "detection"
+
+
 # ── Files ─────────────────────────────────────────────────────────────────
 
 def get_sessions_file() -> Path:
