@@ -294,14 +294,14 @@ class CashSessionWidget(QWidget):
 
             ctype_def = get_cash_type_registry().get(cash_type)
             if ctype_def and ctype_def.connection.db.enabled:
-                self._session.setup_db(database=ctype_def.connection.db.database or "sco_v3")
+                database = ctype_def.connection.db.database or "sco_v3"
+                self._session.setup_db(database=database)
                 try:
-                    await self._session.db.connect()
-                    self._session.db_connected = True
-                    logger.info(f"DB connected to {self._ip} (db=sco_v3)")
+                    await self._session.connect_db()
+                    logger.info(f"DB connected to {self._ip} (db={database})")
                     try:
                         get_notification_manager().notify(
-                            f"БД: {self._ip}: Подключено к sco_v3",
+                            f"БД: {self._ip}: Подключено к {database}",
                             level="success",
                         )
                     except RuntimeError:

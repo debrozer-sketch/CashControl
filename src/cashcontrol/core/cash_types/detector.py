@@ -16,6 +16,13 @@ logger = get_logger()
 BUNDLED_DIR = Path(__file__).parent / "bundled_detection"
 
 
+def _rule_priority(rule: dict[str, Any]) -> int:
+    try:
+        return -int(rule.get("priority", 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 class TypeDetector:
     def __init__(self) -> None:
         self._rules: list[dict[str, Any]] = []
@@ -38,7 +45,7 @@ class TypeDetector:
         rules: list[dict[str, Any]] = []
         for data in files.values():
             rules.extend(data.get("rules") or [])
-        rules.sort(key=lambda r: -int(r.get("priority", 0)))
+        rules.sort(key=_rule_priority)
         self._rules = rules
 
     def reload(self) -> None:

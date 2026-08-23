@@ -276,6 +276,19 @@ class SSHSession:
             self._conn = None
             logger.info(f"SSH disconnected from {self.host}")
 
+    def abort(self) -> None:
+        """Hard-abort the transport without graceful teardown (sync, safe from GUI)."""
+        conn = self._conn
+        if conn is not None:
+            with contextlib.suppress(Exception):
+                conn.abort()
+            self._conn = None
+
+    @property
+    def successful_password(self) -> str | None:
+        """Password that worked for the current connection (for KiTTY/WinSCP launchers)."""
+        return self._successful_password
+
     async def execute(
         self,
         command: str,

@@ -65,7 +65,6 @@ class BarcodeScannerCollector:
             "scanner_error": None,
         }
 
-        cash_type = getattr(session, "cash_type", None) or ""
         mapping = load_usb_mapping("scanner")
 
         try:

@@ -32,7 +32,6 @@ class PaymentRanksCollector:
             "payment_ranks_error": None,
         }
 
-        cash_type = getattr(session, "cash_type", None) or ""
         if not has_feature(session, "payment_ranks"):
             info["payment_ranks_skipped"] = "1"
             return info

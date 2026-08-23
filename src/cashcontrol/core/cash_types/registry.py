@@ -81,6 +81,14 @@ class CashTypeRegistry:
             return None
         return self._aliases.get(value.strip().lower())
 
+    def match_substring(self, value: str) -> str | None:
+        """Find a type whose alias is contained in the given raw string."""
+        lowered = value.strip().lower()
+        for alias, type_id in self._aliases.items():
+            if len(alias) > 2 and alias in lowered:
+                return type_id
+        return None
+
     def get(self, value: str | None) -> CashTypeDefinition | None:
         type_id = self.resolve(value)
         return self._types.get(type_id) if type_id else None

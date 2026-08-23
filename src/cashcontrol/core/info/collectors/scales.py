@@ -64,7 +64,6 @@ class ScalesCollector:
             "scales_error": None,
         }
 
-        cash_type = getattr(session, "cash_type", None) or ""
         mapping = load_usb_mapping("scale")
 
         try:

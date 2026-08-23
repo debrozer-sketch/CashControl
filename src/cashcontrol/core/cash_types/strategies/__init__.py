@@ -60,10 +60,9 @@ async def xml_keywords(
         resolved = registry.resolve(candidate)
         if resolved:
             return resolved
-        lowered = candidate.strip().lower()
-        for alias, type_id in registry._aliases.items():
-            if len(alias) > 2 and alias in lowered:
-                return type_id
+        resolved = registry.match_substring(candidate)
+        if resolved:
+            return resolved
     return None
 
 

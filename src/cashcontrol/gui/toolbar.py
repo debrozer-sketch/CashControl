@@ -417,7 +417,7 @@ class CashToolbar(QWidget):
         ip = session.ip
         password = None
         if session.session and session.session.ssh_connected:
-            password = session.session.ssh._successful_password
+            password = session.session.ssh.successful_password
 
         if password:
             cmd = [
@@ -478,7 +478,7 @@ class CashToolbar(QWidget):
         os_type = "tinycore"
 
         if session.session and session.session.ssh_connected:
-            password = session.session.ssh._successful_password
+            password = session.session.ssh.successful_password
             os_type = session.os_type
 
         if not password:
@@ -586,10 +586,6 @@ class CashToolbar(QWidget):
 
         mw.registry.reload_commands()
 
-        from cashcontrol.core.cash_types import get_cash_type_registry
-
-        get_cash_type_registry().reload()
-
         from PySide6.QtWidgets import QMenu
 
         menu = QMenu(self)
@@ -645,6 +641,7 @@ class CashToolbar(QWidget):
         from PySide6.QtWidgets import QInputDialog
 
         registry = get_cash_type_registry()
+        registry.reload()
         definitions = sorted(registry.all(), key=lambda d: d.id)
         items = [f"{d.id} — {d.name}" for d in definitions]
         choice, ok = QInputDialog.getItem(
@@ -653,8 +650,10 @@ class CashToolbar(QWidget):
         if not ok:
             return
 
-        type_id = choice.split(" — ")[0].strip()
-        resolved = registry.resolve(type_id)
+        selected = next(
+            (d for d in definitions if f"{d.id} — {d.name}" == choice), None
+        )
+        resolved = selected.id if selected else None
         if not resolved or session_widget.session is None:
             return
 

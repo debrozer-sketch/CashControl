@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, Field
 
@@ -34,6 +34,10 @@ class CashTypeDefinition(BaseModel):
     def has(self, feature: str) -> bool:
         return feature in self.features
 
+    _KNOWN_TYPE_KEYS: ClassVar[frozenset[str]] = frozenset(
+        {"id", "name", "aliases", "icon", "extends", "os_hints", "features_mode"}
+    )
+
     @classmethod
     def from_toml(cls, data: dict[str, Any], default_id: str = "") -> CashTypeDefinition:
         type_table = dict(data.get("type") or {})
@@ -48,6 +52,14 @@ class CashTypeDefinition(BaseModel):
         for key in ("name", "aliases", "icon", "extends", "os_hints", "features_mode"):
             if key in type_table:
                 payload[key] = type_table[key]
+        ignored = set(type_table) - cls._KNOWN_TYPE_KEYS - {"id"}
+        if ignored:
+            from cashcontrol.infrastructure.audit_logger import get_logger
+
+            get_logger().warning(
+                f"Cash type '{payload['id']}': ignoring keys inside [type]: "
+                f"{sorted(ignored)} (top-level keys are separate)"
+            )
         return cls(**payload)
 
     def merged_dict(self) -> dict[str, Any]:

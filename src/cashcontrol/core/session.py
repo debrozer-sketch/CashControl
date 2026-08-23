@@ -94,7 +94,13 @@ class CashSession(SessionInterface):
         self._is_connected = True
         logger.info(f"SSH connected to {self._ip}")
         if connect_db:
-            self.setup_db(database="sco_v3")
+            database = None
+            from cashcontrol.core.cash_types import get_cash_type_registry
+
+            definition = get_cash_type_registry().get(self.cash_type)
+            if definition and definition.connection.db.enabled:
+                database = definition.connection.db.database
+            self.setup_db(database or "sco_v3")
             await self.connect_db()
         return True
 
@@ -129,11 +135,12 @@ class CashSession(SessionInterface):
 
     async def abort(self) -> None:
         """Hard-abort underlying connections (used on IP change)."""
-        conn = getattr(self._ssh, "_conn", None)
-        if conn is not None:
+        self._ssh.abort()
+        if self._db is not None:
             with contextlib.suppress(Exception):
-                conn.abort()
-            self._ssh._conn = None
+                await self._db.disconnect()
+            self._db = None
+            self._db_connected = False
         self._is_connected = False
 
     # ── Commands ─────────────────────────────────────────────────────────
@@ -186,9 +193,12 @@ class CashSession(SessionInterface):
             return False
 
     async def reboot(self) -> bool:
-        """Best-effort terminal reboot over SSH."""
+        """Best-effort terminal reboot over SSH.
+
+        Считается успешной, если команда принята ИЛИ соединение оборвалось
+        (ребут рвёт SSH до ответа — это нормальный исход)."""
         result = await self.exec("reboot -f || reboot", timeout=15.0)
-        return result.ok
+        return result.ok or not self.is_connected
 
     # ── Context manager ──────────────────────────────────────────────────
 
