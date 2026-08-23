@@ -1,25 +1,57 @@
 # CashControl — Build & Release
 
-## Полная сборка (Контур B)
+## Сборка portable-версии
 
-Требуется при изменениях:
-- Ядра (core/, infrastructure/, любые скомпилированные модули)
-- Публичного интерфейса между ядром и hot-модулями
-- Версии приложения
+Требуется только [uv](https://docs.astral.sh/uv/) и интернет при первой сборке
+(скачивается embedded Python ~11 МБ, кэшируется в `.build_cache/`).
 
-1. `build.bat` — компиляция Nuitka, создание `dist/CashControl/`
-2. `make_master.bat` — публикация полного мастер-образа на сервер обновлений
+```
+build.bat
+```
 
-## Быстрый релиз hot-модулей (Контур A)
+или вручную:
 
-Только когда правки **исключительно** в hot-модулях (toolbar, dialogs, vnc, widgets):
+```
+uv run python scripts/build_dist.py
+```
 
-1. Внести правки в `src/cashcontrol/gui/...`
-2. `update_modules.bat` — копирует только hot-файлы в мастер-образ + пересчитывает манифест
-3. Клиенты подхватят обновление без перезапуска (через цикл проверки или вручную `check_updates_now`)
+Результат — `dist\CashControl\`: одна переносимая папка.
 
-⚠️ **Важно:** Если правка одновременно затрагивает **ядро и hot-модуль** (изменился публичный интерфейс между ними), использовать `update_modules.bat` **нельзя** — обязателен полный Контур B.
+```
+CashControl.cmd          ← запуск (pythonw + app/main)
+version.txt, icon.ico
+docs/ data/ logs/ commands/ collectors/ soft/ cash_types/ detection/ modules/
+runtime/
+  python/                ← embedded CPython + stdlib
+  lib/site-packages.zip  ← чисто-Python зависимости
+  lib/<pkg>/             ← пакеты с расширениями (PySide6, numpy, ...)
+  app/cashcontrol/       ← код программы (.py)
+```
 
-## Быстрый пересчёт манифеста
+Проверка сборки: перенести/переименовать папку → запустить `CashControl.cmd`.
+Пользовательские данные (`data/`) создаются при первом запуске и уезжают
+вместе с папкой.
 
-`update_manifest.bat` — пересчитывает SHA-256 всех файлов в мастер-образе без копирования. Используется если файлы уже скопированы иными средствами.
+## Разработка
+
+```
+uv sync                                        # зависимости (CPython 3.12)
+uv run python -m cashcontrol.main              # запуск из исходников
+uv run pytest -q                               # тесты
+uv run ruff check src tests                    # линт (должен быть чистым)
+uv run python scripts/sync_version.py          # версия из version.txt → pyproject/__init__
+```
+
+## Версия и релиз
+
+1. Правится `version.txt`, затем `uv run python scripts/sync_version.py`.
+2. Коммит + push в ветку.
+3. Публикуемых «апдейтеров» больше нет — распространение = копирование папки.
+   Старые Nuitka/Inno-сценарии удалены (история в git).
+
+## Горячие правки в установленной версии
+
+Код лежит `.py` файлами в `runtime/app/cashcontrol/`. Точечный фикс можно
+внести прямо там; для GUI-модулей из hot-списка (toolbar, vnc_preview,
+db_viewer, dialogs, widgets) — положить файл в `modules/<путь>` поверх,
+оригинал не трогая. Перечитывается при следующем запуске.
