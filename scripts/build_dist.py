@@ -368,6 +368,17 @@ def write_launcher_cmd(out: Path) -> None:
     )
     log("fallback launcher written: CashControl.cmd")
 
+def purge_user_data(out: Path) -> None:
+    """Final safety: user data must never ship (also protects the installer
+    payload if the app was launched from dist after building)."""
+    for d in ("data", "logs"):
+        target = out / d
+        if target.is_dir():
+            for f in target.iterdir():
+                shutil.rmtree(f, ignore_errors=True) if f.is_dir() else f.unlink()
+            log(f"purged {d}/")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUT)
@@ -388,6 +399,7 @@ def main() -> int:
     build_modules_overlay(args.output)
     copy_user_content(args.output)
     build_launcher(args.output, version)
+    purge_user_data(args.output)
     log(f"DONE: {args.output}")
     return 0
 
