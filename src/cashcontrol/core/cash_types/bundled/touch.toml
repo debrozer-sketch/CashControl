@@ -2,6 +2,7 @@ features = [
     "fiscal_register",
     "barcode_from_xml",
     "scales_from_xml",
+    "drawer_close",
 ]
 
 [type]
