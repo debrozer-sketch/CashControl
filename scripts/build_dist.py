@@ -282,15 +282,91 @@ def copy_user_content(out: Path) -> None:
     log("root content copied")
 
 
-LAUNCHER_CMD = """@echo off
-start "" "%~dp0runtime\\python\\pythonw.exe" "%~dp0runtime\\app\\cashcontrol\\main.py"
+LAUNCHER_CS = """// CashControl portable launcher — starts embedded pythonw with app main.
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+[assembly: AssemblyTitle("CashControl")]
+[assembly: AssemblyProduct("CashControl")]
+[assembly: AssemblyCompany("CashControl Team")]
+[assembly: AssemblyFileVersion("{version}.0")]
+[assembly: AssemblyVersion("{version}.0")]
+
+static class Launcher
+{
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
+
+    [STAThread]
+    static int Main()
+    {
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string python = Path.Combine(baseDir, "runtime", "python", "pythonw.exe");
+        string script = Path.Combine(baseDir, "runtime", "app", "cashcontrol", "main.py");
+
+        if (!File.Exists(python) || !File.Exists(script))
+        {
+            MessageBoxW(IntPtr.Zero,
+                "runtime\\\\python\\\\pythonw.exe не найден. Раскладка установки повреждена.",
+                "CashControl", 0x10);
+            return 1;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = python,
+            Arguments = "\\"" + script + "\\"",
+            WorkingDirectory = baseDir,
+            UseShellExecute = false,
+        });
+        return 0;
+    }
+}
 """
 
 
-def write_launcher(out: Path) -> None:
-    (out / "CashControl.cmd").write_text(LAUNCHER_CMD, encoding="utf-8")
-    log("launcher written")
+def _find_csc() -> Path | None:
+    for candidate in (
+        Path(r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"),
+        Path(r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe"),
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
 
+
+def build_launcher(out: Path, version: str) -> None:
+    """Compile a tiny .NET-Framework exe (icon included) that starts pythonw."""
+    csc = _find_csc()
+    icon = out / "icon.ico"
+    if csc is None:
+        log("csc.exe not found — falling back to CashControl.cmd")
+        write_launcher_cmd(out)
+        return
+    src = CACHE_DIR / f"launcher_{version}.cs"
+    src.parent.mkdir(parents=True, exist_ok=True)
+    src.write_text(LAUNCHER_CS.replace("{version}", version), encoding="utf-8-sig")
+    exe = out / "CashControl.exe"
+    args = [
+        str(csc), "/nologo", "/target:winexe", f"/out:{exe}",
+        "/r:System.dll", f"/win32icon:{icon}", str(src),
+    ]
+    subprocess.run(args, check=True)
+    size_kb = exe.stat().st_size // 1024
+    log(f"launcher written: CashControl.exe ({size_kb} KB)")
+
+
+def write_launcher_cmd(out: Path) -> None:
+    (out / "CashControl.cmd").write_text(
+        '@echo off\r\n'
+        'start "" "%~dp0runtime\\python\\pythonw.exe" '
+        '"%~dp0runtime\\app\\cashcontrol\\main.py"\r\n',
+        encoding="utf-8",
+    )
+    log("fallback launcher written: CashControl.cmd")
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -311,7 +387,7 @@ def main() -> int:
     copy_app_code(args.output)
     build_modules_overlay(args.output)
     copy_user_content(args.output)
-    write_launcher(args.output)
+    build_launcher(args.output, version)
     log(f"DONE: {args.output}")
     return 0
 
