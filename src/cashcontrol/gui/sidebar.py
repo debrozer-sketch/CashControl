@@ -24,7 +24,7 @@ class SidebarPanel(QWidget):
 
     def _make_btn(self, icon: FluentIcon, tooltip: str) -> ToolButton:
         btn = ToolButton(icon, self)
-        btn.setObjectName("SideNavButton")
+        btn.setObjectName("sidebarBtn")
         btn.setFixedSize(_BTN_SIZE, _BTN_SIZE)
         btn.setIconSize(QSize(_ICON_SIZE, _ICON_SIZE))
         btn.setToolTip(tooltip)

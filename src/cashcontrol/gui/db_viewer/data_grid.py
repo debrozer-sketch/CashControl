@@ -35,6 +35,7 @@ class _DataGrid(QTableWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("dbGrid")
         self.setObjectName("DbGrid")
         self.setObjectName("dbGrid")
         from cashcontrol.gui.theme_helper import set_visual_role
