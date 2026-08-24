@@ -19,12 +19,11 @@ class SidebarPanel(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setFixedWidth(_SIDEBAR_WIDTH)
-        self.setObjectName("sidebar")
+        self.setObjectName("CashControlSidebar")
         self._init_ui()
 
     def _make_btn(self, icon: FluentIcon, tooltip: str) -> ToolButton:
         btn = ToolButton(icon, self)
-        btn.setObjectName("sidebarButton")
         btn.setFixedSize(_BTN_SIZE, _BTN_SIZE)
         btn.setIconSize(QSize(_ICON_SIZE, _ICON_SIZE))
         btn.setToolTip(tooltip)

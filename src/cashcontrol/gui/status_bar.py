@@ -40,7 +40,6 @@ _ANIM_MS     = 220
 class CashStatusBar(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("statusBar")
         self._expanded   = False
         self._active_ip: str | None = None
         self._anim: QPropertyAnimation | None = None
@@ -90,7 +89,6 @@ class CashStatusBar(QWidget):
         root.addWidget(collapsed_bar)
 
         self._expanded_panel = QWidget(self)
-        self._expanded_panel.setObjectName("statusDrawer")
         self._expanded_panel.setVisible(False)
         el = QVBoxLayout(self._expanded_panel)
         el.setContentsMargins(4, 2, 4, 4)

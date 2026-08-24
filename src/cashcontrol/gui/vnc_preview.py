@@ -1476,7 +1476,6 @@ class VncPreviewWidget(QWidget):
 
     def __init__(self, ip: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("vncPanel")
         self._ip = ip
         self._config = ConfigManager()
         self._session: CashSession | None = None
