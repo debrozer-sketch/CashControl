@@ -158,7 +158,7 @@ class CashToolbar(QWidget):
 
     def __init__(self, session_mgr: SessionManager, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("CashToolbar")
+        self.setObjectName("ActionToolbar")
         self._session_mgr = session_mgr
         self._config = ConfigManager()
         self._kb_container: QWidget | None = None
@@ -220,7 +220,6 @@ class CashToolbar(QWidget):
         c = _make_labeled_btn(FluentIcon.SCROLL, "Команды", "Выбрать и выполнить команду на кассе")
         self._commands_btn = c.btn
         self._commands_btn.clicked.connect(self._on_commands_clicked)
-        self._reboot_btn.setProperty("ccClass", "danger")
         layout.addWidget(c)
 
         # Hover-prefetch: наведение греет TCP-маршрут до кассы (см. gui/prefetch.py)
@@ -233,6 +232,11 @@ class CashToolbar(QWidget):
             btn.installEventFilter(self)
             btn.setMouseTracking(True)
 
+        for _b in (self._restart_btn, self._reboot_btn, self._vnc_btn,
+                 self._ssh_btn, self._winscp_btn, self._pg_btn,
+                 self._refresh_btn, self._commands_btn):
+            _b.setObjectName("ActionButton")
+        self._reboot_btn.setProperty("role", "danger")
         layout.addStretch()
 
     def eventFilter(self, obj, event) -> bool:

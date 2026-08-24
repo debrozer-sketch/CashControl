@@ -6,6 +6,8 @@ All GUI modules should use these helpers instead of hardcoding hex colors.
 
 from __future__ import annotations
 
+import re
+
 
 def is_dark() -> bool:
     """Return True if current qfluentwidgets theme is dark."""
@@ -19,115 +21,128 @@ def is_dark() -> bool:
 # ── Color palette ──────────────────────────────────────────────────────
 
 # Semantic color pairs: (light_value, dark_value)
-_COLORS = {
-    # ── Mimo «Операторский пульт» ──
-    "bg_app":           ("#F5F6F8", "#12141A"),
-    "bg_primary":       ("#F5F6F8", "#12141A"),
-    "bg_surface":       ("#FFFFFF", "#1A1D25"),
-    "bg_card":          ("#FFFFFF", "#1A1D25"),
-    "bg_surface_alt":   ("#F0F1F4", "#151820"),
-    "bg_secondary":     ("#F0F1F4", "#151820"),
-    "bg_elevated":      ("#FFFFFF", "#1A1D25"),
-    "bg_input":         ("#F8F9FA", "#13151B"),
-    "bg_hover":         ("#E8EAEE", "#222630"),
-    "bg_pressed":       ("#DCDFE4", "#1C2028"),
-    "bg_ok":            ("#E8F5EE", "#142A1E"),
-    "bg_slow":          ("#FFF8E6", "#2A2414"),
-    "bg_timeout":       ("#FDE8E8", "#2A1616"),
-    "bg_tertiary":      ("#F0F1F4", "#151820"),
-    "bg_tooltip":       ("#FFFFFF", "#1A1D25"),
-    "bg_dialog":        ("#F5F6F8", "#12141A"),
-    "bg_selected":      ("#4A6FA5", "#6B9BD2"),
-    "bg_warning":       ("#FFF8E6", "#2A2414"),
-    "bg_info":          ("#F0F1F4", "#151820"),
-    "bg_success":       ("#E8F5EE", "#142A1E"),
-    "bg_danger":        ("#FDE8E8", "#2A1616"),
-    "bg_table_alt":     ("#F0F1F4", "#151820"),
-    "bg_code":          ("#F0F1F4", "#151820"),
-
-    "text_primary":     ("#1A1D24", "#E8EAF0"),
-    "text_secondary":   ("#5A6170", "#8A92A4"),
-    "text_tertiary":    ("#9AA0AE", "#5A6478"),
-    "text_muted":       ("#9AA0AE", "#5A6478"),
-    "text_disabled":    ("#9AA0AE", "#5A6478"),
-    "text_on_accent":   ("#FFFFFF", "#E8EAF0"),
-    "text_inverse":     ("#FFFFFF", "#E8EAF0"),
-    "text_link":        ("#4A6FA5", "#6B9BD2"),
-    "text_heading":     ("#1A1D24", "#E8EAF0"),
-    "text_code":        ("#1E2530", "#D4D8E0"),
-
-    "border_default":   ("#D4D7DE", "#2A2F3A"),
-    "border_primary":   ("#D4D7DE", "#2A2F3A"),
-    "border_subtle":    ("#E4E6EB", "#222630"),
-    "border_secondary": ("#E4E6EB", "#222630"),
-    "border_input":     ("#D4D7DE", "#2A2F3A"),
-    "border_focus":     ("#4A6FA5", "#6B9BD2"),
-    "border_light":     ("#E4E6EB", "#222630"),
-    "tab_hover_border": ("#D4D7DE", "#2A2F3A"),
-    "control_border_bottom": ("#D4D7DE", "#2A2F3A"),
-
-    "accent":           ("#4A6FA5", "#6B9BD2"),
-    "accent_hover":     ("#3D5E8C", "#5A8AC0"),
-    "accent_pressed":   ("#2E4A6E", "#4A7AAE"),
-    "accent_text":      ("#4A6FA5", "#6B9BD2"),
-    "accent_fill":      ("#4A6FA5", "#6B9BD2"),
-    "accent_fill_hover": ("#3D5E8C", "#5A8AC0"),
-    "accent_fill_pressed": ("#2E4A6E", "#4A7AAE"),
-    "accent_subtle":    ("#E8EAEE", "#222630"),
-    "accent_subtle_hover": ("#DCDFE4", "#1C2028"),
-    "accent_light":     ("#E8EAEE", "#222630"),
-
-    "ok":               ("#2D8A5E", "#4ADE80"),
-    "slow":             ("#B8860B", "#FBBF24"),
-    "timeout":          ("#C53030", "#F87171"),
-    "unknown":          ("#8A92A4", "#5A6478"),
-    "success":          ("#2D8A5E", "#4ADE80"),
-    "warning":          ("#D97706", "#F59E0B"),
-    "error":            ("#C53030", "#F87171"),
-    "info":             ("#4A6FA5", "#6B9BD2"),
-    "status_ok":        ("#2D8A5E", "#4ADE80"),
-    "status_warn":      ("#B8860B", "#FBBF24"),
-    "status_error":     ("#C53030", "#F87171"),
-    "status_neutral":   ("#8A92A4", "#5A6478"),
-    "ok_subtle":        ("#E8F5EE", "#142A1E"),
-    "warn_subtle":      ("#FFF8E6", "#2A2414"),
-    "error_subtle":     ("#FDE8E8", "#2A1616"),
-
-    "control_fill":          ("#FFFFFF", "#1A1D25"),
-    "control_fill_hover":    ("#E8EAEE", "#222630"),
-    "control_fill_pressed":  ("#DCDFE4", "#1C2028"),
-    "control_fill_disabled": ("#F0F1F4", "#151820"),
-    "scrollbar_thumb":       ("#D4D7DE", "#2A2F3A"),
-    "scrollbar_thumb_hover": ("#5A6170", "#8A92A4"),
-    "scrollbar_hover":       ("#5A6170", "#8A92A4"),
-
-    "mono_bg":          ("#F0F1F4", "#151820"),
-    "mono_text":        ("#1E2530", "#D4D8E0"),
-    "sql_bg":           ("#F8F9FA", "#13151B"),
-    "sql_text":         ("#1E2530", "#D4D8E0"),
-    "sql_keyword":      ("#4A6FA5", "#6B9BD2"),
-    "sql_string":       ("#1E2530", "#D4D8E0"),
-    "sql_number":       ("#3D5E8C", "#5A8AC0"),
-    "sql_comment":      ("#9AA0AE", "#5A6478"),
-    "sql_function":     ("#5A6170", "#8A92A4"),
-
-    "separator":        ("#E4E6EB", "#222630"),
-
-    "btn_danger_bg":    ("#FDE8E8", "#2A1616"),
-    "btn_danger_hover": ("#C53030", "#F87171"),
-    "btn_flat_hover":   ("#E8EAEE", "#222630"),
-    "btn_cancel_bg":    ("#DCDFE4", "#1C2028"),
-
-    "vnc_bg":           ("#12141A", "#12141A"),
-
-    "table_header_bg":  ("#F0F1F4", "#151820"),
-    "table_header_text": ("#1A1D24", "#E8EAF0"),
-
-    "warning_border":   ("#B8860B", "#FBBF24"),
-    "warning_text":     ("#B8860B", "#FBBF24"),
-    "warning_bg":       ("#FFF8E6", "#2A2414"),
+# ── Vantage «Пульт диспетчера касс» (dash-ключи для QSS) ──
+TOKENS = {
+    "bg-base":    ("#F3F1EC", "#15181D"),
+    "bg-elev":    ("#FBFAF7", "#1E2229"),
+    "bg-sunken":  ("#ECE9E1", "#111419"),
+    "bg-hover":   ("#EBE8DF", "#272C35"),
+    "bg-pressed": ("#E1DDD2", "#2E3440"),
+    "bg-chip":    ("#ECEAE2", "#262B33"),
+    "vnc-bg":     ("#12151A", "#0E1116"),
+    "text-primary":   ("#20242B", "#E4E7EB"),
+    "text-secondary": ("#5C6270", "#A6AEB9"),
+    "text-disabled":  ("#9BA1A9", "#6B7280"),
+    "text-data":      ("#1F3A52", "#C7D5E4"),
+    "line-weak":   ("#E3DFD5", "#272C34"),
+    "line-strong": ("#D2CDC0", "#353C47"),
+    "accent":         ("#0F766E", "#55C0B4"),
+    "accent-hover":   ("#0C6560", "#6BCCC1"),
+    "accent-pressed": ("#0A5751", "#3FA79B"),
+    "soft-accent":    ("#DDEDE9", "#17322F"),
+    "ok":   ("#2E7D32", "#66BB6A"),
+    "warn": ("#A16207", "#E3B341"),
+    "err":  ("#B3261E", "#E57373"),
+    "info": ("#33608C", "#86AEDD"),
+    "soft-ok":   ("#E2EFE1", "#1C3024"),
+    "soft-warn": ("#F6ECD7", "#372F18"),
+    "soft-err":  ("#F5E2E0", "#3A2223"),
+    "sel-bg":   ("#CFE4E0", "#23423D"),
+    "sel-text": ("#20242B", "#E4E7EB"),
+    "scroll-handle": ("#C6C1B4", "#3A414C"),
+    "tooltip-bg":   ("#272C33", "#272C33"),
+    "tooltip-text": ("#F2F4F6", "#F2F4F6"),
+    "ping-ok":      ("#2B8A3E", "#52BD68"),
+    "ping-slow":    ("#B58900", "#E0B13C"),
+    "ping-timeout": ("#C0352B", "#DE5D52"),
+    "ping-unknown": ("#9AA1A9", "#767E89"),
 }
 
+# Алиасы legacy underscore-ключей → TOKENS
+_COLORS = {
+    "bg_primary": TOKENS["bg-base"],
+    "bg_secondary": TOKENS["bg-base"],
+    "bg_card": TOKENS["bg-elev"],
+    "bg_surface": TOKENS["bg-elev"],
+    "bg_elevated": TOKENS["bg-elev"],
+    "bg_input": TOKENS["bg-elev"],
+    "bg_tertiary": TOKENS["bg-sunken"],
+    "bg_tooltip": TOKENS["tooltip-bg"],
+    "bg_dialog": TOKENS["bg-base"],
+    "bg_hover": TOKENS["bg-hover"],
+    "bg_pressed": TOKENS["bg-pressed"],
+    "bg_selected": TOKENS["sel-bg"],
+    "bg_warning": TOKENS["soft-warn"],
+    "bg_info": TOKENS["soft-accent"],
+    "bg_success": TOKENS["soft-ok"],
+    "bg_danger": TOKENS["soft-err"],
+    "bg_table_alt": TOKENS["bg-elev"],
+    "bg_code": TOKENS["bg-sunken"],
+    "text_primary": TOKENS["text-primary"],
+    "text_secondary": TOKENS["text-secondary"],
+    "text_tertiary": TOKENS["text-secondary"],
+    "text_disabled": TOKENS["text-disabled"],
+    "text_on_accent": ("#FFFFFF", "#0A2723"),
+    "text_link": TOKENS["info"],
+    "text_heading": TOKENS["text-primary"],
+    "text_code": TOKENS["text-data"],
+    "border_primary": TOKENS["line-strong"],
+    "border_subtle": TOKENS["line-weak"],
+    "border_secondary": TOKENS["line-weak"],
+    "border_input": TOKENS["line-strong"],
+    "border_focus": TOKENS["accent"],
+    "border_light": TOKENS["line-weak"],
+    "tab_hover_border": TOKENS["line-strong"],
+    "control_border_bottom": TOKENS["line-strong"],
+    "accent_text": TOKENS["accent"],
+    "accent_fill": TOKENS["accent"],
+    "accent_fill_hover": TOKENS["accent-hover"],
+    "accent_fill_pressed": TOKENS["accent-pressed"],
+    "accent_subtle": TOKENS["soft-accent"],
+    "accent_subtle_hover": TOKENS["bg-hover"],
+    "accent_light": TOKENS["soft-accent"],
+    "accent_hover": TOKENS["accent-hover"],
+    "accent_pressed": TOKENS["accent-pressed"],
+    "success": TOKENS["ok"],
+    "warning": TOKENS["warn"],
+    "error": TOKENS["err"],
+    "info": TOKENS["info"],
+    "status_ok": TOKENS["ping-ok"],
+    "status_warn": TOKENS["ping-slow"],
+    "status_error": TOKENS["ping-timeout"],
+    "status_neutral": TOKENS["ping-unknown"],
+    "ok_subtle": TOKENS["soft-ok"],
+    "warn_subtle": TOKENS["soft-warn"],
+    "error_subtle": TOKENS["soft-err"],
+    "bg_ok": TOKENS["soft-ok"],
+    "bg_slow": TOKENS["soft-warn"],
+    "bg_timeout": TOKENS["soft-err"],
+    "control_fill": TOKENS["bg-elev"],
+    "control_fill_hover": TOKENS["bg-hover"],
+    "control_fill_pressed": TOKENS["bg-pressed"],
+    "control_fill_disabled": TOKENS["bg-sunken"],
+    "scrollbar_thumb": TOKENS["scroll-handle"],
+    "scrollbar_thumb_hover": TOKENS["line-strong"],
+    "scrollbar_hover": TOKENS["line-strong"],
+    "sql_bg": TOKENS["bg-sunken"],
+    "sql_text": TOKENS["text-primary"],
+    "sql_keyword": TOKENS["accent"],
+    "sql_string": TOKENS["text-data"],
+    "sql_number": TOKENS["info"],
+    "sql_comment": TOKENS["text-disabled"],
+    "sql_function": TOKENS["text-secondary"],
+    "separator": TOKENS["line-weak"],
+    "btn_danger_bg": TOKENS["soft-err"],
+    "btn_danger_hover": TOKENS["err"],
+    "btn_flat_hover": TOKENS["bg-hover"],
+    "btn_cancel_bg": TOKENS["bg-pressed"],
+    "vnc_bg": TOKENS["vnc-bg"],
+    "table_header_bg": TOKENS["bg-base"],
+    "table_header_text": TOKENS["text-secondary"],
+    "warning_border": TOKENS["warn"],
+    "warning_text": TOKENS["warn"],
+    "warning_bg": TOKENS["soft-warn"],
+}
 
 
 def color(name: str) -> str:
@@ -141,6 +156,17 @@ def color(name: str) -> str:
     if pair is None:
         return "#ff00ff"  # magenta — easy to spot missing colors
     return pair[1] if is_dark() else pair[0]
+
+
+def resolve(qss: str) -> str:
+    """Подстановка @dash-токенов vantage в QSS."""
+    def repl(m: re.Match[str]) -> str:
+        name = m.group(1)
+        if name in TOKENS:
+            return color(name)
+        return m.group(0)
+
+    return re.sub(r"@([a-z0-9-]+)", repl, qss)
 
 
 def colors(*names: str) -> tuple[str, ...]:

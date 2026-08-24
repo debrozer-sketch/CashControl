@@ -140,6 +140,7 @@ class _LogPanel(QWidget):
 
         # ── Log text area ────────────────────────────────────────────────────
         self._text = QPlainTextEdit(self)
+        self._text.setObjectName("MonoPanel")
         from cashcontrol.gui.theme_helper import set_visual_role
 
         set_visual_role(self._text, "logViewer")

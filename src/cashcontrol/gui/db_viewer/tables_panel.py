@@ -33,7 +33,6 @@ class _TablesPanel(QWidget):
 
     def __init__(self, factory, parent=None):
         super().__init__(parent)
-        self.setObjectName("dbSide")
         self._factory = factory
         self._database = factory.database
         self._schema = 'public'
@@ -53,6 +52,7 @@ class _TablesPanel(QWidget):
         self._search.textChanged.connect(self._apply_search)
         lay.addWidget(self._search)
         self._list = QListWidget(self)
+        self._list.setObjectName("TableList")
         self._list.setFont(QFont('Segoe UI', 10))
         self._list.setIconSize(QSize(16, 16))
         self._list.setTextElideMode(Qt.ElideRight)
