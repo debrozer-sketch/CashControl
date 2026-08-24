@@ -21,268 +21,216 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-CORE_QSS = """/* ===== БРУТАЛИСТСКАЯ КАРТОЧНАЯ КАРТОТЕКА (ai/brutalist-archive) ===== */
-QWidget { font-family: "Segoe UI", Arial, sans-serif; font-size: 12px; color: @text_primary; }
+CORE_QSS = """/* ===== ТАБЛО И ЭМАЛЬ (ai/tablo-emal.txt) ===== */
 QMainWindow { background: @bg_primary; }
 QDialog { background: @bg_dialog; }
-
 QToolTip {
-    background: @bg_tooltip; color: @text_on_accent;
-    border: none; border-radius: 4px; padding: 6px 10px; font-size: 12px;
+    background: @bg_tooltip; color: @bg_primary;
+    border: 1px solid @border_secondary; padding: 4px 8px;
 }
 
-/* ===== САЙДБАР ===== */
-#CashControlSidebar {
-    background: @bg_elevated;
-    border-right: 1px solid @border_subtle;
+/* --- скроллбары --- */
+QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
+QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px; }
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background: @scrollbar_thumb; border-radius: 2px;
+    min-height: 24px; min-width: 24px;
 }
-#CashControlSidebar QToolButton {
-    border-radius: 20px;
-    background: transparent;
-    border: 1px solid transparent;
-    padding: 9px;
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background: @scrollbar_thumb_hover;
 }
-#CashControlSidebar QToolButton:hover {
-    background: @bg_hover; border-color: @border_subtle;
-}
-#CashControlSidebar QToolButton:pressed {
-    background: @bg_pressed; border-color: @border_primary;
-}
+QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
 
-/* ===== ВКЛАДКИ ===== */
-#sessionTabArea {
-    background: @bg_secondary;
-    border-bottom: 1px solid @border_subtle;
-}
-#sessionTabArea QTabBar::tab {
-    background: @bg_secondary;
-    color: @text_secondary;
-    border: 1px solid @border_subtle;
-    border-bottom: none;
-    border-radius: 4px 4px 0 0;
-    padding: 6px 14px;
-    min-width: 120px;
-    max-width: 220px;
-    font-size: 12px;
-}
-#sessionTabArea QTabBar::tab:selected {
-    background: @bg_card;
-    color: @text_primary;
-    border-bottom: 2px solid @accent;
-}
-#sessionTabArea QTabBar::tab:hover:!selected {
-    background: @bg_hover;
-    border-bottom: 1px solid @tab_hover_border;
-}
-
-/* ===== ТОЧКА ПИНГА ===== */
-#pingDot {
-    border-radius: 4px;
-    background: @text_tertiary;
-}
-#pingDot[ping="ok"] { background: @success; }
-#pingDot[ping="slow"] { background: @warning; }
-#pingDot[ping="timeout"] { background: @error; }
-#pingDot[ping="unknown"] { background: @text_tertiary; }
-
-/* ===== ТУЛБАР 66×54 ===== */
-#CashToolbar {
-    background: @bg_elevated;
-    border-bottom: 1px solid @border_subtle;
-    padding: 3px 8px;
-}
-#ActionButton {
-    border-radius: 6px;
-    border: 1px solid @border_subtle;
-    background: @bg_surface;
-    padding: 6px 2px 3px 2px;
-    font-size: 10px;
-    color: @text_primary;
-}
-#ActionButton:hover {
-    background: @bg_hover; border-color: @accent;
-}
-#ActionButton:pressed {
-    background: @bg_pressed; border-color: @border_focus;
-}
-#ActionButton:disabled {
-    background: @bg_disabled; color: @text_disabled;
-    border-color: @border_subtle;
-}
-#btnReboot {
-    background: @btn_danger_bg; border-color: @btn_danger_bg;
-    color: @text_on_accent;
-}
-#btnReboot:hover {
-    background: @btn_danger_hover; border-color: @btn_danger_hover;
-}
-#btnRestart {
-    background: @accent_fill; border-color: @accent;
-    color: @accent_text;
-}
-#btnRestart:hover {
-    background: @accent_fill_hover; border-color: @accent_fill_hover;
-}
-
-/* ===== VNC ===== */
-#vncPanel {
-    background: @vnc_bg;
-    border: 1px solid @border_primary;
-}
-
-/* ===== КАРТОЧКИ ===== */
-#InfoCard {
-    background: @bg_card;
-    border: 1px solid @border_subtle;
-    border-left: 3px solid @accent;
-    border-radius: 8px;
-    padding: 12px;
-    margin: 0 8px 8px 8px;
-}
-#InfoCard[status="loading"]  { border-left-color: @text_tertiary; }
-#InfoCard[status="data"]     { border-left-color: @accent; }
-#InfoCard[status="timeout"] {
-    border-left-color: @warning;
-    background: @warning_bg;
-}
-#InfoCard[status="error"] {
-    border-left-color: @error;
-    background: @bg_danger;
-}
-#InfoCardTitle {
-    font-size: 13px; font-weight: 600;
-    color: @text_heading; padding-bottom: 6px;
-}
-#InfoCard[status="timeout"] #InfoCardTitle { color: @warning_text; }
-#InfoCard[status="error"] #InfoCardTitle { color: @error; }
-
-/* ===== СТАТУС-БАР ===== */
-#StatusBar {
-    background: @bg_secondary;
-    border-top: 1px solid @border_subtle;
-}
-#notificationPanel {
-    background: @bg_surface;
-    border: 1px solid @border_default;
-    border-radius: 6px 6px 0 0;
-}
-
-/* ===== DB VIEWER ===== */
-#DbGrid {
-    background: @bg_card;
-    border: 1px solid @border_primary;
-    alternate-background-color: @bg_table_alt;
-    gridline-color: @border_subtle;
-    selection-background-color: @accent_subtle;
-    selection-color: @text_primary;
-}
-#DbGrid QHeaderView::section {
-    background: @table_header_bg;
-    color: @table_header_text;
-    padding: 6px 12px;
-    border-right: 1px solid @border_subtle;
-    border-bottom: 1px solid @border_subtle;
-    font-weight: 600;
-    font-size: 12px;
-}
-#DbGrid::item { padding: 4px 8px; }
-
-#TableList {
-    background: @bg_surface;
-    border-right: 1px solid @border_subtle;
-    outline: none;
-}
-#TableList::item {
-    padding: 6px 12px; min-height: 28px; border-radius: 4px;
-}
-#TableList::item:selected { background: @accent_subtle; }
-
-/* ===== SQL / ЛОГИ / МОНО ===== */
-#SqlConsole {
-    background: @sql_bg; color: @sql_text;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 12px;
-    border-top: 1px solid @border_primary;
-    padding: 4px;
-}
-#logViewer {
-    background: @bg_code; color: @text_code;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 11px;
-}
-#MonoPanel {
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 12px; background: @bg_code; color: @text_code;
-}
-
-/* ===== СКЕЛЕТОН ===== */
-#skeletonBar {
-    background: @control_fill; border-radius: 2px;
-}
-
-/* ===== ПОЛЯ 30px ===== */
-QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
-    background: @bg_input; border: 1px solid @border_input;
-    border-radius: 4px; padding: 7px 10px;
-    color: @text_primary;
-    selection-background-color: @accent_subtle; selection-color: @text_primary;
-}
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus {
-    border: 1px solid @border_focus;
-}
-QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
-    background: @bg_disabled; color: @text_disabled;
-}
-
-/* ===== КНОПКИ ===== */
-QPushButton {
-    background: @control_fill; border: 1px solid @border_secondary;
-    border-radius: 4px; padding: 6px 16px;
-    color: @text_primary;
-}
-QPushButton:hover { background: @control_fill_hover; }
-QPushButton:pressed { background: @control_fill_pressed; }
-QPushButton:disabled { background: @control_fill_disabled; color: @text_disabled; }
-QPushButton:focus { border: 1px solid @border_focus; }
-
-/* ===== МЕНЮ ===== */
+/* --- меню: маршрутная полоса на выбранном пункте --- */
 QMenu {
-    background: @bg_elevated; border: 1px solid @border_primary;
-    border-radius: 6px; padding: 4px;
+    background: @bg_elevated; border: 1px solid @border_primary; padding: 4px;
 }
 QMenu::item {
-    padding: 8px 12px 8px 32px;
-    min-height: 28px; border-radius: 4px;
+    padding: 6px 28px 6px 12px; color: @text_primary;
+    border-left: 3px solid transparent;
 }
-QMenu::item:selected { background: @bg_hover; }
+QMenu::item:selected { background: @accent_subtle; border-left: 3px solid @accent; }
 QMenu::item:disabled { color: @text_disabled; }
 QMenu::separator { height: 1px; background: @separator; margin: 4px 8px; }
 
-/* ===== СКРОЛЛБАРЫ ===== */
-QScrollBar:vertical { background: transparent; width: 10px; margin: 4px 2px; }
-QScrollBar::handle:vertical {
-    background: @scrollbar_thumb; border-radius: 5px; min-height: 30px;
+/* --- поля: 30px задаёт код --- */
+QLineEdit, QPlainTextEdit, QComboBox, QSpinBox {
+    background: @bg_input; color: @text_primary;
+    border: 1px solid @border_input; border-radius: 4px; padding: 4px 8px;
+    selection-background-color: @accent_subtle; selection-color: @text_primary;
 }
-QScrollBar::handle:vertical:hover { background: @scrollbar_thumb_hover; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; border: none; }
-QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px 4px; }
-QScrollBar::handle:horizontal {
-    background: @scrollbar_thumb; border-radius: 5px; min-width: 30px;
+QLineEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {
+    border: 1px solid @border_focus;
 }
-QScrollBar::handle:horizontal:hover { background: @scrollbar_thumb_hover; }
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; border: none; }
+QLineEdit:disabled, QComboBox:disabled { background: @bg_disabled; color: @text_disabled; }
+QComboBox QAbstractItemView {
+    background: @bg_elevated; border: 1px solid @border_primary;
+    selection-background-color: @accent_subtle; selection-color: @text_primary;
+    outline: none;
+}
 
-/* ===== ПРОЧЕЕ ===== */
-QProgressBar {
-    background: @control_fill; border: none;
-    border-radius: 4px; text-align: center;
+/* --- сайдбар: жетоны --- */
+#CashControlSidebar {
+    background: @bg_secondary; border-right: 1px solid @border_primary;
 }
-QProgressBar::chunk { background: @accent; border-radius: 4px; }
+#CashControlSidebar QToolButton {
+    background: transparent; border: 1px solid transparent; border-radius: 20px;
+}
+#CashControlSidebar QToolButton:hover {
+    background: @btn_flat_hover; border: 1px solid @accent;
+}
+#CashControlSidebar QToolButton:pressed { background: @accent_fill; }
 
-QTextBrowser {
-    background: @bg_code; color: @text_code;
-    border: none; padding: 8px;
+/* --- вкладки-станции --- */
+#sessionTabArea { background: @bg_primary; }
+#TabRail { background: @rail; max-height: 2px; }
+
+/* --- бусина пинга: цвет + форма --- */
+#pingDot { border-radius: 5px; }
+#pingDot[ping="ok"]      { background: @success; border: 1px solid @success; }
+#pingDot[ping="slow"]    { background: transparent; border: 3px solid @warning; }
+#pingDot[ping="timeout"] { background: @error; border: 1px solid @error; border-radius: 0; }
+#pingDot[ping="unknown"] { background: transparent; border: 1px solid @text_tertiary; }
+
+/* --- тулбар: эмалевые пластины 66x54 (размер — код) --- */
+#CashToolbar, #actionToolbar {
+    background: @bg_surface; border-bottom: 1px solid @border_primary;
 }
+#ActionButton {
+    background: @control_fill; color: @text_secondary; font-size: 11px;
+    border: 1px solid @border_subtle; border-radius: 4px; padding: 0;
+}
+#ActionButton:hover {
+    background: @btn_flat_hover; color: @text_primary;
+    border: 1px solid @border_primary;
+}
+#ActionButton:pressed {
+    background: @accent_fill; color: @text_on_accent;
+    border: 1px solid @accent_pressed;
+}
+#ActionButton:disabled {
+    background: @control_fill_disabled; color: @text_disabled;
+    border: 1px solid @border_subtle;
+}
+#ActionButton[danger="true"] { color: @error; border: 1px solid @error; }
+#ActionButton[danger="true"]:hover {
+    background: @btn_danger_bg; color: #FFFFFF;
+}
+#ActionButton[danger="true"]:pressed {
+    background: @btn_danger_hover; color: #FFFFFF;
+}
+#ToolbarDivider { background: @separator; max-width: 1px; }
+
+/* --- VNC --- */
+#vncPanel {
+    background: @vnc_bg; border: 1px solid @border_secondary; border-radius: 4px;
+}
+
+/* --- карточки с маршрутной линией --- */
+#InfoCard {
+    background: @bg_card; border: 1px solid @border_primary;
+    border-left: 4px solid @route_idle;
+    border-radius: 4px; padding: 12px;
+}
+#InfoCard[route="pos"]   { border-left: 4px solid @route_pos; }
+#InfoCard[route="hw"]    { border-left: 4px solid @route_hw; }
+#InfoCard[route="misc"]  { border-left: 4px solid @route_misc; }
+#InfoCard[route="idle"]  { border-left: 4px solid @route_idle; }
+
+#InfoCard[state="loading"] {
+    border-left: 4px solid @route_idle; background: @bg_card;
+}
+#InfoCard[state="timeout"] {
+    border: 1px dashed @warning_border;
+    border-left: 4px solid @warning_border;
+}
+#InfoCard[state="error"] {
+    border: 1px solid @error; border-left: 4px solid @error;
+}
+
+#CardTitle { color: @text_heading; font-size: 13px; font-weight: bold; background: transparent; }
+#CardRule { background: @separator; max-height: 1px; }
+#skeletonBar { background: @bg_tertiary; border-radius: 2px; }
+#SeverityBadge[sev="warning"] {
+    background: @bg_warning; color: @warning_text;
+    border: 1px solid @warning_border; border-radius: 3px; padding: 1px 6px;
+}
+#SeverityBadge[sev="error"] {
+    background: @bg_danger; color: @error;
+    border: 1px solid @error; border-radius: 3px; padding: 1px 6px;
+}
+
+/* --- статус-бар / история --- */
+#StatusBar {
+    background: @bg_secondary; color: @text_secondary;
+    border-top: 1px solid @border_primary;
+}
+#StatusChip[result="ok"]    { background: @success; max-width: 4px; }
+#StatusChip[result="error"] { background: @error;   max-width: 4px; }
+#StatusChip[result="idle"]  { background: @route_idle; max-width: 4px; }
+#HistoryPanel {
+    background: @bg_elevated; border: 1px solid @border_primary; border-bottom: none;
+}
+
+/* --- моно-поверхности --- */
+#MonoPanel, #logViewer, #SqlConsole {
+    background: @sql_bg; color: @sql_text; border: 1px solid @border_input;
+    border-radius: 4px; font-family: Consolas, "Cascadia Mono"; font-size: 12px;
+    padding: 6px 8px; selection-background-color: @accent_subtle;
+}
+
+/* --- DB Viewer --- */
+#TableList { background: @bg_surface; border: 1px solid @border_primary; outline: none; }
+#TableList::item {
+    padding: 4px 8px; color: @text_primary; border-left: 3px solid transparent;
+}
+#TableList::item:hover { background: @bg_hover; }
+#TableList::item:selected {
+    background: @accent_subtle; border-left: 3px solid @accent; color: @text_primary;
+}
+#DbGrid {
+    background: @bg_card; alternate-background-color: @bg_table_alt;
+    border: 1px solid @border_primary; gridline-color: @border_subtle;
+    selection-background-color: @bg_selected; selection-color: @text_primary;
+    outline: none;
+}
+#DbGrid::item { padding: 2px 4px; }
+QHeaderView::section {
+    background: @table_header_bg; color: @table_header_text;
+    font-weight: bold; border: none;
+    border-right: 1px solid @border_subtle; border-bottom: 2px solid @border_secondary;
+    padding: 3px 6px;
+}
+#SqlResultBar {
+    background: @bg_surface; color: @text_secondary;
+    border-top: 1px solid @border_subtle; font-family: Consolas;
+}
+#SqlResultBar[state="error"] { background: @bg_danger; color: @error; }
+
+/* --- кнопки диалогов (32px — код) --- */
+QPushButton {
+    background: @control_fill; color: @text_primary;
+    border: 1px solid @border_primary; border-radius: 4px; padding: 5px 16px;
+}
+QPushButton:hover { background: @control_fill_hover; }
+QPushButton:pressed { background: @control_fill_pressed; }
+QPushButton:disabled {
+    background: @control_fill_disabled; color: @text_disabled;
+    border: 1px solid @border_subtle;
+}
+QPushButton[primary="true"] {
+    background: @accent_fill; color: @text_on_accent;
+    border: 1px solid @accent_pressed;
+}
+QPushButton[primary="true"]:hover { background: @accent_fill_hover; }
+QPushButton[primary="true"]:pressed { background: @accent_fill_pressed; }
+QPushButton[cancel="true"] { background: @btn_cancel_bg; }
+QPushButton[danger="true"] {
+    background: @btn_danger_bg; color: #FFFFFF;
+    border: 1px solid @btn_danger_hover;
+}
+QPushButton[danger="true"]:hover { background: @btn_danger_hover; }
 """
 
 

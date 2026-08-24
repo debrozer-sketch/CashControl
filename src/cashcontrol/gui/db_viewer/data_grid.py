@@ -36,6 +36,8 @@ class _DataGrid(QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("DbGrid")
+        self.setAlternatingRowColors(True)
+        self.setObjectName("DbGrid")
         self.setObjectName("dbGrid")
         self.setObjectName("dbGrid")
         self.setObjectName("DbGrid")

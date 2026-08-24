@@ -33,6 +33,7 @@ class _TablesPanel(QWidget):
 
     def __init__(self, factory, parent=None):
         super().__init__(parent)
+        self.setObjectName("dbSidebar")
         self._factory = factory
         self._database = factory.database
         self._schema = 'public'

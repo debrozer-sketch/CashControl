@@ -18,9 +18,12 @@ class InfoGroupWidget(QFrame):
     no emoji icons. Supports progressive field addition and alias links.
     """
 
-    def __init__(self, title: str, parent: QWidget | None = None) -> None:
+    def __init__(self, title: str, parent: QWidget | None = None,
+                 route: str | None = None) -> None:
         super().__init__(parent)
         self.setObjectName("InfoCard")
+        if route:
+            self.setProperty("route", route)
         self._title_text = title
         self._fields: list[InfoField] = []
 
@@ -30,7 +33,7 @@ class InfoGroupWidget(QFrame):
         self._layout.setSpacing(4)
 
         self._title = QLabel(f"<b>{title}</b>")
-        self._title.setObjectName("InfoCardTitle")
+        self._title.setObjectName("CardTitle")
         self._title.setTextFormat(Qt.TextFormat.RichText)
         self._title.setStyleSheet(f"font-size: 13px; color: {_tc('text_primary')};")
         self._layout.addWidget(self._title)
@@ -49,9 +52,7 @@ class InfoGroupWidget(QFrame):
         self.show_loading()
 
     def show_loading(self) -> None:
-        self.setProperty("status", "loading")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self.setProperty("state", "loading")
         self._show_skeleton()
         self.setStyleSheet("")
 
@@ -84,17 +85,13 @@ class InfoGroupWidget(QFrame):
 
     def show_timeout(self) -> None:
         self._clear_skeleton()
-        self.setProperty("status", "timeout")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self.setProperty("state", "timeout")
         self._body.setText("<i>Таймаут</i>")
         self.setStyleSheet("")
 
     def show_error(self, error: str | None = None) -> None:
         self._clear_skeleton()
-        self.setProperty("status", "error")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self.setProperty("state", "error")
         text = f"<i>{error or 'Ошибка'}</i>"
         self._body.setText(text)
         self.setStyleSheet("")
@@ -102,9 +99,7 @@ class InfoGroupWidget(QFrame):
     def add_items(self, fields: list[InfoField]) -> None:
         """Append multiple InfoFields to this group and refresh display."""
         self._clear_skeleton()
-        self.setProperty("status", "data")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self.setProperty("state", "data")
         self._fields.extend(fields)
         self._render_body()
 

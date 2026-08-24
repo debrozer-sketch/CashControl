@@ -86,7 +86,6 @@ class _SqlEdit(QPlainTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("SqlEdit")
         self.setFont(_mono())
         self._hist, self._hist_pos = [], -1
 

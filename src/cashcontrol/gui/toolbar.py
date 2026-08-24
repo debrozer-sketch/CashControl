@@ -236,8 +236,7 @@ class CashToolbar(QWidget):
                  self._ssh_btn, self._winscp_btn, self._pg_btn,
                  self._refresh_btn, self._commands_btn):
             _b.setObjectName("ActionButton")
-        self._reboot_btn.setObjectName("btnReboot")
-        self._restart_btn.setObjectName("btnRestart")
+        self._reboot_btn.setProperty("danger", True)
         layout.addStretch()
 
     def eventFilter(self, obj, event) -> bool:

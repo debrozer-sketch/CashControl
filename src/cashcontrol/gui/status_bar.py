@@ -90,6 +90,7 @@ class CashStatusBar(QWidget):
         root.addWidget(collapsed_bar)
 
         self._expanded_panel = QWidget(self)
+        self._expanded_panel.setObjectName("HistoryPanel")
         self._expanded_panel.setVisible(False)
         el = QVBoxLayout(self._expanded_panel)
         el.setContentsMargins(4, 2, 4, 4)
