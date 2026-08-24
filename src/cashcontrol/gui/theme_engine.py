@@ -13,7 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 from qfluentwidgets import Theme, isDarkTheme, setTheme, setThemeColor
 
@@ -21,465 +21,691 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-CORE_QSS = """
-/* ===== ROOT / APP ===== */
-QMainWindow, QDialog, QWidget#appRoot {
-    background-color: @bg.app;
-    color: @text.primary;
-    font-family: "Segoe UI", "Inter", sans-serif;
-    font-size: 13px;
+CORE_QSS = """/* ---------- Base ---------- */
+
+QWidget {
+    background-color: @bg_app;
+    color: @text_primary;
+    font-family: "Segoe UI";
+    font-size: 12px;
+}
+
+QMainWindow,
+QDialog,
+QWizard {
+    background-color: @bg_app;
+}
+
+QLabel {
+    background: transparent;
+    color: @text_primary;
+}
+
+QLabel[role="secondary"] {
+    color: @text_secondary;
+}
+
+QLabel[role="muted"] {
+    color: @text_muted;
+}
+
+QLabel[mono="true"],
+QLineEdit[mono="true"],
+QPlainTextEdit[mono="true"],
+QTextEdit[mono="true"] {
+    font-family: "Cascadia Mono";
+}
+
+QLabel[severity="success"] { color: @success; }
+QLabel[severity="warning"] { color: @warning; }
+QLabel[severity="error"]   { color: @danger; }
+QLabel[severity="info"]    { color: @info; }
+
+/* ---------- Inputs ---------- */
+
+QLineEdit,
+QTextEdit,
+QPlainTextEdit,
+QSpinBox,
+QDoubleSpinBox,
+QComboBox {
+    min-height: 30px;
+    padding: 0 8px;
+    color: @text_primary;
+    background-color: @bg_surface;
+    border: 1px solid @border;
+    border-radius: 5px;
+    selection-background-color: @bg_selected;
+    selection-color: @text_primary;
+}
+
+QTextEdit,
+QPlainTextEdit {
+    padding: 7px 8px;
+}
+
+QLineEdit:hover,
+QTextEdit:hover,
+QPlainTextEdit:hover,
+QSpinBox:hover,
+QDoubleSpinBox:hover,
+QComboBox:hover {
+    border-color: @border_strong;
+}
+
+QLineEdit:focus,
+QTextEdit:focus,
+QPlainTextEdit:focus,
+QSpinBox:focus,
+QDoubleSpinBox:focus,
+QComboBox:focus {
+    border: 2px solid @focus;
+}
+
+QLineEdit[validation="error"],
+QTextEdit[validation="error"],
+QPlainTextEdit[validation="error"] {
+    border: 1px solid @danger;
+    background-color: @danger_soft;
+}
+
+QLineEdit:disabled,
+QTextEdit:disabled,
+QPlainTextEdit:disabled,
+QComboBox:disabled {
+    color: @text_disabled;
+    background-color: @bg_disabled;
+    border-color: @border_subtle;
+}
+
+/* ---------- Buttons ---------- */
+
+QPushButton,
+QToolButton {
+    min-height: 30px;
+    padding: 0 10px;
+    color: @text_primary;
+    background-color: @bg_surface;
+    border: 1px solid @border;
+    border-radius: 5px;
+}
+
+QPushButton:hover,
+QToolButton:hover {
+    background-color: @bg_hover;
+    border-color: @border_strong;
+}
+
+QPushButton:pressed,
+QToolButton:pressed {
+    background-color: @bg_pressed;
+}
+
+QPushButton:checked,
+QToolButton:checked {
+    color: @accent;
+    background-color: @accent_soft;
+    border-color: @accent;
+}
+
+QPushButton:focus,
+QToolButton:focus {
+    border: 2px solid @focus;
+}
+
+QPushButton:disabled,
+QToolButton:disabled {
+    color: @text_disabled;
+    background-color: @bg_disabled;
+    border-color: @border_subtle;
+}
+
+QPushButton[role="primary"],
+QToolButton[role="primary"] {
+    color: @text_inverse;
+    background-color: @accent;
+    border-color: @accent;
+    font-weight: 600;
+}
+
+QPushButton[role="primary"]:hover,
+QToolButton[role="primary"]:hover {
+    background-color: @accent_hover;
+    border-color: @accent_hover;
+}
+
+QPushButton[role="primary"]:pressed,
+QToolButton[role="primary"]:pressed {
+    background-color: @accent_pressed;
+    border-color: @accent_pressed;
+}
+
+QPushButton[role="danger"]:hover,
+QToolButton[role="danger"]:hover {
+    color: @danger;
+    background-color: @danger_soft;
+    border-color: @danger;
+}
+
+QPushButton[role="ghost"],
+QToolButton[role="ghost"] {
+    background-color: transparent;
+    border-color: transparent;
+}
+
+QPushButton[role="ghost"]:hover,
+QToolButton[role="ghost"]:hover {
+    background-color: @bg_hover;
+}
+
+/* ---------- Sidebar ---------- */
+
+QFrame#sidebar {
+    min-width: 52px;
+    max-width: 52px;
+    background-color: @bg_sidebar;
+    border-right: 1px solid @border_strong;
+}
+
+QToolButton#sidebarButton {
+    min-width: 36px;
+    max-width: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    padding: 0;
+    color: @text_sidebar;
+    background-color: transparent;
+    border: 0;
+    border-radius: 18px;
+}
+
+QToolButton#sidebarButton:hover {
+    background-color: @bg_pressed;
+}
+
+QToolButton#sidebarButton:pressed,
+QToolButton#sidebarButton:checked {
+    color: @text_inverse;
+    background-color: @accent;
+}
+
+QLabel#versionLabel {
+    color: @text_muted;
+    font-size: 10px;
+}
+
+/* ---------- Tab bar ---------- */
+
+QFrame#sessionTabArea {
+    min-height: 40px;
+    max-height: 40px;
+    background-color: @bg_surface_raised;
+    border-bottom: 1px solid @border;
+}
+
+QTabBar {
+    background-color: transparent;
+}
+
+QTabBar::tab {
+    min-width: 132px;
+    max-width: 176px;
+    min-height: 38px;
+    padding: 0 9px;
+    color: @text_secondary;
+    background-color: transparent;
+    border: 0;
+    border-right: 1px solid @border_subtle;
+}
+
+QTabBar::tab:hover {
+    color: @text_primary;
+    background-color: @bg_hover;
+}
+
+QTabBar::tab:selected {
+    color: @text_primary;
+    background-color: @bg_surface;
+    border-bottom: 2px solid @accent;
+    font-weight: 600;
+}
+
+QLabel#pingDot {
+    min-width: 8px;
+    max-width: 8px;
+    min-height: 8px;
+    max-height: 8px;
+    border-radius: 4px;
+}
+
+QLabel#pingDot[ping="ok"]      { background-color: @success; }
+QLabel#pingDot[ping="slow"]    { background-color: @warning; }
+QLabel#pingDot[ping="timeout"] { background-color: @danger; }
+QLabel#pingDot[ping="unknown"] { background-color: @ping_unknown; }
+
+QToolButton#addSessionButton {
+    min-width: 32px;
+    max-width: 32px;
+    min-height: 30px;
+    max-height: 30px;
+    padding: 0;
+    border-radius: 5px;
+}
+
+/* ---------- Action toolbar ---------- */
+
+QFrame#actionToolbar {
+    min-height: 62px;
+    max-height: 62px;
+    background-color: @bg_surface;
+    border-bottom: 1px solid @border;
+}
+
+QToolButton#actionButton {
+    min-width: 66px;
+    max-width: 78px;
+    min-height: 52px;
+    max-height: 52px;
+    padding: 3px 5px;
+    background-color: transparent;
+    border-color: transparent;
+    border-radius: 5px;
+    font-size: 11px;
+}
+
+QToolButton#actionButton:hover {
+    background-color: @bg_hover;
+}
+
+QToolButton#actionButton:checked {
+    color: @accent;
+    background-color: @accent_soft;
+    border-color: @accent;
+}
+
+QToolButton#actionButton[role="danger"]:hover {
+    color: @danger;
+    background-color: @danger_soft;
+    border-color: @danger;
+}
+
+QFrame#toolbarSeparator {
+    min-width: 1px;
+    max-width: 1px;
+    min-height: 32px;
+    max-height: 32px;
+    background-color: @border_subtle;
+    border: 0;
+}
+
+/* ---------- Work area / splitter ---------- */
+
+QFrame#workArea {
+    background-color: @bg_app;
+}
+
+QSplitter::handle {
+    background-color: @border_subtle;
+}
+
+QSplitter::handle:horizontal {
+    width: 5px;
+    margin: 4px 1px;
+}
+
+QSplitter::handle:vertical {
+    height: 5px;
+    margin: 1px 4px;
+}
+
+QSplitter::handle:hover {
+    background-color: @accent;
+}
+
+/* ---------- VNC ---------- */
+
+QFrame#vncPanel,
+QFrame#vncViewport {
+    background-color: @vnc_bg;
+    border: 1px solid @border;
+    border-radius: 7px;
+}
+
+QFrame#vncControls {
+    min-height: 38px;
+    max-height: 38px;
+    background-color: @bg_surface_raised;
+    border: 1px solid @border;
+    border-radius: 5px;
+}
+
+QLabel#vncEmptyTitle {
+    color: @text_inverse;
+    font-size: 15px;
+    font-weight: 600;
+}
+
+QLabel#vncEmptyText {
+    color: @text_muted;
+}
+
+/* ---------- Info cards ---------- */
+
+QFrame#infoPanel {
+    background-color: transparent;
+}
+
+QFrame#infoCard {
+    background-color: @bg_surface;
+    border: 1px solid @border;
+    border-radius: 7px;
+}
+
+QFrame#infoCard:hover {
+    border-color: @border_strong;
+}
+
+QFrame#cardHeader {
+    min-height: 36px;
+    max-height: 36px;
+    background-color: @bg_surface_raised;
+    border-bottom: 1px solid @border_subtle;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+}
+
+QLabel#cardTitle {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+QFrame#cardStateRail {
+    min-width: 3px;
+    max-width: 3px;
+    border: 0;
+}
+
+QFrame#cardStateRail[state="loading"] { background-color: @info; }
+QFrame#cardStateRail[state="ready"]   { background-color: @success; }
+QFrame#cardStateRail[state="timeout"] { background-color: @warning; }
+QFrame#cardStateRail[state="error"]   { background-color: @danger; }
+QFrame#cardStateRail[state="idle"]    { background-color: @ping_unknown; }
+
+QFrame#infoRow {
+    min-height: 28px;
+    background-color: transparent;
+    border-bottom: 1px solid @border_subtle;
+}
+
+QLabel#infoLabel {
+    color: @text_secondary;
+}
+
+QLabel#infoValue {
+    color: @text_primary;
+}
+
+QFrame#problemItem {
+    min-height: 34px;
+    background-color: @bg_surface_raised;
+    border: 1px solid @border_subtle;
+    border-radius: 5px;
+}
+
+QFrame#problemItem[severity="warning"] {
+    background-color: @warning_soft;
+    border-color: @warning;
+}
+
+QFrame#problemItem[severity="error"] {
+    background-color: @danger_soft;
+    border-color: @danger;
+}
+
+QFrame#connectionState {
+    background-color: @bg_surface;
+    border: 1px solid @border;
+    border-radius: 7px;
+}
+
+QFrame#connectionState[state="error"] {
+    background-color: @danger_soft;
+    border-color: @danger;
+}
+
+/* ---------- Status bar and drawer ---------- */
+
+QFrame#statusBar {
+    min-height: 28px;
+    max-height: 28px;
+    background-color: @bg_surface_raised;
+    border-top: 1px solid @border;
+}
+
+QFrame#statusDrawer {
+    background-color: @bg_surface;
+    border-top: 1px solid @border_strong;
+}
+
+QLabel#statusDot {
+    min-width: 7px;
+    max-width: 7px;
+    min-height: 7px;
+    max-height: 7px;
+    border-radius: 3px;
+}
+
+QLabel#statusDot[status="success"] { background-color: @success; }
+QLabel#statusDot[status="warning"] { background-color: @warning; }
+QLabel#statusDot[status="error"]   { background-color: @danger; }
+QLabel#statusDot[status="info"]    { background-color: @info; }
+
+QLabel#notificationBadge {
+    min-width: 18px;
+    min-height: 18px;
+    padding: 0 4px;
+    color: @text_inverse;
+    background-color: @accent;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* ---------- Navigation lists ---------- */
+
+QListView,
+QTreeView {
+    color: @text_primary;
+    background-color: @bg_surface;
+    border: 1px solid @border;
+    border-radius: 5px;
+    selection-background-color: @bg_selected;
+    selection-color: @text_primary;
+}
+
+QListView::item,
+QTreeView::item {
+    min-height: 30px;
+    padding: 0 7px;
+    border: 0;
+}
+
+QListView::item:hover,
+QTreeView::item:hover {
+    background-color: @bg_hover;
+}
+
+QListView::item:selected,
+QTreeView::item:selected {
+    color: @text_primary;
+    background-color: @bg_selected;
+}
+
+QListView#settingsNavigation::item {
+    min-height: 36px;
+}
+
+QListView#settingsNavigation::item:selected {
+    color: @accent;
+    background-color: @accent_soft;
+    border-left: 3px solid @accent;
+}
+
+/* ---------- Tables / DB Viewer ---------- */
+
+QTableView,
+QTableWidget {
+    color: @text_primary;
+    background-color: @bg_surface;
+    alternate-background-color: @table_alt;
+    border: 1px solid @border;
+    gridline-color: @table_grid;
+    selection-background-color: @bg_selected;
+    selection-color: @text_primary;
+}
+
+QTableView::item,
+QTableWidget::item {
+    min-height: 27px;
+    padding: 0 6px;
+    border: 0;
+}
+
+QTableView::item:hover,
+QTableWidget::item:hover {
+    background-color: @bg_hover;
+}
+
+QTableView::item:selected,
+QTableWidget::item:selected {
+    color: @text_primary;
+    background-color: @bg_selected;
+}
+
+QHeaderView::section {
+    min-height: 30px;
+    padding: 0 7px;
+    color: @text_secondary;
+    background-color: @table_header;
+    border: 0;
+    border-right: 1px solid @table_grid;
+    border-bottom: 1px solid @border_strong;
+    font-weight: 600;
+}
+
+QHeaderView::section:hover {
+    color: @text_primary;
+    background-color: @bg_hover;
+}
+
+QFrame#dbSidebar,
+QFrame#dbToolbar,
+QFrame#paginationBar,
+QFrame#sqlResultBar {
+    background-color: @bg_surface_raised;
+    border: 1px solid @border;
+}
+
+QPlainTextEdit#sqlEditor,
+QPlainTextEdit#commandOutput,
+QPlainTextEdit#logViewer {
+    color: @code_text;
+    background-color: @code_bg;
+    border-color: @border;
+    font-family: "Cascadia Mono";
+    font-size: 12px;
+}
+
+/* ---------- Menus / tooltips ---------- */
+
+QMenu {
+    padding: 5px;
+    color: @text_primary;
+    background-color: @bg_surface;
+    border: 1px solid @border_strong;
+    border-radius: 7px;
+}
+
+QMenu::item {
+    min-height: 30px;
+    padding: 0 28px 0 10px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: @bg_hover;
+}
+
+QMenu::item:disabled {
+    color: @text_disabled;
+}
+
+QMenu::separator {
+    height: 1px;
+    margin: 5px 7px;
+    background-color: @border_subtle;
 }
 
 QToolTip {
-    background-color: @bg.overlay;
-    color: @text.primary;
-    border: 1px solid @border.subtle;
-    padding: 6px 8px;
+    padding: 5px 7px;
+    color: @tooltip_text;
+    background-color: @tooltip_bg;
+    border: 1px solid @border_strong;
     border-radius: 4px;
-    font-size: 12px;
 }
 
-/* ===== SIDEBAR ===== */
-QWidget#sidebar {
-    background-color: @bg.sidebar;
-    border-right: 1px solid @border.subtle;
-    min-width: 56px;
-    max-width: 56px;
-}
-QToolButton#sidebarBtn {
-    background: transparent;
-    border: none;
-    border-radius: 6px;
-    padding: 10px;
-    margin: 4px 8px;
-    color: @text.secondary;
-}
-QToolButton#sidebarBtn:hover {
-    background: @bg.hover;
-    color: @text.primary;
-}
-QToolButton#sidebarBtn:pressed {
-    background: @bg.pressed;
-}
-QToolButton#sidebarBtn[checked="true"],
-QToolButton#sidebarBtn:checked {
-    background: @accent.muted;
-    color: @accent.default;
-}
-QLabel#appVersion {
-    color: @text.tertiary;
-    font-size: 11px;
-    qproperty-alignment: AlignCenter;
-    padding: 8px 4px;
-}
+/* ---------- Scroll bars ---------- */
 
-/* ===== TAB BAR ===== */
-QWidget#tabBar {
-    background: @bg.surface;
-    border-bottom: 1px solid @border.subtle;
-    min-height: 36px;
-}
-QToolButton#cashTab {
-    background: @bg.tab;
-    color: @text.secondary;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    padding: 6px 10px;
-    margin: 4px 2px;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 12px;
-    font-weight: 600;
-    min-width: 128px;
-    max-width: 180px;
-}
-QToolButton#cashTab:hover {
-    background: @bg.hover;
-    color: @text.primary;
-}
-QToolButton#cashTab[active="true"] {
-    background: @bg.tab.active;
-    color: @text.primary;
-    border-bottom: 2px solid @accent.default;
-}
-QToolButton#tabAddBtn {
-    background: transparent;
-    border: none;
-    border-radius: 6px;
-    padding: 6px;
-    color: @text.secondary;
-    margin: 4px;
-}
-QToolButton#tabAddBtn:hover {
-    background: @bg.hover;
-    color: @text.primary;
-}
-/* ping dot via property on child QLabel */
-QLabel#pingDot[ping="ok"]      { background: @semantic.ok; border-radius: 4px; min-width: 8px; max-width: 8px; min-height: 8px; max-height: 8px; }
-QLabel#pingDot[ping="slow"]    { background: @semantic.slow; border-radius: 4px; min-width: 8px; max-width: 8px; min-height: 8px; max-height: 8px; }
-QLabel#pingDot[ping="timeout"] { background: @semantic.err; border-radius: 4px; min-width: 8px; max-width: 8px; min-height: 8px; max-height: 8px; }
-QLabel#pingDot[ping="unknown"]{ background: @semantic.unknown; border-radius: 4px; min-width: 8px; max-width: 8px; min-height: 8px; max-height: 8px; }
-
-/* ===== TOOLBAR ===== */
-QWidget#actionToolbar {
-    background: @bg.surface;
-    border-bottom: 1px solid @border.subtle;
-    min-height: 64px;
-    padding: 4px 8px;
-}
-QToolButton#actionBtn {
-    background: transparent;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 8px;
-    color: @text.primary;
-    font-size: 11px;
-    min-width: 64px;
-    min-height: 52px;
-}
-QToolButton#actionBtn:hover { background: @bg.hover; }
-QToolButton#actionBtn:pressed { background: @bg.pressed; }
-QToolButton#actionBtn:disabled { color: @text.tertiary; }
-QToolButton#actionBtn[danger="true"] { color: @danger.btn; }
-QToolButton#actionBtn[danger="true"]:hover {
-    background: @semantic.err.muted;
-    color: @danger.btn.hover;
-}
-QFrame#toolbarSep {
-    background: @border.subtle;
-    max-width: 1px;
-    margin: 12px 6px;
-}
-
-/* ===== SPLITTER / VNC ===== */
-QSplitter#mainSplitter::handle {
-    background: @border.subtle;
-    width: 1px;
-    margin: 0;
-}
-QSplitter#mainSplitter::handle:hover { background: @accent.default; }
-
-QWidget#vncPanel { background: @bg.sunken; }
-QWidget#vncLetterbox { background: @vnc.letterbox; }
-QWidget#vncEmptyState { background: @bg.sunken; }
-QLabel#vncEmptyTitle { color: @text.secondary; font-size: 13px; }
-QLabel#vncErrorText { color: @semantic.err; font-size: 12px; }
-QWidget#vncControls {
-    background: @bg.surface2;
-    border-top: 1px solid @border.subtle;
-    min-height: 36px;
-}
-
-/* ===== INFO CARDS ===== */
-QScrollArea#infoScroll {
-    background: @bg.app;
-    border: none;
-}
-QWidget#infoScrollContent { background: @bg.app; }
-
-QFrame#infoCard {
-    background: @bg.surface2;
-    border: 1px solid @border.subtle;
-    border-radius: 8px;
-    padding: 12px 14px;
-}
-QFrame#infoCard[state="error"] {
-    border-left: 3px solid @semantic.err;
-}
-QFrame#infoCard[state="timeout"] {
-    border-left: 3px solid @semantic.slow;
-}
-QFrame#infoCard[state="loading"] {
-    border-left: 3px solid @border.strong;
-}
-QLabel#cardTitle {
-    color: @text.secondary;
-    font-size: 12px;
-    font-weight: 600;
-    padding-bottom: 8px;
-}
-QLabel#cardKey {
-    color: @data.key;
-    font-size: 12px;
-    font-family: "Segoe UI", sans-serif;
-}
-QLabel#cardValue {
-    color: @data.mono;
-    font-size: 12px;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-}
-QFrame#problemRow {
-    border-radius: 4px;
-    padding: 8px 10px;
-    margin: 3px 0;
-}
-QFrame#problemRow[severity="error"] {
-    background: @semantic.err.muted;
-    border-left: 3px solid @semantic.err;
-}
-QFrame#problemRow[severity="warning"] {
-    background: @semantic.slow.muted;
-    border-left: 3px solid @semantic.slow;
-}
-QLabel#skeletonBar {
-    background: @bg.hover;
-    border-radius: 4px;
-    min-height: 10px;
-    max-height: 10px;
-}
-
-/* ===== STATUS BAR ===== */
-QWidget#statusBar {
-    background: @bg.surface;
-    border-top: 1px solid @border.subtle;
-    min-height: 28px;
-}
-QLabel#statusText {
-    color: @text.secondary;
-    font-size: 11px;
-    padding-left: 10px;
-}
-QLabel#notifBadge {
-    background: @bg.hover;
-    color: @text.primary;
-    border-radius: 8px;
-    padding: 1px 6px;
-    font-size: 11px;
-    font-weight: 600;
-}
-QLabel#notifBadge[hasUnread="true"] {
-    background: @semantic.err;
-    color: @text.inverse;
-}
-QWidget#statusPanel {
-    background: @bg.overlay;
-    border-top: 1px solid @border.subtle;
-}
-QListWidget#historyList, QListWidget#notifList {
-    background: transparent;
-    border: none;
-    outline: none;
-    font-size: 12px;
-}
-QListWidget#historyList::item, QListWidget#notifList::item {
-    padding: 6px 8px;
-    border-radius: 4px;
-    color: @text.primary;
-}
-QListWidget#historyList::item:hover, QListWidget#notifList::item:hover {
-    background: @bg.hover;
-}
-
-/* ===== BUTTONS (shared) ===== */
-QPushButton#primaryBtn {
-    background: @accent.default;
-    color: @text.inverse;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 16px;
-    font-size: 13px;
-    font-weight: 600;
-    min-height: 32px;
-}
-QPushButton#primaryBtn:hover { background: @accent.hover; }
-QPushButton#primaryBtn:pressed { background: @accent.pressed; }
-QPushButton#primaryBtn:disabled {
-    background: @bg.hover;
-    color: @text.tertiary;
-}
-QPushButton#secondaryBtn {
-    background: transparent;
-    color: @text.primary;
-    border: 1px solid @border.strong;
-    border-radius: 6px;
-    padding: 6px 16px;
-    min-height: 32px;
-}
-QPushButton#secondaryBtn:hover { background: @bg.hover; }
-QPushButton#secondaryBtn:pressed { background: @bg.pressed; }
-
-/* ===== INPUTS ===== */
-QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QComboBox {
-    background: @bg.sunken;
-    color: @text.primary;
-    border: 1px solid @border.subtle;
-    border-radius: 4px;
-    padding: 5px 8px;
-    selection-background-color: @accent.muted;
-    selection-color: @text.primary;
-    font-size: 13px;
-    min-height: 28px;
-}
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus,
-QSpinBox:focus, QComboBox:focus {
-    border: 1px solid @border.focus;
-}
-QLineEdit:disabled, QTextEdit:disabled {
-    color: @text.tertiary;
-    background: @bg.surface;
-}
-QComboBox::drop-down { border: none; width: 24px; }
-QComboBox QAbstractItemView {
-    background: @bg.surface2;
-    border: 1px solid @border.subtle;
-    selection-background-color: @accent.muted;
-    color: @text.primary;
-}
-
-/* ===== SETTINGS ===== */
-QWidget#settingsNav {
-    background: @bg.sunken;
-    border-right: 1px solid @border.subtle;
-    min-width: 180px;
-}
-QListWidget#settingsNavList {
-    background: transparent;
-    border: none;
-    outline: none;
-}
-QListWidget#settingsNavList::item {
-    padding: 10px 14px;
-    border-radius: 4px;
-    margin: 2px 8px;
-    color: @text.secondary;
-}
-QListWidget#settingsNavList::item:hover {
-    background: @bg.hover;
-    color: @text.primary;
-}
-QListWidget#settingsNavList::item:selected {
-    background: @accent.muted;
-    color: @accent.default;
-    border-left: 2px solid @accent.default;
-}
-
-/* ===== DB VIEWER ===== */
-QWidget#dbSidebar {
-    background: @bg.surface;
-    border-right: 1px solid @border.subtle;
-    max-width: 260px;
-}
-QListWidget#tableList {
-    background: transparent;
-    border: none;
-    outline: none;
-    font-size: 12px;
-}
-QListWidget#tableList::item {
-    padding: 5px 8px;
-    border-radius: 4px;
-    min-height: 28px;
-    color: @text.primary;
-}
-QListWidget#tableList::item:hover { background: @bg.hover; }
-QListWidget#tableList::item:selected {
-    background: @bg.selected;
-    color: @text.primary;
-}
-QTableView#dbGrid {
-    background: @bg.surface2;
-    alternate-background-color: @grid.alt;
-    gridline-color: @grid.line;
-    color: @data.mono;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 12px;
-    border: none;
-    selection-background-color: @bg.selected;
-    selection-color: @text.primary;
-}
-QTableView#dbGrid::item { padding: 4px 8px; }
-QHeaderView::section {
-    background: @bg.sunken;
-    color: @text.secondary;
-    border: none;
-    border-right: 1px solid @grid.line;
-    border-bottom: 1px solid @border.subtle;
-    padding: 6px 8px;
-    font-family: "Segoe UI", sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    min-height: 28px;
-}
-QWidget#sqlConsole {
-    background: @code.bg;
-    border-top: 1px solid @border.subtle;
-}
-QPlainTextEdit#sqlEditor {
-    background: @code.bg;
-    color: @data.mono;
-    border: none;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 12px;
-    padding: 8px;
-}
-QLabel#sqlResultBar {
-    background: @bg.surface;
-    color: @text.secondary;
-    font-size: 11px;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    padding: 4px 10px;
-    border-top: 1px solid @border.subtle;
-}
-QLabel#sqlResultBar[error="true"] { color: @semantic.err; }
-
-/* ===== SCROLLBARS ===== */
 QScrollBar:vertical {
-    background: transparent;
     width: 10px;
     margin: 0;
+    background-color: @scroll_track;
+    border: 0;
 }
+
 QScrollBar::handle:vertical {
-    background: @scrollbar;
-    border-radius: 4px;
     min-height: 32px;
     margin: 2px;
+    background-color: @scroll_thumb;
+    border-radius: 3px;
 }
-QScrollBar::handle:vertical:hover { background: @scrollbar.hover; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+
+QScrollBar::handle:vertical:hover {
+    background-color: @scroll_thumb_hover;
+}
+
 QScrollBar:horizontal {
-    background: transparent;
     height: 10px;
+    margin: 0;
+    background-color: @scroll_track;
+    border: 0;
 }
+
 QScrollBar::handle:horizontal {
-    background: @scrollbar;
-    border-radius: 4px;
     min-width: 32px;
     margin: 2px;
-}
-QScrollBar::handle:horizontal:hover { background: @scrollbar.hover; }
-QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
-QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
-
-/* ===== MENUS ===== */
-QMenu {
-    background: @bg.surface2;
-    color: @text.primary;
-    border: 1px solid @border.subtle;
-    border-radius: 6px;
-    padding: 4px;
-}
-QMenu::item {
-    padding: 8px 28px 8px 12px;
-    border-radius: 4px;
-    font-size: 13px;
-}
-QMenu::item:selected { background: @bg.hover; }
-QMenu::item:disabled { color: @text.tertiary; }
-QMenu::separator {
-    height: 1px;
-    background: @border.subtle;
-    margin: 4px 8px;
+    background-color: @scroll_thumb;
+    border-radius: 3px;
 }
 
-/* ===== MONO OUTPUT (command result, logs) ===== */
-QPlainTextEdit#monoOutput, QTextEdit#logView {
-    background: @code.bg;
-    color: @data.mono;
-    border: 1px solid @border.subtle;
-    border-radius: 6px;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 12px;
-    padding: 8px;
+QScrollBar::handle:horizontal:hover {
+    background-color: @scroll_thumb_hover;
 }
+
+QScrollBar::add-line,
+QScrollBar::sub-line,
+QScrollBar::add-page,
+QScrollBar::sub-page {
+    width: 0;
+    height: 0;
+    background: transparent;
+    border: 0;
+}
+
+#infoCard[state="loading"] { border-left: 3px solid @info; }
+#infoCard[state="timeout"] { border-left: 3px solid @warning; }
+#infoCard[state="error"] { border-left: 3px solid @danger; }
+#infoCard[state="ready"] { border-left: 3px solid @success; }
 """
 
 
@@ -512,12 +738,32 @@ class ThemeEngine(QObject):
         return "dark" if isDarkTheme() else "light"
 
     def _apply_stylesheet(self) -> None:
-        from cashcontrol.gui.theme_helper import color as _tc
-        from cashcontrol.gui.theme_helper import resolve
+        from cashcontrol.gui.theme_helper import (
+            _COLORS,
+        )
+        from cashcontrol.gui.theme_helper import (
+            color as _tc,
+        )
+        dark = isDarkTheme()
         qss = self._build_qss(_tc) + CORE_QSS
+        for key, (light, dark_v) in _COLORS.items():
+            qss = qss.replace("@" + key, dark_v if dark else light)
         app = QApplication.instance()
         if app:
-            app.setStyleSheet(resolve(qss))
+            palette = QPalette()
+            palette.setColor(QPalette.ColorRole.Window, QColor(_tc("bg_app")))
+            palette.setColor(QPalette.ColorRole.WindowText, QColor(_tc("text_primary")))
+            palette.setColor(QPalette.ColorRole.Base, QColor(_tc("bg_surface")))
+            palette.setColor(QPalette.ColorRole.AlternateBase, QColor(_tc("table_alt")))
+            palette.setColor(QPalette.ColorRole.Text, QColor(_tc("text_primary")))
+            palette.setColor(QPalette.ColorRole.Button, QColor(_tc("bg_surface")))
+            palette.setColor(QPalette.ColorRole.ButtonText, QColor(_tc("text_primary")))
+            palette.setColor(QPalette.ColorRole.Highlight, QColor(_tc("bg_selected")))
+            palette.setColor(QPalette.ColorRole.HighlightedText, QColor(_tc("text_primary")))
+            palette.setColor(QPalette.ColorRole.Link, QColor(_tc("accent")))
+            palette.setColor(QPalette.ColorRole.PlaceholderText, QColor(_tc("text_muted")))
+            app.setPalette(palette)
+            app.setStyleSheet(qss)
 
     def _build_qss(self, _tc: Callable[[str], str]) -> str:
         from qfluentwidgets import isDarkTheme

@@ -59,7 +59,7 @@ class CashTabBar(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("tabBar")
+        self.setObjectName("sessionTabArea")
         self._bar = _ScrollableTabBar(self)
         self._bar.setMovable(True)
         self._bar.setTabMaximumWidth(220)
