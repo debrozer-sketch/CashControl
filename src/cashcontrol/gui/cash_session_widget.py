@@ -456,9 +456,7 @@ class CashSessionWidget(QWidget):
     def _show_skeletons(self) -> None:
         self._clear_sections()
         for key in _SKELETON_KEYS:
-            routes = {"system": "pos", "equipment": "hw", "other": "misc", "problems": "idle"}
-            widget = InfoGroupWidget(_GROUP_TITLES[key], parent=self._info_content,
-                                     route=routes.get(key))
+            widget = InfoGroupWidget(_GROUP_TITLES[key], parent=self._info_content)
             widget.show_loading()
             self._group_widgets[key] = widget
             stretch_index = self.info_layout.count() - 1

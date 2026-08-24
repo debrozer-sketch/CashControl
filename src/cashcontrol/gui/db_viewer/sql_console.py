@@ -196,7 +196,6 @@ class _SqlConsole(QWidget):  # Выдвижная консоль: редакто
 
     def __init__(self, factory, parent=None):
         super().__init__(parent)
-        self.setObjectName("SqlConsole")
         self._factory = factory
         self._database = factory.database
         self._hist = _load_json('query_history.json', [])

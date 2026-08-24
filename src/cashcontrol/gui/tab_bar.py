@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QIcon, QPainter, QPixmap
-from PySide6.QtWidgets import QFrame, QMenu, QWidget
+from PySide6.QtWidgets import QMenu, QWidget
 from qfluentwidgets import FluentIcon, TabBar, TabCloseButtonDisplayMode
 
 from cashcontrol.gui.theme_helper import color as _tc
@@ -59,7 +59,6 @@ class CashTabBar(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setObjectName("sessionTabArea")
         self._bar = _ScrollableTabBar(self)
         self._bar.setMovable(True)
         self._bar.setTabMaximumWidth(220)
@@ -77,11 +76,7 @@ class CashTabBar(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        self._rail = QFrame(self)
-        self._rail.setObjectName("TabRail")
-        self._rail.setFixedHeight(2)
         layout.addWidget(self._bar)
-        layout.addWidget(self._rail)
 
     def add_tab(self, ip: str) -> None:
         self._bar.addTab(ip, ip, _make_dot_icon("unknown"))
