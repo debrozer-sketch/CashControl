@@ -145,8 +145,8 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
         self._worker = _Worker(self._factory,
                                lambda conn, worker: _load_page(
                                    conn, worker, self.schema, self.table,
-                                   self.page_size, 0, self._order,
-                                   self._filter_text),
+                                   self.page_size, (self._page - 1) * self.page_size,
+                                   self._order, self._filter_text),
                                database=self.database, parent=self)
         self._worker.done.connect(self._on_loaded)
         self._worker.failed.connect(self._on_failed)
