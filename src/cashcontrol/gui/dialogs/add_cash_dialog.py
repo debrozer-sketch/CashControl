@@ -17,7 +17,7 @@ class AddCashDialog(QDialog):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Добавить кассу")
-        self.setFixedSize(360, 140)
+        self.setFixedSize(360, 104)
         self.setWindowFlags(
             self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint
         )
@@ -28,24 +28,26 @@ class AddCashDialog(QDialog):
     def _init_ui(self) -> None:
         """Build the dialog layout."""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(10)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(8)
 
         row = QHBoxLayout()
         row.setSpacing(8)
         label = BodyLabel("IP-адрес кассы:", self)
-        label.setFixedWidth(110)
+        label.setFixedWidth(100)
         label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
         self._ip_input = LineEdit(self)
         self._ip_input.setPlaceholderText("192.168.1.10")
         self._ip_input.setClearButtonEnabled(True)
         self._ip_input.returnPressed.connect(self._on_ok)
+        self._ip_input.textEdited.connect(self._sanitize_comma)
         row.addWidget(label)
         row.addWidget(self._ip_input, stretch=1)
         layout.addLayout(row)
 
         # Buttons
         btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(6)
         btn_layout.addStretch()
 
         self._ok_btn = PrimaryPushButton("Добавить", self, FluentIcon.ADD)
@@ -58,9 +60,17 @@ class AddCashDialog(QDialog):
 
         layout.addLayout(btn_layout)
 
+    def _sanitize_comma(self, text: str) -> None:
+        """На лету заменить запятую на точку: 192,168,1,1 → 192.168.1.1."""
+        if "," not in text:
+            return
+        pos = self._ip_input.cursorPosition()
+        self._ip_input.setText(text.replace(",", "."))
+        self._ip_input.setCursorPosition(pos)
+
     def _on_ok(self) -> None:
         """Validate and accept the dialog."""
-        ip = self._ip_input.text().strip()
+        ip = self._ip_input.text().strip().replace(",", ".")
 
         if not ip:
             return

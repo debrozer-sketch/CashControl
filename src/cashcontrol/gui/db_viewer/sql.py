@@ -159,8 +159,9 @@ def _load_page(conn, worker, schema, table, limit, offset, order, filter_text):
     where = _build_where(filter_text, meta['columns']) if filter_text.strip() \
         else None
     cur = conn.cursor()
+    params = (limit, offset) if limit is not None else None
     cur.execute(_sel_query(schema, table, meta['columns'], where, order,
-                           limit, offset), (limit, offset))
+                           limit, offset), params)
     rows = []
     while True:
         batch = cur.fetchmany(200)

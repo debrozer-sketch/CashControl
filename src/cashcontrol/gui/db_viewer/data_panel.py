@@ -141,12 +141,15 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
     # --- загрузка ---
 
     def open(self):
+        ps = self.page_size
+        limit = ps
+        offset = (self._page - 1) * ps if ps else 0
         self._busy(True)
         self._worker = _Worker(self._factory,
                                lambda conn, worker: _load_page(
                                    conn, worker, self.schema, self.table,
-                                   self.page_size, (self._page - 1) * self.page_size,
-                                   self._order, self._filter_text),
+                                   limit, offset, self._order,
+                                   self._filter_text),
                                database=self.database, parent=self)
         self._worker.done.connect(self._on_loaded)
         self._worker.failed.connect(self._on_failed)
@@ -217,7 +220,8 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
 
     @property
     def page_size(self):
-        return int(self._combo_size.currentText())
+        text = self._combo_size.currentText()
+        return None if text == "Все" else int(text)
 
     def reload(self):
         if self._worker and self._worker.isRunning():
@@ -263,8 +267,12 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
         self.reload()
 
     def _go_page(self, p):
-        pages = max(1, -(-self._total // self.page_size))
-        self._page = max(1, min(pages, p))
+        ps = self.page_size
+        if ps:
+            pages = max(1, -(-self._total // ps))
+            self._page = max(1, min(pages, p))
+        else:
+            self._page = 1
         self.reload()
 
     def _on_size_changed(self):
@@ -272,16 +280,22 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
         self.reload()
 
     def _update_pagination(self):
-        pages = max(1, -(-self._total // self.page_size)) if self._total else 1
-        self._lbl_page.setText(f'Стр. {self._page} / {pages}')
+        ps = self.page_size
+        if ps:
+            pages = max(1, -(-self._total // ps)) if self._total else 1
+            self._lbl_page.setText(f'Стр. {self._page} / {pages}')
+            self._btn_prev.setEnabled(self._page > 1)
+            self._btn_next.setEnabled(self._page < pages)
+        else:
+            self._lbl_page.setText('Все строки')
+            self._btn_prev.setEnabled(False)
+            self._btn_next.setEnabled(False)
         if self._filter_text:
             self._lbl_total.setText(f'Найдено строк: {self._total}')
         elif self._meta:
             self._lbl_total.setText(f'Строк (оценка): {self._total}')
         else:
             self._lbl_total.setText('')
-        self._btn_prev.setEnabled(self._page > 1)
-        self._btn_next.setEnabled(self._page < pages)
 
     # --- редактирование / удаление ---
 
