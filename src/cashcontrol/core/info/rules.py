@@ -121,6 +121,14 @@ class ProblemChecker:
 
     def __init__(self) -> None:
         self._checks: list[DiagnosticCheck] = DIAGNOSTIC_CHECKS
+        self._toml_rules = []
+        from cashcontrol.core.info.toml_rules import TomlRuleChecker
+
+        self._toml_rules = TomlRuleChecker().load()
+
+    def register_rule(self, rule) -> None:
+        """Add a declarative (TOML) rule at runtime."""
+        self._toml_rules.append(rule)
 
     def check(
         self, snapshot: CashInfoSnapshot, cash_type: str
@@ -135,5 +143,12 @@ class ProblemChecker:
                     issues.append(issue)
             except Exception:
                 # ожидаемо: сбой одной проверки не валит весь анализ
+                pass
+        for rule in self._toml_rules:
+            try:
+                issue = rule.check(snapshot, cash_type)
+                if issue is not None:
+                    issues.append(issue)
+            except Exception:
                 pass
         return issues

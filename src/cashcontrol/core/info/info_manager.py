@@ -53,6 +53,7 @@ ALL_SECTIONS: list[str] = [
     "dns",
     "loymax",
     "qrid",
+    "connection",
 ]
 
 SECTION_GROUPS: dict[str, list[str]] = {
@@ -138,6 +139,7 @@ _SECTIONS: tuple[str, ...] = (
     "dns",
     "loymax",
     "qrid",
+    "connection",
 )
 
 

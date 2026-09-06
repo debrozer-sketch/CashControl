@@ -17,6 +17,7 @@ _COLLECTOR_SPECS: dict[str, tuple[str, str]] = {
     "barcode_scanner": ("cashcontrol.core.info.collectors.barcode_scanner", "BarcodeScannerCollector"),
     "cash_software": ("cashcontrol.core.info.collectors.cash_software", "CashSoftwareCollector"),
     "cash_type": ("cashcontrol.core.info.collectors.cash_type", "CashTypeCollector"),
+    "connection": ("cashcontrol.core.info.collectors.connection", "ConnectionCollector"),
     "cpu_info": ("cashcontrol.core.info.collectors.cpu_info", "CPUInfoCollector"),
     "customer_display": ("cashcontrol.core.info.collectors.customer_display", "CustomerDisplayCollector"),
     "dns_info": ("cashcontrol.core.info.collectors.dns_info", "DNSInfoCollector"),
