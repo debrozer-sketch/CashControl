@@ -37,14 +37,6 @@ class _DataGrid(QTableWidget):
         super().__init__(parent)
         self.setObjectName("DbGrid")
         self.setAlternatingRowColors(True)
-        self.setObjectName("DbGrid")
-        self.setObjectName("dbGrid")
-        self.setObjectName("dbGrid")
-        self.setObjectName("DbGrid")
-        self.setObjectName("dbGrid")
-        from cashcontrol.gui.theme_helper import set_visual_role
-
-        set_visual_role(self, "dbGrid")
         self._columns, self._pk, self._dirty = [], [], {}
         self._loading, self._readonly = False, False
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
