@@ -26,9 +26,11 @@ Ready/
 modules/
 dev/
 .ruff_cache/
+.pytest_cache/
 *.log
 launch_err.txt
 launch_out.txt
+/ssh_terminal_release.zip
 
 # OS
 Thumbs.db
