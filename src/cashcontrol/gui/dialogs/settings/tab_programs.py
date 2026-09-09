@@ -127,7 +127,6 @@ class TabPrograms(QWidget):
             f"color: {_tc('text_secondary')}; font-size: 11px;"
         )
         layout.addWidget(hotkeys_label)
-        return card
 
         self.ssh_args_template = LineEdit(card)
         self.ssh_args_template.hide()
