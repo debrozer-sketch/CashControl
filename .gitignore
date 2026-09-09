@@ -8,8 +8,11 @@ dist/
 .build_cache/
 
 # Runtime data (keystore, passwords, sessions — never commit)
-data/
-logs/
+/data/
+/logs/
+
+# Vendored SSH terminal runtime data (code in builtin_terminal/data/*.py is tracked)
+builtin_terminal/data/app/
 
 # Bundled binaries and their configs
 soft/*.exe
@@ -28,6 +31,7 @@ dev/
 .ruff_cache/
 .pytest_cache/
 *.log
+*.7z
 launch_err.txt
 launch_out.txt
 /ssh_terminal_release.zip

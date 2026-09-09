@@ -186,7 +186,7 @@ class CashToolbar(QWidget):
         self._vnc_btn.clicked.connect(self._on_vnc)
         layout.addWidget(c)
 
-        c = _make_labeled_btn(FluentIcon.COMMAND_PROMPT, "SSH", "SSH — терминал (KiTTY)")
+        c = _make_labeled_btn(FluentIcon.COMMAND_PROMPT, "SSH", "SSH — терминал (встроенный или KiTTY)")
         self._ssh_btn = c.btn
         self._ssh_btn.clicked.connect(self._on_ssh)
         layout.addWidget(c)
@@ -423,21 +423,14 @@ class CashToolbar(QWidget):
 
         p = self._config.settings.programs
         conn = self._config.settings.connection
-        exe_path = p.get_ssh_client()
-        exe = Path(exe_path)
 
-        if not exe.exists():
-            new_path, _ = QFileDialog.getOpenFileName(
-                self,
-                "Укажите SSH-клиент (KiTTY, PuTTY или другой)",
-                str(exe.parent) if exe.parent.exists() else "",
-                "Executable (*.exe);;All files (*)",
-            )
-            if not new_path:
-                return
-            p.ssh_client_path = new_path
-            self._config.save()
-            exe = Path(new_path)
+        from cashcontrol.gui.ssh_terminal_launcher import should_use_builtin_ssh
+
+        if should_use_builtin_ssh(p.ssh_client_path):
+            self._open_builtin_ssh_terminal(session)
+            return
+
+        exe = Path(p.ssh_client_path or "")
 
         ip = session.ip
         password = None
@@ -466,6 +459,36 @@ class CashToolbar(QWidget):
                 logger.error(f"KiTTY launch failed: {e}")
 
         threading.Thread(target=_run, daemon=True).start()
+
+    def _open_builtin_ssh_terminal(self, session) -> None:
+        from cashcontrol.core.security.password_manager import PasswordManager
+        from cashcontrol.gui.notification_manager import get_notification_manager
+        from cashcontrol.gui.ssh_terminal_launcher import launch_builtin_terminal
+
+        conn = self._config.settings.connection
+        password = None
+        if session.session and session.session.ssh_connected:
+            password = session.session.ssh.successful_password
+        else:
+            passwords = list(PasswordManager().get_passwords_for_ip(session.ip, "ssh"))
+            password = passwords[0] if passwords else None
+
+        win = launch_builtin_terminal(
+            host=session.ip,
+            port=conn.ssh_port,
+            login=conn.ssh_login,
+            password=password,
+            parent=self,
+        )
+        if win is None:
+            get_notification_manager().notify(
+                "Не удалось открыть встроенный SSH терминал: компонент отсутствует",
+                level="error",
+            )
+        else:
+            get_notification_manager().notify(
+                f"SSH терминал: {session.ip}:{conn.ssh_port}", level="info"
+            )
 
     def _on_winscp(self) -> None:
         asyncio.ensure_future(self._launch_winscp())

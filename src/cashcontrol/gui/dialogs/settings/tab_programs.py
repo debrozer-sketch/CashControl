@@ -81,11 +81,12 @@ class TabPrograms(QWidget):
         layout = QVBoxLayout(card)
         layout.setContentsMargins(16, 14, 16, 14)
         layout.setSpacing(10)
-        layout.addWidget(SubtitleLabel("SSH Клиент (KiTTY)", card))
+        layout.addWidget(SubtitleLabel("SSH Клиент", card))
 
         desc = BodyLabel(
             "KiTTY автоматически подключается с паролем из настроек подключения.\n"
-            "Укажите путь к kitty.exe или оставьте пустым (будет использован soft/kitty.exe).",
+            "Укажите путь к kitty.exe или любому другому SSH-клиенту.\n"
+            "Если путь не задан или файл не найден — будет запускаться ВСТРОЕННЫЙ SSH-терминал.",
             card,
         )
         desc.setWordWrap(True)
@@ -109,6 +110,24 @@ class TabPrograms(QWidget):
         row.addWidget(self.ssh_client_path, stretch=1)
         row.addWidget(browse_btn)
         layout.addLayout(row)
+
+        hotkeys_label = QLabel(
+            "<b>Встроенный терминал — горячие клавиши:</b><br>"
+            "Ctrl+N / Ctrl+T — новое подключение<br>"
+            "Ctrl+W — закрыть вкладку, Ctrl+Tab / Ctrl+Shift+Tab — переключение вкладок<br>"
+            "Ctrl+Space — быстрый выбор сниппета<br>"
+            "Ctrl+Shift+C / Ctrl+Shift+V — копировать / вставить<br>"
+            "Ctrl++ — шрифт крупнее, Ctrl+- — шрифт мельче, Ctrl+0 — сброс шрифта<br>"
+            "Shift+PgUp / Shift+PgDn, колесо мыши — прокрутка<br>"
+            "Ctrl+Alt+M — главное меню, Shift+ПКМ — меню терминала",
+            card,
+        )
+        hotkeys_label.setWordWrap(True)
+        hotkeys_label.setStyleSheet(
+            f"color: {_tc('text_secondary')}; font-size: 11px;"
+        )
+        layout.addWidget(hotkeys_label)
+        return card
 
         self.ssh_args_template = LineEdit(card)
         self.ssh_args_template.hide()

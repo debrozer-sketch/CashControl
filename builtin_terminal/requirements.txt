@@ -1,0 +1,4 @@
+asyncssh>=2.17,<3
+pyte>=0.8.2
+PySide6>=6.7,<6.9
+qasync>=0.27

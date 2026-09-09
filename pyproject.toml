@@ -24,6 +24,8 @@ dependencies = [
     "numpy>=1.26",
     # Safe XML parsing
     "defusedxml>=0.7",
+    # Built-in SSH terminal (vendored in builtin_terminal/)
+    "pyte>=0.8,<1",
     # Windows-specific
     "pywin32>=306; sys_platform == 'win32'",
 ]
@@ -48,6 +50,9 @@ packages = ["src/cashcontrol"]
 target-version = "py312"
 line-length = 100
 src = ["src"]
+# Vendored SSH terminal keeps its own prototype style; linted state is
+# tracked separately (see builtin_terminal/README.md).
+exclude = ["builtin_terminal"]
 
 [tool.ruff.lint]
 select = [

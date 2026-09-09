@@ -267,16 +267,52 @@ def build_modules_overlay(out: Path) -> None:
     log("modules/ overlay built")
 
 
+def _builtin_terminal_ignore(src_dir, names: list[str]) -> list[str]:
+    """Что исключаем из копии builtin_terminal: служебные/dev-файлы,
+    __pycache__ и runtime-данные (app-папка с сниппетами/профилями, логи)."""
+    src = Path(src_dir)
+    ignored = set()
+    for n in names:
+        if (
+            n in {"__pycache__", "logs"}
+            or (src.name == "data" and n == "app")
+            or (
+                src.name == "builtin_terminal"
+                and n in {"builtin_terminal.7z", "README.md", "requirements.txt", "run.bat"}
+            )
+        ):
+            ignored.add(n)
+    return sorted(ignored)
+
+
 def copy_user_content(out: Path) -> None:
     (REPO_ROOT / "version.txt").read_bytes()
     shutil.copy2(REPO_ROOT / "version.txt", out / "version.txt")
     icon = SRC_PKG / "gui" / "resources" / "icon.ico"
     if icon.exists():
         shutil.copy2(icon, out / "icon.ico")
-    for d in ("docs", "commands", "collectors", "soft", "cash_types", "detection"):
+    def _soft_ignore(_d, names):
+        # Пользовательские данные KiTTY (кэш ключей, сессии, прокси) не
+        # должны попасть в dist и инсталлятор.
+        return {n for n in names if n in {"SshHostKeys", "Sessions", "Proxies", "reinstall"}}
+
+    for d in ("docs", "commands", "collectors", "cash_types", "detection"):
         src = REPO_ROOT / d
         if src.exists():
             shutil.copytree(src, out / d)
+    soft_src = REPO_ROOT / "soft"
+    if soft_src.exists():
+        shutil.copytree(soft_src, out / "soft", ignore=_soft_ignore)
+    # builtin_terminal копируется выборочно: без служебных файлов (7z, README,
+    # requirements.txt, run.bat), без __pycache__ и без runtime-данных/логов —
+    # они создаются самим терминалом при первом запуске.
+    bt_src = REPO_ROOT / "builtin_terminal"
+    if bt_src.exists():
+        shutil.copytree(
+            bt_src,
+            out / "builtin_terminal",
+            ignore=_builtin_terminal_ignore,
+        )
     for d in ("data", "logs"):
         (out / d).mkdir(exist_ok=True)
     log("root content copied")
