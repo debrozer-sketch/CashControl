@@ -62,7 +62,8 @@ Name: "startmenuicon"; Description: "Создать ярлык в меню Пу�
 ; build_dist.py before this script runs, so Inno (which skips empty dirs)
 ; won't ship them — user data/passwords never enter the installer.
 ; NOTE: do not add "data"/"logs" masks here: Inno matches them at ANY depth
-; and would also drop the builtin_terminal/data Python package.
+; and would also drop the builtin/terminal/data Python package
+; (runtime\app\cashcontrol\builtin\terminal\data\*.py).
 Source: "{#SourceDir}\*"; Excludes: "*.pyc,soft\SshHostKeys,soft\Sessions,soft\Proxies,soft\reinstall"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]

@@ -71,6 +71,7 @@ uv run python scripts/sync_version.py          # версия из version.txt �
 ## Горячие правки в установленной версии
 
 Код лежит `.py` файлами в `runtime/app/cashcontrol/`. Точечный фикс можно
-внести прямо там; для GUI-модулей из hot-списка (toolbar, vnc_preview,
-db_viewer, dialogs, widgets) — положить файл в `modules/<путь>` поверх,
-оригинал не трогая. Перечитывается при следующем запуске.
+внести прямо там; для GUI-модулей из hot-списка (toolbar, dialogs, widgets,
+builtin/vnc/vnc_preview, builtin/db_viewer, builtin/file_manager) — положить
+файл в `modules/<путь>` поверх, оригинал не трогая. Перечитывается при
+следующем запуске.

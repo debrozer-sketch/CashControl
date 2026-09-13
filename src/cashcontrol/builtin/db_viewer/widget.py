@@ -24,12 +24,12 @@ from qfluentwidgets import (
     ToolButton,
 )
 
-from cashcontrol.gui.db_viewer.data_panel import _DataPanel
-from cashcontrol.gui.db_viewer.sql import _SQL_COMPLETION, _SQL_DATABASES
-from cashcontrol.gui.db_viewer.sql_console import _SqlConsole
-from cashcontrol.gui.db_viewer.storage import _Busy, _icon, _toast
-from cashcontrol.gui.db_viewer.tables_panel import _TablesPanel
-from cashcontrol.gui.db_viewer.workers import _ConnFactory, _Worker
+from cashcontrol.builtin.db_viewer.data_panel import _DataPanel
+from cashcontrol.builtin.db_viewer.sql import _SQL_COMPLETION, _SQL_DATABASES
+from cashcontrol.builtin.db_viewer.sql_console import _SqlConsole
+from cashcontrol.builtin.db_viewer.storage import _Busy, _icon, _toast
+from cashcontrol.builtin.db_viewer.tables_panel import _TablesPanel
+from cashcontrol.builtin.db_viewer.workers import _ConnFactory, _Worker
 
 
 class PostgresToolWidget(QWidget):
@@ -253,6 +253,8 @@ class PostgresToolWindow(QMainWindow):  # Окно-обёртка над Postgre
         self.setCentralWidget(self._widget)
         self.setWindowTitle('PostgreSQL клиент')
         self.resize(1120, 700)
+        from cashcontrol.gui.app_icon import apply_window_icon
+        apply_window_icon(self)
 
     @property
     def widget(self):

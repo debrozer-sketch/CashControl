@@ -17,6 +17,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 import qasync
@@ -66,6 +67,22 @@ def _read_password_from_stdin() -> str | None:
     return line.rstrip("\r\n")
 
 
+def _app_icon() -> QIcon:
+    """Основная иконка CashControl: ищется в корне сборки или проекта.
+
+    Терминал — отдельный процесс и не импортирует cashcontrol, поэтому
+    корень определяется по расположению интерпретатора и этого модуля.
+    """
+    candidates: list[Path] = [Path(sys.executable).parent.parent]
+    candidates.extend(Path(__file__).resolve().parents[:6])
+    for base in candidates:
+        for rel in ("icon.ico", "src/cashcontrol/gui/resources/icon.ico"):
+            candidate = base / rel
+            if candidate.is_file():
+                return QIcon(str(candidate))
+    return QIcon()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="ssh_terminal",
@@ -94,6 +111,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("SshTerminal")
     app.setOrganizationName("SshTerminalPrototype")
+    app.setWindowIcon(_app_icon())
 
     loop = qasync.QEventLoop(app)
     asyncio_loop = qasync.get_event_loop() if hasattr(qasync, "get_event_loop") else loop

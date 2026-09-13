@@ -6,8 +6,8 @@ import contextlib
 import psycopg2
 from PySide6.QtCore import QThread, Signal
 
-from cashcontrol.gui.db_viewer.formatting import _human
-from cashcontrol.gui.db_viewer.storage import _DbError
+from cashcontrol.builtin.db_viewer.formatting import _human
+from cashcontrol.builtin.db_viewer.storage import _DbError
 
 
 class _ConnFactory:  # Соединение psycopg2; пароли перебираются до первого успеха.

@@ -6,11 +6,11 @@ import sys
 
 import pytest
 
-from cashcontrol.gui.ssh_terminal_launcher import builtin_terminal_root
+from cashcontrol.builtin.ssh_terminal_launcher import builtin_terminal_root
 
 pytestmark = pytest.mark.skipif(
     not builtin_terminal_root().is_dir(),
-    reason="vendored builtin_terminal/ is not present",
+    reason="vendored builtin/terminal is not present",
 )
 
 

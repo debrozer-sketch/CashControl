@@ -23,12 +23,12 @@ from qfluentwidgets import (
     ToolButton,
 )
 
+from cashcontrol.builtin.vnc.vnc_preview import VncPreviewWidget
 from cashcontrol.core.cash_types import get_cash_type_registry, has_feature
 from cashcontrol.core.info import InfoCollector, ProblemChecker
 from cashcontrol.core.info.info_manager import CollectionStatus, InfoField
 from cashcontrol.core.session import CashSession
 from cashcontrol.gui.notification_manager import get_notification_manager
-from cashcontrol.gui.vnc_preview import VncPreviewWidget
 from cashcontrol.gui.widgets.info_section_widget import InfoGroupWidget
 from cashcontrol.infrastructure.audit_logger import get_logger
 
@@ -712,9 +712,18 @@ class CashSessionWidget(QWidget):
         """Connect embedded VNC (called from keyboard shortcut)."""
         self._vnc_widget.connect_vnc()
 
+    def open_vnc_client(self, fullscreen: bool) -> None:
+        """Open VNC via the available client (external exe or built-in viewer)."""
+        logger.info("[VNC] open client for %s", self._ip)
+        self._vnc_widget.open_client(fullscreen)
+
     def open_vnc_external(self) -> None:
         logger.info(f"[VNC] open_vnc_external called for {self._ip}")
-        self._vnc_widget.open_fullscreen()
+        from cashcontrol.infrastructure.config_manager import ConfigManager
+        builtin = ConfigManager().settings.builtin
+        self._vnc_widget.open_client(
+            fullscreen=builtin.vnc_start_mode == "fullscreen"
+        )
 
     # ── IP editing ──────────────────────────────────────────────────────────
 

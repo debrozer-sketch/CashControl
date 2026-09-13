@@ -1431,6 +1431,138 @@ class EmbeddedVNCWidget(QWidget):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# VncClientWindow — separate top-level window for the built-in viewer
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+class VncClientWindow(QWidget):
+    """Separate window hosting the built-in VNC viewer.
+
+    Created once per session and reused: closing only hides the window and
+    disconnects the viewer (the worker thread is retired).  Esc is sent to the
+    remote cash keyboard, so fullscreen is toggled with the header buttons.
+    """
+
+    closed = Signal()
+
+    _SS_HDR = (
+        "QPushButton {"
+        "  background: rgba(40,40,60,0.85);"
+        "  color: #e8eaf6;"
+        "  border: 1px solid rgba(120,120,160,0.5);"
+        "  border-radius: 5px;"
+        "  padding: 4px 12px;"
+        "}"
+        "QPushButton:hover { background: rgba(70,70,100,0.9); }"
+    )
+
+    def __init__(self, ip: str, depth_idx: int = _DEFAULT_DEPTH_IDX) -> None:
+        super().__init__(None, Qt.WindowType.Window)
+        self.setWindowTitle(f"CashControl — VNC {ip}")
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, False)
+        self.resize(1024, 700)
+        from cashcontrol.gui.app_icon import apply_window_icon
+        apply_window_icon(self)
+
+        self._viewer = EmbeddedVNCWidget(ip, parent=self)
+
+        self._depth_idx = depth_idx
+        self._depth_btns: list[QPushButton] = []
+
+        header = QWidget(self)
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(6, 4, 6, 4)
+        header_layout.setSpacing(6)
+
+        for idx, preset in enumerate(_DEPTH_PRESETS):
+            button = QPushButton(preset.label, header)
+            button.setStyleSheet(_SS_BTN_NORMAL)
+            button.setFixedHeight(20)
+            button.setMinimumWidth(52)
+            button.setToolTip(preset.tooltip)
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
+            button.clicked.connect(
+                lambda _checked=False, selected_idx=idx: self._on_depth_clicked(
+                    selected_idx
+                )
+            )
+            header_layout.addWidget(button)
+            self._depth_btns.append(button)
+        self._update_depth_buttons()
+
+        header_layout.addStretch()
+
+        self._btn_toggle = QPushButton("⛶  На весь экран", header)
+        self._btn_toggle.setStyleSheet(self._SS_HDR)
+        self._btn_toggle.clicked.connect(self._toggle_fullscreen)
+        header_layout.addWidget(self._btn_toggle)
+
+        self._btn_close = QPushButton("Закрыть", header)
+        self._btn_close.setStyleSheet(self._SS_HDR)
+        self._btn_close.setToolTip("Закрыть окно и отключить просмотр")
+        self._btn_close.clicked.connect(self.close)
+        header_layout.addWidget(self._btn_close)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(header)
+        layout.addWidget(self._viewer, stretch=1)
+
+    @property
+    def viewer(self) -> EmbeddedVNCWidget:
+        return self._viewer
+
+    def show_client(self, fullscreen: bool) -> None:
+        if fullscreen:
+            self.showFullScreen()
+        else:
+            self.showNormal()
+            self.resize(1024, 700)
+        self._sync_toggle_text()
+        self.raise_()
+        self.activateWindow()
+        self._viewer.setFocus()
+
+    def closeEvent(self, event) -> None:
+        self._viewer.disconnect_vnc()
+        self.closed.emit()
+        self.hide()
+        event.ignore()
+
+    def _toggle_fullscreen(self) -> None:
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+        self._sync_toggle_text()
+        self.raise_()
+        self.activateWindow()
+
+    def _on_depth_clicked(self, idx: int) -> None:
+        _depth_preset(idx)
+        if idx == self._depth_idx:
+            return
+        self._depth_idx = idx
+        self._viewer.set_depth(idx)
+        self._update_depth_buttons()
+        logger.info(
+            "[VNC] detached depth changed to %s", _depth_preset(idx).label
+        )
+
+    def _update_depth_buttons(self) -> None:
+        for idx, button in enumerate(self._depth_btns):
+            button.setStyleSheet(
+                _SS_BTN_ACTIVE if idx == self._depth_idx else _SS_BTN_NORMAL
+            )
+
+    def _sync_toggle_text(self) -> None:
+        self._btn_toggle.setText(
+            "⛶  Свернуть окно" if self.isFullScreen() else "⛶  На весь экран"
+        )
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # VncPreviewWidget — container with depth buttons below VNC area
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -1480,7 +1612,8 @@ class VncPreviewWidget(QWidget):
         self._config = ConfigManager()
         self._session: CashSession | None = None
         self._task: asyncio.Task | None = None
-        self._depth_idx = _DEFAULT_DEPTH_IDX
+        self._depth_idx = self._default_depth_idx()
+        self._client_window: VncClientWindow | None = None
 
         self._vnc = EmbeddedVNCWidget(ip, parent=self)
         self._vnc.state_changed.connect(self._on_vnc_state)
@@ -1540,6 +1673,17 @@ class VncPreviewWidget(QWidget):
             self._task.cancel()
         self._task = None
 
+    def _default_depth_idx(self) -> int:
+        bpp = getattr(self._config.settings.builtin, "vnc_default_depth", None)
+        try:
+            bpp = int(bpp)
+        except (TypeError, ValueError):
+            return _DEFAULT_DEPTH_IDX
+        for idx, preset in enumerate(_DEPTH_PRESETS):
+            if preset.bpp == bpp:
+                return idx
+        return _DEFAULT_DEPTH_IDX
+
     # ── Depth selection ───────────────────────────────────────────────────
 
     def _on_depth_clicked(self, idx: int) -> None:
@@ -1586,19 +1730,53 @@ class VncPreviewWidget(QWidget):
         self._vnc.disconnect_vnc()
         self._audit("vnc_disconnect")
 
-    def open_fullscreen(self) -> None:
-        exe_str = str(self._config.settings.programs.get_vnc_client() or "").strip()
-        # Path("") is Path(".") and therefore exists.  Check before creating
-        # Path and require a file, not merely an existing directory.
-        if not exe_str:
-            self.state_changed.emit("error", "⚠  Путь к VNC клиенту не настроен")
-            return
+    def open_client(self, fullscreen: bool) -> None:
+        """Open VNC via the available client.
 
-        exe = Path(exe_str).expanduser()
-        if not exe.is_file():
-            self.state_changed.emit("error", f"⚠  VNC клиент не найден:\n{exe_str}")
+        The external vncviewer is used only when a client path is explicitly
+        configured and the executable exists; otherwise the built-in viewer
+        opens in a separate window (fullscreen on request).
+        """
+        exe_str = (self._config.settings.programs.vnc_client_path or "").strip()
+        exe = Path(exe_str).expanduser() if exe_str else None
+        if exe is not None and exe.is_file():
+            logger.info("[VNC] external client %r → open external", str(exe))
+            self._spawn_task(self._open_fullscreen_async(exe))
             return
-        self._spawn_task(self._open_fullscreen_async(exe))
+        logger.info("[VNC] no external client → built-in viewer window")
+        win = self._open_client_window()
+        self._spawn_task(self._connect_client_window(win, fullscreen))
+
+    def open_fullscreen(self) -> None:
+        self.open_client(fullscreen=True)
+
+    def _open_client_window(self) -> VncClientWindow:
+        if self._client_window is None:
+            win = VncClientWindow(self._ip, depth_idx=self._depth_idx)
+            win.viewer.set_depth(self._depth_idx)
+            win.viewer.state_changed.connect(self._on_vnc_state)
+            self._client_window = win
+        else:
+            win = self._client_window
+        # The window is created lazily; keep it in sync if the tab IP changes.
+        win.viewer._ip = self._ip
+        return win
+
+    async def _connect_client_window(
+        self, win: VncClientWindow, fullscreen: bool
+    ) -> None:
+        win.show_client(fullscreen)
+        if win.viewer.is_connected:
+            return
+        if not self._vnc.is_connected:
+            started = await self._ensure_x11vnc()
+            if not started:
+                self.state_changed.emit(
+                    "error", "⚠  Ошибка запуска x11vnc через SSH"
+                )
+                return
+            await asyncio.sleep(_VNC_START_DELAY)
+        win.viewer.connect_vnc()
 
     async def _ensure_x11vnc(self) -> bool:
         if not self._session or not self._session.is_connected:
@@ -1675,3 +1853,5 @@ class VncPreviewWidget(QWidget):
     def cleanup(self) -> None:
         self._cancel_task()
         self._vnc.cleanup()
+        if self._client_window is not None:
+            self._client_window.viewer.cleanup()

@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 from PySide6.QtCore import QPoint, QSize, Qt, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
-    QFileDialog,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
@@ -387,26 +386,9 @@ class CashToolbar(QWidget):
             get_notification_manager().notify("Нет активной вкладки: Откройте вкладку с кассой", level="warning")
             return
 
-        p = self._config.settings.programs
-        exe_path = p.get_vnc_client()
-        if not exe_path or not exe_path.strip():
-            get_notification_manager().notify("VNC: путь не задан: Настройки → Программы", level="warning")
-            return
-
-        exe = Path(exe_path)
-        if not exe.exists():
-            new_path, _ = QFileDialog.getOpenFileName(
-                self,
-                "Укажите путь к VNC-клиенту",
-                str(exe.parent) if exe.parent.exists() else "",
-                "Executable (*.exe);;All files (*)",
-            )
-            if not new_path:
-                return
-            p.vnc_client_path = new_path
-            self._config.save()
-
-        session_widget.open_vnc_external()
+        session_widget.open_vnc_client(
+            fullscreen=self._config.settings.builtin.vnc_start_mode == "fullscreen"
+        )
 
     def _on_ssh(self) -> None:
         asyncio.ensure_future(self._launch_kitty())
@@ -424,7 +406,7 @@ class CashToolbar(QWidget):
         p = self._config.settings.programs
         conn = self._config.settings.connection
 
-        from cashcontrol.gui.ssh_terminal_launcher import should_use_builtin_ssh
+        from cashcontrol.builtin.ssh_terminal_launcher import should_use_builtin_ssh
 
         if should_use_builtin_ssh(p.ssh_client_path):
             self._open_builtin_ssh_terminal(session)
@@ -461,9 +443,9 @@ class CashToolbar(QWidget):
         threading.Thread(target=_run, daemon=True).start()
 
     def _open_builtin_ssh_terminal(self, session) -> None:
+        from cashcontrol.builtin.ssh_terminal_launcher import launch_builtin_terminal
         from cashcontrol.core.security.password_manager import PasswordManager
         from cashcontrol.gui.notification_manager import get_notification_manager
-        from cashcontrol.gui.ssh_terminal_launcher import launch_builtin_terminal
 
         conn = self._config.settings.connection
         password = None
@@ -505,21 +487,6 @@ class CashToolbar(QWidget):
 
         p = self._config.settings.programs
         conn = self._config.settings.connection
-        exe_path = p.get_winscp()
-        exe = Path(exe_path)
-
-        if not exe.exists():
-            new_path, _ = QFileDialog.getOpenFileName(
-                self,
-                "Укажите путь к WinSCP",
-                str(exe.parent) if exe.parent.exists() else "",
-                "Executable (*.exe);;All files (*)",
-            )
-            if not new_path:
-                return
-            p.winscp_path = new_path
-            self._config.save()
-            exe = Path(new_path)
 
         ip = session.ip
         password = None
@@ -536,29 +503,47 @@ class CashToolbar(QWidget):
             return
 
         protocol = "sftp" if os_type.lower() == "ubuntu" else "scp"
-        uri = f"{protocol}://{conn.ssh_login}:{password}@{ip}/"
 
-        cmd = [
-            str(exe),
-            uri,
-            "/hostkey=*",
-            "/rawsettings",
-            "AuthKI=0",
-            "AuthTIS=0",
-            "AuthGSSAPI=0",
-        ]
+        exe_str = (p.winscp_path or "").strip()
+        if exe_str:
+            exe = Path(exe_str).expanduser()
+            if exe.is_file():
+                uri = f"{protocol}://{conn.ssh_login}:{password}@{ip}/"
 
-        audit_log(action_type="tool", action_name="winscp", target=ip, result="success")
-        logger.info(f"Launching WinSCP for {ip} protocol={protocol}")
+                cmd = [
+                    str(exe),
+                    uri,
+                    "/hostkey=*",
+                    "/rawsettings",
+                    "AuthKI=0",
+                    "AuthTIS=0",
+                    "AuthGSSAPI=0",
+                ]
 
-        def _run():
-            time.sleep(0.2)
-            try:
-                subprocess.Popen(cmd, creationflags=0x08000000)
-            except Exception as e:
-                logger.error(f"WinSCP launch failed: {e}")
+                audit_log(action_type="tool", action_name="winscp", target=ip, result="success")
+                logger.info(f"Launching WinSCP for {ip} protocol={protocol}")
 
-        threading.Thread(target=_run, daemon=True).start()
+                def _run():
+                    time.sleep(0.2)
+                    try:
+                        subprocess.Popen(cmd, creationflags=0x08000000)
+                    except Exception as e:
+                        logger.error(f"WinSCP launch failed: {e}")
+
+                threading.Thread(target=_run, daemon=True).start()
+                return
+
+        from cashcontrol.builtin.file_manager_launcher import open_file_manager
+
+        open_file_manager(
+            host=ip,
+            port=conn.ssh_port,
+            login=conn.ssh_login,
+            password=password,
+            start_dir=self._config.settings.builtin.file_manager_start_dir or "/home/tc/storage",
+            protocol=protocol,
+        )
+        logger.info("Opened built-in file manager for %s protocol=%s", ip, protocol)
 
     def _on_postgres(self) -> None:
         from cashcontrol.gui.notification_manager import get_notification_manager
@@ -582,8 +567,8 @@ class CashToolbar(QWidget):
                 return
 
             try:
+                from cashcontrol.builtin.db_viewer import PostgresToolWindow
                 from cashcontrol.core.security.password_manager import PasswordManager
-                from cashcontrol.gui.db_viewer import PostgresToolWindow
             except ImportError as e:
                 get_notification_manager().notify(f"Ошибка загрузки DB Viewer: {e!s}", level="error")
                 logger.error(f"[DB] Import error: {e}")

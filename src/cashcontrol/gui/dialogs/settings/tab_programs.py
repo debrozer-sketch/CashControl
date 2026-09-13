@@ -1,4 +1,4 @@
-"""Programs settings tab — external tool paths and args."""
+"""Programs settings tab — external tool paths and built-in software options."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
-    QLabel,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -18,26 +17,35 @@ from PySide6.QtWidgets import (
 from qfluentwidgets import (
     BodyLabel,
     CardWidget,
+    ComboBox,
     FluentIcon,
     LineEdit,
-    StrongBodyLabel,
     SubtitleLabel,
     ToolButton,
 )
 
 from cashcontrol.gui.theme_helper import color as _tc
-from cashcontrol.infrastructure.audit_logger import get_logger
 
 if TYPE_CHECKING:
     from cashcontrol.infrastructure.config_manager import ConfigManager
 
-logger = get_logger()
-_LABEL_W = 90
+_LABEL_W = 110
 _BTN_SIZE = 32
+_ARG_W = 250
+
+_EXTERNAL_DEFAULTS = {
+    "ssh_args_template": (
+        "-- ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=yes"
+        " -p {port} {login}@{host}"
+    ),
+    "vnc_args_template": "{host}:{display}",
+    "winscp_args_template": "/open scp://{login}@{host}:{port}",
+    "db_args_template": "-h {host} -p {db_port} -U {db_login}",
+}
 
 
 class TabPrograms(QWidget):
-    """External program paths and argument templates."""
+    """External program paths and built-in software options."""
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -56,193 +64,145 @@ class TabPrograms(QWidget):
         inner = QWidget()
         inner_layout = QVBoxLayout(inner)
         inner_layout.setContentsMargins(4, 4, 8, 4)
-        inner_layout.setSpacing(10)
+        inner_layout.setSpacing(8)
 
-        inner_layout.addWidget(self._make_ssh_card())
-        inner_layout.addWidget(self._make_card(
-            "VNC Клиент", "Просмотр удалённого рабочего стола",
-            "vnc_client_path", "vnc_args_template",
-            ["TightVNC:  {host}:{display}", "UltraVNC:  {host}::{port_vnc}",
-             "RealVNC:   {host}:{display}"],
-        ))
-        inner_layout.addWidget(self._make_winscp_card())
-        inner_layout.addWidget(self._make_card(
-            "PostgreSQL Клиент", "Клиент для работы с базой данных кассы",
-            "db_client_path", "db_args_template",
-            ["psql:      -h {host} -p {db_port} -U {db_login}",
-             "DBeaver:   Путь + аргументы зависят от версии"],
-        ))
+        inner_layout.addWidget(self._make_external_card())
+        inner_layout.addWidget(self._make_builtin_card())
         inner_layout.addStretch()
         scroll.setWidget(inner)
         root.addWidget(scroll, stretch=1)
 
-    def _make_ssh_card(self) -> CardWidget:
-        card = CardWidget(self)
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(10)
-        layout.addWidget(SubtitleLabel("SSH Клиент", card))
-
-        desc = BodyLabel(
-            "KiTTY автоматически подключается с паролем из настроек подключения.\n"
-            "Укажите путь к kitty.exe или любому другому SSH-клиенту.\n"
-            "Если путь не задан или файл не найден — будет запускаться ВСТРОЕННЫЙ SSH-терминал.",
-            card,
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet(f"color: {_tc('text_secondary')}; font-size: 11px;")
-        layout.addWidget(desc)
-
-        row = QHBoxLayout()
-        lbl = BodyLabel("Путь:", card)
-        lbl.setFixedWidth(_LABEL_W)
-        lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
-        self.ssh_client_path = LineEdit(card)
-        self.ssh_client_path.setClearButtonEnabled(True)
-        self.ssh_client_path.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-        browse_btn = ToolButton(FluentIcon.FOLDER, card)
-        browse_btn.setFixedSize(_BTN_SIZE, _BTN_SIZE)
-        browse_btn.setToolTip("Выбрать файл")
-        browse_btn.clicked.connect(lambda: self._browse_file(self.ssh_client_path))
-
-        row.addWidget(lbl)
-        row.addWidget(self.ssh_client_path, stretch=1)
-        row.addWidget(browse_btn)
-        layout.addLayout(row)
-
-        hotkeys_label = QLabel(
-            "<b>Встроенный терминал — горячие клавиши:</b><br>"
-            "Ctrl+N / Ctrl+T — новое подключение<br>"
-            "Ctrl+W — закрыть вкладку, Ctrl+Tab / Ctrl+Shift+Tab — переключение вкладок<br>"
-            "Ctrl+Space — быстрый выбор сниппета<br>"
-            "Ctrl+Shift+C / Ctrl+Shift+V — копировать / вставить<br>"
-            "Ctrl++ — шрифт крупнее, Ctrl+- — шрифт мельче, Ctrl+0 — сброс шрифта<br>"
-            "Shift+PgUp / Shift+PgDn, колесо мыши — прокрутка<br>"
-            "Ctrl+Alt+M — главное меню, Shift+ПКМ — меню терминала",
-            card,
-        )
-        hotkeys_label.setWordWrap(True)
-        hotkeys_label.setStyleSheet(
-            f"color: {_tc('text_secondary')}; font-size: 11px;"
-        )
-        layout.addWidget(hotkeys_label)
-
-        self.ssh_args_template = LineEdit(card)
-        self.ssh_args_template.hide()
-        return card
-
-    def _make_winscp_card(self) -> CardWidget:
-        card = CardWidget(self)
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(10)
-        layout.addWidget(SubtitleLabel("WinSCP", card))
-
-        desc = BodyLabel(
-            "WinSCP запускается автоматически с нужным протоколом:\n"
-            "TinyCore → SCP, Ubuntu → SFTP. Пароль берётся из настроек подключения.",
-            card,
-        )
-        desc.setWordWrap(True)
-        desc.setStyleSheet(f"color: {_tc('text_secondary')}; font-size: 11px;")
-        layout.addWidget(desc)
-
-        row = QHBoxLayout()
-        lbl = BodyLabel("Путь:", card)
-        lbl.setFixedWidth(_LABEL_W)
-        lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
-        self.winscp_path = LineEdit(card)
-        self.winscp_path.setClearButtonEnabled(True)
-        self.winscp_path.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-
-        browse_btn = ToolButton(FluentIcon.FOLDER, card)
-        browse_btn.setFixedSize(_BTN_SIZE, _BTN_SIZE)
-        browse_btn.setToolTip("Выбрать файл")
-        browse_btn.clicked.connect(lambda: self._browse_file(self.winscp_path))
-
-        row.addWidget(lbl)
-        row.addWidget(self.winscp_path, stretch=1)
-        row.addWidget(browse_btn)
-        layout.addLayout(row)
-
-        self.winscp_args_template = LineEdit(card)
-        self.winscp_args_template.hide()
-        return card
-
-    def _make_card(self, title: str, description: str,
-                   path_key: str, args_key: str, examples: list[str]) -> CardWidget:
+    def _make_external_card(self) -> CardWidget:
         card = CardWidget(self)
         card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(8)
-        layout.addWidget(StrongBodyLabel(title, card))
+        layout.setContentsMargins(14, 10, 14, 12)
+        layout.setSpacing(4)
+        layout.addWidget(SubtitleLabel("Внешние программы", card))
 
-        desc_label = BodyLabel(description, card)
-        desc_label.setStyleSheet(f"color: {_tc('text_secondary')}; font-size: 11px;")
-        layout.addWidget(desc_label)
+        programs = [
+            ("SSH-клиент", "ssh_client_path", "ssh_args_template"),
+            ("VNC-клиент", "vnc_client_path", "vnc_args_template"),
+            ("WinSCP", "winscp_path", "winscp_args_template"),
+            ("PostgreSQL", "db_client_path", "db_args_template"),
+        ]
+        for name, path_key, args_key in programs:
+            self._program_row(layout, card, name, path_key, args_key)
 
-        path_row = QHBoxLayout()
-        path_row.setSpacing(6)
-        path_lbl = BodyLabel("Путь:", card)
-        path_lbl.setFixedWidth(_LABEL_W)
-        path_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
-        path_row.addWidget(path_lbl)
+        hint = BodyLabel(
+            "Переменные аргументов: {host} {port} {login} {display} {db_port} {db_login}. "
+            "Если путь не задан или файл не найден — используется встроенный инструмент.",
+            card,
+        )
+        hint.setWordWrap(True)
+        hint.setStyleSheet(f"color: {_tc('text_secondary')}; font-size: 11px;")
+        layout.addWidget(hint)
+        return card
 
-        path_edit = LineEdit(card)
+    def _program_row(self, layout: QVBoxLayout, parent: QWidget,
+                     name: str, path_key: str, args_key: str) -> None:
+        row = QHBoxLayout()
+        row.setSpacing(6)
+
+        name_lbl = BodyLabel(name, parent)
+        name_lbl.setFixedWidth(_LABEL_W)
+        name_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
+
+        path_edit = LineEdit(parent)
         path_edit.setPlaceholderText("Путь к .exe файлу программы\u2026")
         path_edit.setClearButtonEnabled(True)
         path_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        path_row.addWidget(path_edit, stretch=1)
 
-        browse_btn = ToolButton(FluentIcon.FOLDER, card)
+        browse_btn = ToolButton(FluentIcon.FOLDER, parent)
         browse_btn.setFixedSize(_BTN_SIZE, _BTN_SIZE)
         browse_btn.setToolTip("Выбрать файл")
-        browse_btn.clicked.connect(lambda _checked=False, e=path_edit: self._browse_file(e))
-        path_row.addWidget(browse_btn)
-        layout.addLayout(path_row)
-
-        args_row = QHBoxLayout()
-        args_row.setSpacing(6)
-        args_lbl = BodyLabel("Аргументы:", card)
-        args_lbl.setFixedWidth(_LABEL_W)
-        args_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
-        args_row.addWidget(args_lbl)
-
-        args_edit = LineEdit(card)
-        args_edit.setClearButtonEnabled(True)
-        args_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        args_row.addWidget(args_edit, stretch=1)
-
-        spacer = QWidget(card)
-        spacer.setFixedSize(_BTN_SIZE, _BTN_SIZE)
-        args_row.addWidget(spacer)
-        layout.addLayout(args_row)
-
-        vars_hint = BodyLabel(
-            "Переменные: {host} {port} {login} {display} {db_port} {db_login}",
-            card,
+        browse_btn.clicked.connect(
+            lambda _checked=False, e=path_edit: self._browse_file(e)
         )
-        vars_hint.setStyleSheet(f"color: {_tc('text_secondary')}; font-size: 10px;")
-        layout.addWidget(vars_hint)
 
-        if examples:
-            ex_label = QLabel("Примеры:", card)
-            ex_label.setStyleSheet(
-                f"color: {_tc('text_tertiary')}; font-size: 10px; font-style: italic; margin-top: 2px;"
-            )
-            layout.addWidget(ex_label)
-            for ex in examples:
-                ex_line = QLabel(f"  {ex}", card)
-                ex_line.setStyleSheet(
-                    f"color: {_tc('text_tertiary')}; font-size: 10px; font-family: monospace;"
-                )
-                layout.addWidget(ex_line)
+        args_edit = LineEdit(parent)
+        args_edit.setFixedWidth(_ARG_W)
+        args_edit.setPlaceholderText(_EXTERNAL_DEFAULTS[args_key])
+        args_edit.setClearButtonEnabled(True)
+        args_edit.setToolTip("Аргументы запуска (см. описание ниже)")
+
+        row.addWidget(name_lbl)
+        row.addWidget(path_edit, stretch=1)
+        row.addWidget(browse_btn)
+        row.addWidget(args_edit)
+        layout.addLayout(row)
 
         setattr(self, path_key, path_edit)
         setattr(self, args_key, args_edit)
+
+    def _make_builtin_card(self) -> CardWidget:
+        card = CardWidget(self)
+        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 10, 14, 12)
+        layout.setSpacing(6)
+        layout.addWidget(SubtitleLabel("Встроенное ПО", card))
+
+        layout.addWidget(self._section_label(card, "Файловый менеджер"))
+        fm_row = QHBoxLayout()
+        fm_row.setSpacing(6)
+        fm_lbl = BodyLabel("Каталог на кассе:", card)
+        fm_lbl.setFixedWidth(_LABEL_W)
+        fm_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
+        self.file_manager_start_dir = LineEdit(card)
+        self.file_manager_start_dir.setPlaceholderText("/home/tc/storage")
+        self.file_manager_start_dir.setClearButtonEnabled(True)
+        self.file_manager_start_dir.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        fm_row.addWidget(fm_lbl)
+        fm_row.addWidget(self.file_manager_start_dir, stretch=1)
+        layout.addLayout(fm_row)
+
+        layout.addWidget(self._section_label(card, "VNC-просмотр"))
+        vnc_row = QHBoxLayout()
+        vnc_row.setSpacing(6)
+        mode_lbl = BodyLabel("Режим открытия:", card)
+        mode_lbl.setFixedWidth(_LABEL_W)
+        mode_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
+        self.vnc_start_mode = ComboBox(card)
+        self.vnc_start_mode.addItems(["Окно", "Полный экран"])
+        self.vnc_start_mode.setFixedWidth(150)
+        vnc_row.addWidget(mode_lbl)
+        vnc_row.addWidget(self.vnc_start_mode)
+        vnc_row.addSpacing(8)
+        depth_lbl = BodyLabel("Глубина цвета:", card)
+        depth_lbl.setFixedWidth(110)
+        depth_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
+        self.vnc_default_depth = ComboBox(card)
+        self.vnc_default_depth.addItems(["8 бит", "16 бит", "32 бита"])
+        self.vnc_default_depth.setFixedWidth(120)
+        vnc_row.addWidget(depth_lbl)
+        vnc_row.addWidget(self.vnc_default_depth)
+        vnc_row.addStretch()
+        layout.addLayout(vnc_row)
+
+        term_label = self._section_label(card, "SSH-терминал")
+        layout.addWidget(term_label)
+        hotkeys = BodyLabel(
+            "Горячие клавиши: Ctrl+N — новое подключение, Ctrl+W — закрыть вкладку, "
+            "Ctrl+Tab — переключение вкладок, Ctrl+Space — выбрать сниппет, "
+            "Ctrl++ / Ctrl+- — размер шрифта, Ctrl+0 — сброс, Ctrl+Shift+C/V — копировать/вставить, "
+            "Shift+PgUp / Shift+PgDn — прокрутка.",
+            card,
+        )
+        hotkeys.setWordWrap(True)
+        hotkeys.setStyleSheet(f"color: {_tc('text_secondary')}; font-size: 11px;")
+        layout.addWidget(hotkeys)
         return card
+
+    def _section_label(self, parent: QWidget, text: str) -> BodyLabel:
+        lbl = BodyLabel(text, parent)
+        lbl.setStyleSheet(
+            f"color: {_tc('text_secondary')}; font-size: 11px; font-weight: bold;"
+            " margin-top: 2px;"
+        )
+        return lbl
 
     def _browse_file(self, line_edit: LineEdit) -> None:
         current = line_edit.text().strip()
@@ -268,21 +228,35 @@ class TabPrograms(QWidget):
         self.winscp_args_template.setText(p.winscp_args_template)
         self.db_args_template.setText(p.db_args_template)
 
+        b = config.settings.builtin
+        self.file_manager_start_dir.setText(b.file_manager_start_dir or "/home/tc/storage")
+        self.vnc_start_mode.setCurrentIndex(
+            {"window": 0, "fullscreen": 1}.get(b.vnc_start_mode, 0)
+        )
+        self.vnc_default_depth.setCurrentIndex(
+            {8: 0, 16: 1, 32: 2}.get(b.vnc_default_depth, 2)
+        )
+
     def save(self, config: ConfigManager) -> None:
-        defaults = {
-            "ssh_args_template": "-- ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=yes -p {port} {login}@{host}",
-            "vnc_args_template": "{host}:{display}",
-            "winscp_args_template": "/open scp://{login}@{host}:{port}",
-            "db_args_template": "-h {host} -p {db_port} -U {db_login}",
-        }
         config.update(
             "programs",
             ssh_client_path=self.ssh_client_path.text().strip() or None,
             vnc_client_path=self.vnc_client_path.text().strip() or None,
             winscp_path=self.winscp_path.text().strip() or None,
             db_client_path=self.db_client_path.text().strip() or None,
-            ssh_args_template=self.ssh_args_template.text().strip() or defaults["ssh_args_template"],
-            vnc_args_template=self.vnc_args_template.text().strip() or defaults["vnc_args_template"],
-            winscp_args_template=self.winscp_args_template.text().strip() or defaults["winscp_args_template"],
-            db_args_template=self.db_args_template.text().strip() or defaults["db_args_template"],
+            ssh_args_template=self.ssh_args_template.text().strip()
+            or _EXTERNAL_DEFAULTS["ssh_args_template"],
+            vnc_args_template=self.vnc_args_template.text().strip()
+            or _EXTERNAL_DEFAULTS["vnc_args_template"],
+            winscp_args_template=self.winscp_args_template.text().strip()
+            or _EXTERNAL_DEFAULTS["winscp_args_template"],
+            db_args_template=self.db_args_template.text().strip()
+            or _EXTERNAL_DEFAULTS["db_args_template"],
         )
+        config.update(
+            "builtin",
+            file_manager_start_dir=self.file_manager_start_dir.text().strip() or "/home/tc/storage",
+            vnc_start_mode=["window", "fullscreen"][self.vnc_start_mode.currentIndex()],
+            vnc_default_depth=[8, 16, 32][self.vnc_default_depth.currentIndex()],
+        )
+

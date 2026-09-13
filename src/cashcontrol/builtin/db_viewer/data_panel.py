@@ -23,13 +23,13 @@ from qfluentwidgets import (
     ToolButton,
 )
 
-from cashcontrol.gui.db_viewer.constants import _PAGE_SIZES
-from cashcontrol.gui.db_viewer.csv_import import _CsvImportDialog
-from cashcontrol.gui.db_viewer.data_grid import _DataGrid
-from cashcontrol.gui.db_viewer.formatting import _qtable
-from cashcontrol.gui.db_viewer.sql import _build_where, _export_rows, _load_page
-from cashcontrol.gui.db_viewer.storage import _DbError, _icon, _toast
-from cashcontrol.gui.db_viewer.workers import _Worker
+from cashcontrol.builtin.db_viewer.constants import _PAGE_SIZES
+from cashcontrol.builtin.db_viewer.csv_import import _CsvImportDialog
+from cashcontrol.builtin.db_viewer.data_grid import _DataGrid
+from cashcontrol.builtin.db_viewer.formatting import _qtable
+from cashcontrol.builtin.db_viewer.sql import _build_where, _export_rows, _load_page
+from cashcontrol.builtin.db_viewer.storage import _DbError, _icon, _toast
+from cashcontrol.builtin.db_viewer.workers import _Worker
 
 
 class _DataPanel(QWidget):  # Открытая таблица: фильтр-строка, грид, пагинация, действия.

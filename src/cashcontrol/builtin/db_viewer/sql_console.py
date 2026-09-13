@@ -34,12 +34,12 @@ from qfluentwidgets import (
     ToolButton,
 )
 
-from cashcontrol.gui.db_viewer.constants import _HISTORY_LIMIT, _MAX_CONSOLE_ROWS
-from cashcontrol.gui.db_viewer.data_grid import _DataGrid
-from cashcontrol.gui.db_viewer.formatting import _c, _mono
-from cashcontrol.gui.db_viewer.sql import _csv_cell, _json_value
-from cashcontrol.gui.db_viewer.storage import _DbError, _icon, _load_json, _save_json, _toast
-from cashcontrol.gui.db_viewer.workers import _Worker
+from cashcontrol.builtin.db_viewer.constants import _HISTORY_LIMIT, _MAX_CONSOLE_ROWS
+from cashcontrol.builtin.db_viewer.data_grid import _DataGrid
+from cashcontrol.builtin.db_viewer.formatting import _c, _mono
+from cashcontrol.builtin.db_viewer.sql import _csv_cell, _json_value
+from cashcontrol.builtin.db_viewer.storage import _DbError, _icon, _load_json, _save_json, _toast
+from cashcontrol.builtin.db_viewer.workers import _Worker
 
 _SQL_KEYWORDS = ['SELECT', 'FROM', 'WHERE', 'GROUP', 'BY', 'ORDER', 'HAVING', 'LIMIT', 'OFFSET', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'FULL', 'CROSS', 'ON', 'AND', 'OR', 'NOT', 'NULL', 'AS', 'DISTINCT', 'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE', 'CREATE', 'TABLE', 'INDEX', 'VIEW', 'DROP', 'ALTER', 'BEGIN', 'COMMIT', 'ROLLBACK', 'TRANSACTION', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END', 'UNION', 'ALL', 'EXISTS', 'IN', 'LIKE', 'ILIKE', 'BETWEEN', 'IS', 'TRUE', 'FALSE', 'CAST', 'RETURNING', 'WITH', 'RECURSIVE', 'ASC', 'DESC', 'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES', 'UNIQUE', 'CHECK', 'DEFAULT', 'USING', 'INTERSECT', 'EXCEPT', 'OVER', 'PARTITION', 'FILTER']
 _SQL_TYPES = ['INT', 'INTEGER', 'BIGINT', 'SMALLINT', 'SERIAL', 'TEXT', 'VARCHAR', 'CHAR', 'BOOLEAN', 'BOOL', 'NUMERIC', 'DECIMAL', 'REAL', 'DOUBLE', 'FLOAT', 'DATE', 'TIME', 'TIMESTAMP', 'UUID', 'JSON', 'JSONB', 'BYTEA', 'MONEY', 'INET', 'INTERVAL']

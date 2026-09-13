@@ -11,8 +11,8 @@ dist/
 /data/
 /logs/
 
-# Vendored SSH terminal runtime data (code in builtin_terminal/data/*.py is tracked)
-builtin_terminal/data/app/
+# Vendored SSH terminal runtime data (code in builtin/terminal/data/*.py is tracked)
+src/cashcontrol/builtin/terminal/data/app/
 
 # Bundled binaries and their configs
 soft/*.exe

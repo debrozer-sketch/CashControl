@@ -48,6 +48,8 @@ class HelpDialog(QDialog):
             | Qt.WindowType.WindowMaximizeButtonHint
             | Qt.WindowType.WindowMinimizeButtonHint
         )
+        from cashcontrol.gui.app_icon import apply_window_icon
+        apply_window_icon(self)
         self._pages: dict[QTreeWidgetItem, callable] = {}
         self._setup_ui()
         self._build_tree()

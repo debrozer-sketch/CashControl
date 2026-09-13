@@ -25,8 +25,9 @@ logger = get_logger()
 # Префиксы модулей, которые разрешено переопределять из modules/.
 _HOT_PACKAGE_PREFIXES = frozenset({
     "cashcontrol.gui.toolbar",
-    "cashcontrol.gui.vnc_preview",
-    "cashcontrol.gui.db_viewer",
+    "cashcontrol.builtin.vnc.vnc_preview",
+    "cashcontrol.builtin.db_viewer",
+    "cashcontrol.builtin.file_manager",
     "cashcontrol.gui.dialogs",
     "cashcontrol.gui.widgets",
 })

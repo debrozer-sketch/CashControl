@@ -74,11 +74,18 @@ class VncPreviewSettings(BaseModel):
     color_level: str = "rgb222"
 
 
+class BuiltinSettings(BaseModel):
+    file_manager_start_dir: str = "/home/tc/storage"
+    vnc_start_mode: str = "window"
+    vnc_default_depth: int = 32
+
+
 class Settings(BaseModel):
     connection: ConnectionSettings = Field(default_factory=ConnectionSettings)
     programs: ProgramsSettings = Field(default_factory=ProgramsSettings)
     general: GeneralSettings = Field(default_factory=GeneralSettings)
     vnc_preview: VncPreviewSettings = Field(default_factory=VncPreviewSettings)
+    builtin: BuiltinSettings = Field(default_factory=BuiltinSettings)
 
 
 class ConfigManager:

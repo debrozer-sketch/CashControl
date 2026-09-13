@@ -1,6 +1,6 @@
 [project]
 name = "cashcontrol"
-version = "3.8.0"
+version = "3.8.1"
 description = "Desktop application for remote POS terminal management"
 requires-python = ">=3.12,<3.14"
 authors = [
@@ -24,7 +24,7 @@ dependencies = [
     "numpy>=1.26",
     # Safe XML parsing
     "defusedxml>=0.7",
-    # Built-in SSH terminal (vendored in builtin_terminal/)
+    # Built-in SSH terminal (vendored in src/cashcontrol/builtin/terminal)
     "pyte>=0.8,<1",
     # Windows-specific
     "pywin32>=306; sys_platform == 'win32'",
@@ -51,8 +51,8 @@ target-version = "py312"
 line-length = 100
 src = ["src"]
 # Vendored SSH terminal keeps its own prototype style; linted state is
-# tracked separately (see builtin_terminal/README.md).
-exclude = ["builtin_terminal"]
+# tracked separately (see src/cashcontrol/builtin/terminal/README.md).
+exclude = ["src/cashcontrol/builtin/terminal"]
 
 [tool.ruff.lint]
 select = [
@@ -80,6 +80,8 @@ ignore = [
 # Qt API requires camelCase overrides (paintEvent, keyPressEvent, ...) and
 # mixedCase Signal attributes — renaming would break the framework contract.
 "src/cashcontrol/gui/**" = ["N802", "N815", "N801"]
+# Built-in tools (VNC preview, DB viewer) use the same Qt API naming.
+"src/cashcontrol/builtin/**" = ["N802", "N815", "N801"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["cashcontrol"]

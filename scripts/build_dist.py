@@ -42,12 +42,19 @@ BIN_EXTS = {".pyd", ".dll", ".so"}
 COPY_EXTS = {".py", ".pyw", ".json", ".ico", ".png", ".svg", ".qss", ".txt", ".toml"}
 
 HOT_FILES = [
-    ("gui", ["toolbar.py", "vnc_preview.py"]),
-    ("gui/db_viewer", [
+    ("gui", ["toolbar.py"]),
+    ("builtin/db_viewer", [
         "__init__.py",
         "constants.py", "formatting.py", "storage.py", "workers.py", "sql.py",
         "data_grid.py", "data_panel.py", "csv_import.py",
         "sql_console.py", "tables_panel.py", "widget.py",
+    ]),
+    ("builtin/vnc", ["vnc_preview.py"]),
+    ("builtin/file_manager", [
+        "__init__.py",
+        "models.py", "backends.py", "service.py", "cli.py",
+        "gui/__init__.py", "gui/dialogs.py", "gui/runtime.py",
+        "gui/session.py", "gui/widgets.py", "gui/window.py",
     ]),
     ("gui/dialogs", [
         "command_editor.py", "command_result_dialog.py", "logs_viewer.py",
@@ -238,13 +245,22 @@ def prune_runtime(out: Path) -> None:
     log("runtime pruned")
 
 
+def _app_ignore(directory: str, names: list[str]) -> list[str]:
+    """Что исключаем из копии app-кода: __pycache__ и dev/runtime-артефакты
+    встроенного SSH-терминала (README/requirements/run.bat, логи, data/app)."""
+    src = Path(directory)
+    ignored = {n for n in names if n == "__pycache__"}
+    if src.name == "terminal":
+        ignored |= {n for n in names if n in {"README.md", "requirements.txt", "run.bat", "logs"}}
+    if src.name == "data" and "app" in names:
+        ignored.add("app")
+    return sorted(ignored)
+
+
 def copy_app_code(out: Path) -> None:
     app_pkg = out / "runtime" / "app" / "cashcontrol"
 
-    def ignore(directory: str, names: list[str]) -> list[str]:
-        return [n for n in names if n == "__pycache__"]
-
-    shutil.copytree(SRC_PKG, app_pkg, ignore=ignore)
+    shutil.copytree(SRC_PKG, app_pkg, ignore=_app_ignore)
     log(f"app code -> {app_pkg}")
 
 
@@ -256,8 +272,11 @@ def build_modules_overlay(out: Path) -> None:
         src_dir = SRC_PKG / rel_dir
         for fname in files:
             f = src_dir / fname
-            if f.exists():
-                shutil.copy2(f, target / fname)
+            if not f.exists():
+                continue
+            dst = target / fname
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, dst)
     layouts_src = SRC_PKG / "gui" / "widgets" / "keyboard_layouts"
     if layouts_src.exists():
         dst = modules / "gui" / "widgets" / "keyboard_layouts"
@@ -265,24 +284,6 @@ def build_modules_overlay(out: Path) -> None:
         for f in layouts_src.glob("*.json"):
             shutil.copy2(f, dst / f.name)
     log("modules/ overlay built")
-
-
-def _builtin_terminal_ignore(src_dir, names: list[str]) -> list[str]:
-    """Что исключаем из копии builtin_terminal: служебные/dev-файлы,
-    __pycache__ и runtime-данные (app-папка с сниппетами/профилями, логи)."""
-    src = Path(src_dir)
-    ignored = set()
-    for n in names:
-        if (
-            n in {"__pycache__", "logs"}
-            or (src.name == "data" and n == "app")
-            or (
-                src.name == "builtin_terminal"
-                and n in {"builtin_terminal.7z", "README.md", "requirements.txt", "run.bat"}
-            )
-        ):
-            ignored.add(n)
-    return sorted(ignored)
 
 
 def copy_user_content(out: Path) -> None:
@@ -303,16 +304,9 @@ def copy_user_content(out: Path) -> None:
     soft_src = REPO_ROOT / "soft"
     if soft_src.exists():
         shutil.copytree(soft_src, out / "soft", ignore=_soft_ignore)
-    # builtin_terminal копируется выборочно: без служебных файлов (7z, README,
-    # requirements.txt, run.bat), без __pycache__ и без runtime-данных/логов —
-    # они создаются самим терминалом при первом запуске.
-    bt_src = REPO_ROOT / "builtin_terminal"
-    if bt_src.exists():
-        shutil.copytree(
-            bt_src,
-            out / "builtin_terminal",
-            ignore=_builtin_terminal_ignore,
-        )
+    # Встроенный SSH-терминал уходит вместе с app-кодом (copy_app_code):
+    # из dist-копии исключаются dev-файлы, логи и runtime-данные — они
+    # создаются самим терминалом при первом запуске.
     for d in ("data", "logs"):
         (out / d).mkdir(exist_ok=True)
     log("root content copied")

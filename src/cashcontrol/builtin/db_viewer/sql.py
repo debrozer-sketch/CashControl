@@ -10,8 +10,8 @@ from decimal import Decimal
 
 from psycopg2 import sql as pgsql
 
-from cashcontrol.gui.db_viewer.formatting import _fmt, _qtable
-from cashcontrol.gui.db_viewer.storage import _DbError
+from cashcontrol.builtin.db_viewer.formatting import _fmt, _qtable
+from cashcontrol.builtin.db_viewer.storage import _DbError
 
 _SQL_DATABASES = "SELECT datname FROM pg_database WHERE NOT datistemplate ORDER BY 1"
 _SQL_TABLES = """SELECT c.relname AS name, c.relkind AS kind, c.reltuples::bigint AS est

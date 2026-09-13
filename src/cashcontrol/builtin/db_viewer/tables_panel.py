@@ -20,10 +20,10 @@ from qfluentwidgets import (
     SearchLineEdit,
 )
 
-from cashcontrol.gui.db_viewer.formatting import _qtable
-from cashcontrol.gui.db_viewer.sql import _SQL_TABLES
-from cashcontrol.gui.db_viewer.storage import _DbError, _icon, _toast
-from cashcontrol.gui.db_viewer.workers import _Worker
+from cashcontrol.builtin.db_viewer.formatting import _qtable
+from cashcontrol.builtin.db_viewer.sql import _SQL_TABLES
+from cashcontrol.builtin.db_viewer.storage import _DbError, _icon, _toast
+from cashcontrol.builtin.db_viewer.workers import _Worker
 
 
 class _TablesPanel(QWidget):

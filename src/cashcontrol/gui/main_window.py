@@ -9,7 +9,7 @@ Layout:
 from __future__ import annotations
 
 from PySide6.QtCore import QSettings, QSize, QTimer
-from PySide6.QtGui import QCloseEvent, QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
 from cashcontrol import __app_name__, __version__
@@ -33,16 +33,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{__app_name__} v{__version__}")
         self.setMinimumSize(QSize(960, 640))
 
-        # Window icon (taskbar + title bar)
-        from cashcontrol.infrastructure.path_resolver import get_app_root
-        _icon_candidates = [
-            get_app_root() / "icon.ico",                                        # prod
-            get_app_root() / "src" / "cashcontrol" / "gui" / "resources" / "icon.ico",  # dev
-        ]
-        for _icon_path in _icon_candidates:
-            if _icon_path.exists():
-                self.setWindowIcon(QIcon(str(_icon_path)))
-                break
+        from cashcontrol.gui.app_icon import apply_window_icon
+        apply_window_icon(self)
         self.setObjectName("CashControlMainWindow")
 
         self._registry = ActionsRegistry()
@@ -174,7 +166,8 @@ class MainWindow(QMainWindow):
         sw.connect_vnc()
 
     def _hotkey_vnc_external(self) -> None:
-        """Ctrl+Shift+V — открыть внешнее VNC-приложение для активной кассы."""
+        """Ctrl+Shift+V — открыть доступный VNC-клиент (внешний или свой
+        просмотрщик в отдельном окне) для активной кассы."""
         sw = self._active_session_widget()
         if sw is None:
             self.set_status("Нет активной вкладки кассы")

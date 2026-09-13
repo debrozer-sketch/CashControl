@@ -1,4 +1,4 @@
-"""Integration tests for the built-in SSH terminal (vendored in builtin_terminal/)."""
+"""Integration tests for the built-in SSH terminal (vendored in builtin/terminal)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from cashcontrol.gui.ssh_terminal_launcher import (
+from cashcontrol.builtin.ssh_terminal_launcher import (
     build_terminal_command,
     builtin_terminal_root,
     should_use_builtin_ssh,
@@ -48,7 +48,7 @@ def test_build_command_password_never_in_argv():
 
 @pytest.mark.skipif(
     not builtin_terminal_root().is_dir(),
-    reason="vendored builtin_terminal/ is not present",
+    reason="vendored builtin/terminal is not present",
 )
 def test_vendored_emulator_processes_output():
     root = builtin_terminal_root()

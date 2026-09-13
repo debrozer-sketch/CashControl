@@ -1,8 +1,8 @@
-"""Integration of the built-in SSH terminal (vendored as builtin_terminal/).
+"""Integration of the built-in SSH terminal (vendored as cashcontrol/builtin/terminal).
 
-The terminal is launched as a SEPARATE process (pythonw + builtin_terminal/
-main.py) — the same pattern as the external KiTTY/WinSCP tools — instead of
-being embedded into the CashControl event loop. This gives the terminal its
+The terminal is launched as a SEPARATE process (pythonw + terminal/main.py) —
+the same pattern as the external KiTTY/WinSCP tools — instead of being
+embedded into the CashControl event loop. This gives the terminal its
 own QApplication, qasync event loop and top-level window, so its parsing/paint
 floods and the app's SSH pings/collectors can no longer stall each other.
 
@@ -18,16 +18,15 @@ import sys
 from pathlib import Path
 
 from cashcontrol.infrastructure.audit_logger import audit_log
-from cashcontrol.infrastructure.path_resolver import get_app_root
 
-logger = logging.getLogger("cashcontrol.gui.ssh_terminal")
+logger = logging.getLogger("cashcontrol.builtin.ssh_terminal")
 
 _CREATE_NO_WINDOW = 0x08000000
 
 
 def builtin_terminal_root() -> Path:
-    """App-root resolved location of the vendored terminal (dev == repo root)."""
-    return get_app_root() / "builtin_terminal"
+    """Location of the vendored terminal, resolved relative to this module."""
+    return Path(__file__).resolve().parent / "terminal"
 
 
 def should_use_builtin_ssh(client_path: str | None) -> bool:

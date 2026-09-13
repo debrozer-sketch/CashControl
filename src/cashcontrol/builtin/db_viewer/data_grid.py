@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
 )
 
-from cashcontrol.gui.db_viewer.formatting import (
+from cashcontrol.builtin.db_viewer.formatting import (
     _EDITABLE,
     _c,
     _fmt,
