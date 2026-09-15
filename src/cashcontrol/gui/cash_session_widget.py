@@ -25,7 +25,7 @@ from qfluentwidgets import (
 
 from cashcontrol.builtin.vnc.vnc_preview import VncPreviewWidget
 from cashcontrol.core.cash_types import get_cash_type_registry, has_feature
-from cashcontrol.core.info import InfoCollector, ProblemChecker
+from cashcontrol.core.info import ProblemChecker, get_info_collector
 from cashcontrol.core.info.info_manager import CollectionStatus, InfoField
 from cashcontrol.core.session import CashSession
 from cashcontrol.gui.notification_manager import get_notification_manager
@@ -96,7 +96,9 @@ class CashSessionWidget(QWidget):
         self._section_ready.connect(self._render_section)
         from cashcontrol.gui.theme_engine import ThemeEngine
 
-        ThemeEngine.instance().theme_changed.connect(self._refresh_theme)
+        self._theme_conn = ThemeEngine.instance().theme_changed.connect(
+            self._refresh_theme
+        )
         self._connect_task = None
 
     @property
@@ -396,7 +398,12 @@ class CashSessionWidget(QWidget):
 
     async def load_info(self, force: bool = False) -> None:
         if self._loading:
-            return
+            if not force:
+                return
+            # force: перезапуск идущего сбора, а не тихий no-op
+            if self._info_task and not self._info_task.done():
+                self._info_task.cancel()
+            self._loading = False
         if self._info_loaded and not force:
             return
         if not self._session or not self._session.is_connected:
@@ -417,7 +424,7 @@ class CashSessionWidget(QWidget):
             self._show_skeletons()
             self.loading_label.hide()
 
-            collector = InfoCollector()
+            collector = get_info_collector()
             snapshot = await collector.collect_all(
                 self._session,
                 force=force,
@@ -446,7 +453,9 @@ class CashSessionWidget(QWidget):
 
         except asyncio.CancelledError:
             logger.debug(f"Info collection cancelled for {self._ip}")
-            self._loading = False
+            current = asyncio.current_task()
+            if current is None or current is self._info_task:
+                self._loading = False
         except Exception as e:
             self.loading_label.show()
             self.loading_label.setText(f"Ошибка: {e}")
@@ -702,8 +711,13 @@ class CashSessionWidget(QWidget):
                 f"font-size: 14px; color: {_tc('text_secondary')};"
             )
         if hasattr(self, "_vnc_status_label"):
+            state = getattr(self._vnc_widget, "state", lambda: "idle")()
+            color_key = {
+                "connected": "success",
+                "error": "error",
+            }.get(state, "text_secondary")
             self._vnc_status_label.setStyleSheet(
-                f"color: {_tc('text_secondary')}; font-size: 11px;"
+                f"color: {_tc(color_key)}; font-size: 11px;"
             )
 
     # ── Public VNC API ───────────────────────────────────────────────────
@@ -815,6 +829,9 @@ class CashSessionWidget(QWidget):
         self.start_connecting()
 
     def cleanup(self) -> None:
+        if self._theme_conn is not None:
+            self._theme_conn.disconnect()
+            self._theme_conn = None
         self._vnc_widget.cleanup()
 
     @override

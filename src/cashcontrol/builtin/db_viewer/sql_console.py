@@ -68,11 +68,14 @@ class _SqlHighlighter(QSyntaxHighlighter):
         self._rules = ([(re.compile(rf'\b{w}\b', re.I), kw) for w in _SQL_KEYWORDS]
                        + [(re.compile(rf'\b{w}\b', re.I), ty) for w in _SQL_TYPES]
                        + [(re.compile(rf'\b{w}\b', re.I), fn) for w in _SQL_FUNCS]
-                       + [(re.compile(r"'(?:[^']|'')*'"), st),
-                          (re.compile(r'\b\d+(\.\d+)?\b'), nm),
+                       + [(re.compile(r'\b\d+(\.\d+)?\b'), nm),
+                          (re.compile(r'[+\-*/%=<>()\[\];,.]'), op),
+                          # строки и комментарии ПОСЛЕ операторов: последнее совпавшее
+                          # правило перезаписывает предыдущее, поэтому они должны
+                          # "выигрывать" при пересечении с операторными символами
+                          (re.compile(r"'(?:[^']|'')*'"), st),
                           (re.compile(r'--[^\n]*'), cm),
-                          (re.compile(r'/\*.*?\*/', re.S), cm),
-                          (re.compile(r'[+\-*/%=<>()\[\];,.]'), op)])
+                          (re.compile(r'/\*.*?\*/', re.S), cm)])
 
     def highlightBlock(self, text):
         for rx, fmt in self._rules:

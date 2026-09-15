@@ -106,9 +106,11 @@ class HistoryManager(QObject):
                 logger.exception(f"History flush failed for {ip}")
 
     def get(self, ip: str, limit: int = 100) -> list[HistoryEntry]:
-        if self._mode() == "persistent":
-            return self._load_from_file(ip, limit)
         entries = self._memory.get(ip, [])
+        # В persistent-режиме живём из памяти (совпадает с live-сигналом),
+        # файл служит только для восстановления после перезапуска.
+        if not entries and self._mode() == "persistent":
+            return self._load_from_file(ip, limit)
         return list(reversed(entries[-limit:]))
 
     def clear(self, ip: str) -> None:

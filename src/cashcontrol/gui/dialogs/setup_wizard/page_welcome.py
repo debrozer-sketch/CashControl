@@ -14,7 +14,7 @@ class WelcomePage(QWizardPage):
         layout.setSpacing(16)
         layout.setContentsMargins(40, 20, 40, 20)
 
-        title = TitleLabel(f"Добро пожаловать в {__app_name__} 3.0", self)
+        title = TitleLabel(f"Добро пожаловать в {__app_name__} {__version__}", self)
         layout.addWidget(title)
 
         desc = BodyLabel(

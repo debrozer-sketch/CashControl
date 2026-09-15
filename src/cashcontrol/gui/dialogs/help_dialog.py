@@ -60,7 +60,15 @@ class HelpDialog(QDialog):
             self._show_page(first)
 
         from cashcontrol.gui.theme_engine import ThemeEngine
-        ThemeEngine.instance().theme_changed.connect(self._refresh_theme)
+        self._theme_conn = ThemeEngine.instance().theme_changed.connect(
+            self._refresh_theme
+        )
+
+    def closeEvent(self, event) -> None:
+        if self._theme_conn is not None:
+            self._theme_conn.disconnect()
+            self._theme_conn = None
+        super().closeEvent(event)
 
     def _setup_ui(self) -> None:
         layout = QHBoxLayout(self)

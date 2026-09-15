@@ -378,6 +378,8 @@ class CommandEditorDialog(QDialog):
             desc, req, timeout = "", False, 30
             for line in src.splitlines():
                 line = line.strip()
+                if not line:
+                    continue
                 if not line.startswith("#"):
                     break
                 if line.startswith("# description:"):

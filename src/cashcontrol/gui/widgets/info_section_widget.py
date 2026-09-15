@@ -179,14 +179,10 @@ class InfoGroupWidget(QFrame):
             self._update_field_display(field, field.value)
 
     def _update_field_display(self, field: InfoField, new_value: str) -> None:
-        text = self._body.text()
-        old_display = (
-            get_alias_manager().resolve(field.alias_key or "", fallback=field.value)
-            if field.alias_key
-            else field.value
-        )
-        text = text.replace(str(old_display), str(new_value))
-        self._body.setText(text)
+        # Полный перерендер, а не str.replace: значение могло быть у нескольких
+        # полей, и точечная замена переименовала бы их все. resolve() вернёт
+        # новое имя только для этого alias_key.
+        self._render_body()
 
 
 def _simple_field(key: str, value: Any) -> InfoField:

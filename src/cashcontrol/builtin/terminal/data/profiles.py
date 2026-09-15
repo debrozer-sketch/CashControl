@@ -9,7 +9,31 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Optional
+
+from cashcontrol.core.security.encryption import decrypt_password, encrypt_password
+
+
+def _encrypt_pw(password: str | None) -> str | None:
+    """Шифруем пароль перед записью на диск (Fernet/DPAPI-ключ из keystore)."""
+    if not password:
+        return None
+    try:
+        return encrypt_password(password)
+    except Exception:
+        return password
+
+
+def _decrypt_pw(stored: str | None) -> str | None:
+    """Расшифровываем пароль; legacy-значение (открытый текст) не ломаем."""
+    if not stored:
+        return None
+    # не Fernet-токен → legacy открытый текст, без попытки расшифровки
+    if not stored.startswith("gAAAA"):
+        return stored
+    try:
+        return decrypt_password(stored)
+    except Exception:
+        return stored
 
 
 def _app_data_dir() -> Path:
@@ -26,9 +50,9 @@ class HostProfile:
     host: str
     username: str = "root"
     port: int = 22
-    password: Optional[str] = None
+    password: str | None = None
     color_tag: str = "none"  # none | red | green | blue | yellow
-    last_connected: Optional[str] = None
+    last_connected: str | None = None
 
     @property
     def profile_id(self) -> str:
@@ -38,7 +62,7 @@ class HostProfile:
 @dataclass
 class AppSettings:
     font_size: float = 10.0
-    font_family: Optional[str] = None
+    font_family: str | None = None
     scrollback_lines: int = 10000
     copy_on_select: bool = True
     keepalive_interval: float = 15.0
@@ -106,10 +130,18 @@ class ProfileStore:
     def all_profiles(self) -> list[HostProfile]:
         # фильтруем неизвестные ключи (миграция старых форматов)
         valid = set(HostProfile.__dataclass_fields__)
-        return [HostProfile(**{k: v for k, v in p.items() if k in valid}) for p in self._profiles]
+        profiles = []
+        for p in self._profiles:
+            entry = {k: v for k, v in p.items() if k in valid}
+            if entry.get("password"):
+                entry["password"] = _decrypt_pw(entry["password"])
+            profiles.append(entry)
+        return [HostProfile(**entry) for entry in profiles]
 
     def upsert(self, profile: HostProfile) -> None:
         profiles = [dict(p) for p in self._profiles]
+        # пароль храним только в шифрованном виде
+        entry_pw = _encrypt_pw(profile.password)
         for i, p in enumerate(profiles):
             if p.get("profile_id") == profile.profile_id or (
                 p.get("host") == profile.host and p.get("port") == profile.port
@@ -117,10 +149,12 @@ class ProfileStore:
             ):
                 profiles[i] = asdict(profile)
                 profiles[i]["profile_id"] = profile.profile_id
+                profiles[i]["password"] = entry_pw
                 break
         else:
             entry = asdict(profile)
             entry["profile_id"] = profile.profile_id
+            entry["password"] = entry_pw
             profiles.append(entry)
         self._store.set("profiles", profiles)
 

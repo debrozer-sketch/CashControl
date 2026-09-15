@@ -2,9 +2,6 @@
 from __future__ import annotations
 
 import json
-import sys
-import tempfile
-from pathlib import Path
 
 from PySide6.QtWidgets import (
     QApplication,
@@ -16,20 +13,15 @@ from qfluentwidgets import (
     InfoBarPosition,
 )
 
+from cashcontrol.infrastructure.path_resolver import get_data_dir
+
 
 class _DbError(Exception):
     pass
 
 
 def _data_dir():
-    base = Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) \
-        else Path(__file__).resolve().parents[3]
-    try:
-        d = base / 'data'
-        d.mkdir(parents=True, exist_ok=True)
-        return d
-    except OSError:
-        return Path(tempfile.gettempdir()) / 'cashcontrol'
+    return get_data_dir()
 
 
 def _load_json(name, default):

@@ -484,7 +484,7 @@ class RemoteSession(QWidget):
         if not name:
             return
         if panel.kind == "local":
-            target = join_remote(panel.current_dir() or "", name).replace("/", os.sep) if panel.current_dir() else name
+            target = str(Path(panel.current_dir() or "") / name)
             self._executor.submit(self._local_mkdir_coro(target, "local"))
         else:
             if self._service is None:
@@ -517,8 +517,7 @@ class RemoteSession(QWidget):
         if not new_name:
             return
         if panel.kind == "local":
-            parent = str(Path(current).parent)
-            target = join_remote(parent, new_name).replace("/", os.sep)
+            target = str(Path(current).parent / new_name)
             self._executor.submit(self._local_rename_coro(current, target, "local"))
         else:
             parent = parent_remote(current)

@@ -8,6 +8,7 @@ On first launch, shows setup wizard.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import sys
 
 import qasync
@@ -55,6 +56,13 @@ def main() -> None:
 
     logger.info(f"Starting {__app_name__} v{__version__}")
 
+    # Первичное копирование примеров (commands/collectors/cash_types/detection)
+    # из defaults/ — только для отсутствующих файлов, чтобы обновление никогда
+    # не затирало то, что пользователь создал или изменил.
+    from cashcontrol.infrastructure.seed_defaults import seed_defaults
+
+    seed_defaults()
+
     from cashcontrol.infrastructure.module_loader import install
 
     install()  # до любых импортов GUI — иначе excluded-модули не найдутся
@@ -66,6 +74,20 @@ def main() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName(__app_name__)
     app.setApplicationVersion(__version__)
+
+    # Windows: уникальный AppUserModelID заставляет панель задач брать иконку
+    # окна (CashControl) вместо дефолтной иконки pythonw-процесса загрузчика.
+    if sys.platform == "win32":
+        import ctypes
+
+        with contextlib.suppress(Exception):
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("CashControl.app")
+
+    from cashcontrol.gui.app_icon import app_icon
+
+    _icon = app_icon()
+    if not _icon.isNull():
+        app.setWindowIcon(_icon)
 
     # Setup asyncio event loop — before any dialogs with async
     loop = qasync.QEventLoop(app)

@@ -82,12 +82,26 @@ class CashTypeRegistry:
         return self._aliases.get(value.strip().lower())
 
     def match_substring(self, value: str) -> str | None:
-        """Find a type whose alias is contained in the given raw string."""
+        """Find the most specific alias contained in the given raw string.
+
+        Prefer the longest matching alias: a generic one ("pos", "sco") must
+        not shadow a more precise hit ("sco_v3") just because it comes first
+        in the registry traversal order.
+        """
+        if not value:
+            return None
         lowered = value.strip().lower()
+        best_alias: str | None = None
+        best_type: str | None = None
         for alias, type_id in self._aliases.items():
-            if len(alias) > 2 and alias in lowered:
-                return type_id
-        return None
+            if (
+                len(alias) > 2
+                and alias in lowered
+                and (best_alias is None or len(alias) > len(best_alias))
+            ):
+                best_alias = alias
+                best_type = type_id
+        return best_type
 
     def get(self, value: str | None) -> CashTypeDefinition | None:
         type_id = self.resolve(value)

@@ -58,9 +58,13 @@ Name: "desktopicon"; Description: "Создать ярлык на рабочем
 Name: "startmenuicon"; Description: "Создать ярлык в меню Пуск"; GroupDescription: "Дополнительно:"
 
 [Files]
-; All files from dist\CashControl\. Root data/ and logs/ are purged by
-; build_dist.py before this script runs, so Inno (which skips empty dirs)
-; won't ship them — user data/passwords never enter the installer.
+; All files from dist\CashControl\. User data is never part of the payload:
+;   - root data/ and logs/ are purged by build_dist.py before this script runs,
+;     so Inno (which skips empty dirs) won't ship them — settings, keystore and
+;     sessions stay untouched across updates;
+;   - commands/collectors/cash_types/detection are shipped under defaults/ and
+;     the app seeds them only when missing, so custom user commands/settings are
+;     never overwritten by an update (infrastructure/seed_defaults).
 ; NOTE: do not add "data"/"logs" masks here: Inno matches them at ANY depth
 ; and would also drop the builtin/terminal/data Python package
 ; (runtime\app\cashcontrol\builtin\terminal\data\*.py).

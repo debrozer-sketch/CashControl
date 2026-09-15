@@ -665,8 +665,8 @@ class RemoteFileModel(QAbstractItemModel):
         reverse = order is Qt.SortOrder.DescendingOrder
         dirs = sorted((e for e in self._entries if e.is_dir), key=value, reverse=reverse)
         files = sorted((e for e in self._entries if not e.is_dir), key=value, reverse=reverse)
-        self._entries = dirs + files
         self.beginResetModel()
+        self._entries = dirs + files
         self.endResetModel()
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
@@ -722,10 +722,10 @@ class RemoteFileModel(QAbstractItemModel):
         path, entries = payload
         if path != self._directory:
             return
-        self._entries = [entry for entry in entries if self._show_hidden or not entry.hidden]
-        self._loading = False
         self.beginResetModel()
+        self._entries = [entry for entry in entries if self._show_hidden or not entry.hidden]
         self.endResetModel()
+        self._loading = False
         self.directory_loaded.emit(path)
 
     def _on_error(self, message: str) -> None:

@@ -32,15 +32,11 @@ class SettingsDialog(QDialog):
         self.font_combo = QFontComboBox()
         current_font = store.settings.font_family
         if current_font:
-            self.font_combo.setCurrentFont(
-                self.font_combo.itemData(
-                    next(
-                        (i for i in range(self.font_combo.count())
-                         if self.font_combo.itemText(i) == current_font),
-                        0,
-                    )
-                )
-            )
+            from PySide6.QtGui import QFont
+
+            # itemData() комбо возвращает не данные шрифта (он в FontRole),
+            # поэтому setCurrentFont(itemData(...)) сбрасывал шрифт на дефолт.
+            self.font_combo.setCurrentFont(QFont(current_font))
         form.addRow("Шрифт:", self.font_combo)
 
         self.size_spin = QDoubleSpinBox()

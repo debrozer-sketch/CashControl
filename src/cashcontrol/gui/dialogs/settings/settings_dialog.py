@@ -63,7 +63,15 @@ class SettingsDialog(QDialog):
         self._menu.currentRowChanged.connect(self._stack.setCurrentIndex)
 
         from cashcontrol.gui.theme_engine import ThemeEngine
-        ThemeEngine.instance().theme_changed.connect(self._refresh_menu_icons)
+        self._theme_conn = ThemeEngine.instance().theme_changed.connect(
+            self._refresh_menu_icons
+        )
+
+    def closeEvent(self, event) -> None:
+        if self._theme_conn is not None:
+            self._theme_conn.disconnect()
+            self._theme_conn = None
+        super().closeEvent(event)
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
@@ -111,6 +119,11 @@ class SettingsDialog(QDialog):
             self._tab_general.save(self._config)
             self._tab_logs.save(self._config)
             self._config.save()
+            # Настройки могли изменить логин/пароли/коллекторы — инвалидируем
+            # закешированные снимки и пересобираем маппинг коллекторов.
+            from cashcontrol.core.info import get_info_collector
+            get_info_collector().clear_cache()
+            get_info_collector().reload()
             return True
         except Exception as e:
             from qfluentwidgets import MessageBox

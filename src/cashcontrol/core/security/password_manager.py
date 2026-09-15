@@ -41,7 +41,20 @@ class PasswordManager:
     - Thread-safe for concurrent connections
     """
 
+    _instance: PasswordManager | None = None
+
+    def __new__(cls, config: ConfigManager | None = None) -> PasswordManager:
+        # Singleton: кэш успешного пароля должен переживать создание новых
+        # SSHConnection/DBConnection (иначе 4 места создания дают 4 пустых кэша).
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self, config: ConfigManager | None = None) -> None:
+        if self._initialized:
+            return
+        self._initialized = True
         self._config = config or ConfigManager()
         # Cache: IP -> successful password (plaintext, in memory only)
         self._success_cache: dict[str, str] = {}
@@ -163,5 +176,5 @@ class PasswordManager:
 
     @classmethod
     def _reset_singleton(cls) -> None:
-        """For testing only."""
-        pass
+        """Reset singleton (for testing only)."""
+        cls._instance = None

@@ -695,7 +695,7 @@ class SftpBackend:
     async def read_file(self, path: str, max_bytes: int = 10 * 1024 * 1024) -> bytes:
         sftp = await self._ensure_sftp()
         try:
-            async with sftp.open(path, "r") as handle:
+            async with sftp.open(path, "rb") as handle:
                 data = await handle.read(max_bytes + 1)
         except (OSError, asyncssh.Error) as exc:
             raise _translate_op_error(exc) from exc
@@ -707,7 +707,7 @@ class SftpBackend:
         sftp = await self._ensure_sftp()
         temp = self._temp_name(path, TransferOptions())
         try:
-            async with sftp.open(temp, "w") as handle:
+            async with sftp.open(temp, "wb") as handle:
                 await handle.write(data)
             if mode is not None:
                 await sftp.chmod(temp, mode & 0o7777)
@@ -809,8 +809,12 @@ def _perms_from_ls(spec: str) -> int | None:
     for i, char in enumerate(spec):
         if char == "r" or char == "w" or char in "x":
             value |= _PERM_BITS[i]
-        elif char in "sS":
+        elif char == "s":
             value |= _PERM_BITS[i] | _SPECIAL_BITS[i // 3]
+        elif char == "S":
+            # setuid/setgid/bit-липучки БЕЗ бита выполнения (ls показывает
+            # верхний регистр именно когда execute не выставлен)
+            value |= _SPECIAL_BITS[i // 3]
         elif char == "t":
             value |= _PERM_BITS[i] | 0o1000
         elif char == "T":

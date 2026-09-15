@@ -156,6 +156,8 @@ class CashStatusBar(QWidget):
         self._set_status(text)
 
     def add_history_entry(self, ip: str, entry: HistoryEntry) -> None:
+        if self._active_ip and ip != self._active_ip:
+            return
         self._add_history_item(entry)
         ok = entry.result == "success"
         msg = f"{entry.action_name}: {'успешно' if ok else 'ошибка'}"
@@ -244,7 +246,8 @@ class CashStatusBar(QWidget):
         if not self._active_ip:
             return
         from cashcontrol.gui.history_manager import get_history_manager
-        for entry in get_history_manager().get(self._active_ip):
+        # get() возвращает newest-first; рисуем так же, как при live-добавлении
+        for entry in reversed(get_history_manager().get(self._active_ip)):
             self._add_history_item(entry)
 
     def _add_history_item(self, entry: HistoryEntry) -> None:

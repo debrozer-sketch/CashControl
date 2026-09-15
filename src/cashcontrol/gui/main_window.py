@@ -131,7 +131,9 @@ class MainWindow(QMainWindow):
             self._post_show_done = True
             # Отложенная инициализация: окно уже показано, тяжёлое грузим в фоне
             QTimer.singleShot(0, self._post_show_init)
-        QTimer.singleShot(0, self._tab_manager.restore_sessions)
+            # Восстановление вкладок тоже одноразовое: повторный показ/смена темы
+            # не должны приводить к дублирующему подключению касс.
+            QTimer.singleShot(0, self._tab_manager.restore_sessions)
 
     def _post_show_init(self) -> None:
         """Deferred init after the window is visible (acceleration step 5)."""

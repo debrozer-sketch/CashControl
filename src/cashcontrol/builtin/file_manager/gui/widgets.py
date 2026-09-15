@@ -329,6 +329,14 @@ class FilePanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(bar)
         layout.addWidget(self._view, 1)
+        self._summary: QLabel | None
+        if kind == "remote":
+            self._summary = QLabel("", self)
+            self._summary.setStyleSheet("color: #6f7780; padding: 1px 8px 3px;")
+            layout.addWidget(self._summary)
+            self._model.directory_loaded.connect(lambda _path: self._update_summary())
+        else:
+            self._summary = None
 
     # ── navigation ──────────────────────────────────────────
     def current_dir(self) -> str | None:
@@ -433,6 +441,16 @@ class FilePanel(QWidget):
 
     def _on_context_menu(self, position: Any) -> None:
         self.context_menu.emit(self._view.viewport().mapToGlobal(position))
+
+    def _update_summary(self) -> None:
+        if self._summary is None:
+            return
+        files = [entry for entry in self._model.entries() if not entry.is_dir]
+        size = sum(entry.size for entry in files if entry.size is not None)
+        if files:
+            self._summary.setText(f"Файлов: {len(files)}  •  Объём: {_bytes(size)}")
+        else:
+            self._summary.setText("Файлов нет")
 
 
 # ── Transfer side panel ─────────────────────────────────────────────────────
@@ -586,18 +604,30 @@ class _BusHandler(logging.Handler):
         self._ring = ring
         self._emit = emit
         self._lock = threading.Lock()
+        self._file: Any = None
 
     def emit(self, record: logging.LogRecord) -> None:
         line = _format_record(record)
         with self._lock:
             self._ring.append(line)
-            handle = log_file_path().open("a", encoding="utf-8")
-            try:
-                handle.write(line + "\n")
-            finally:
-                handle.close()
+            # файл открывается один раз и держится открытым (не на каждое сообщение)
+            if self._file is None:
+                self._file = log_file_path().open("a", encoding="utf-8")
+            self._file.write(line + "\n")
+            self._file.flush()
         with contextlib.suppress(RuntimeError):
             self._emit(line)
+
+    def flush(self) -> None:
+        with self._lock:
+            if self._file is not None:
+                self._file.flush()
+
+    def close_file(self) -> None:
+        with self._lock:
+            if self._file is not None:
+                self._file.close()
+                self._file = None
 
 
 class LogConsole(QObject):
@@ -616,6 +646,7 @@ class LogConsole(QObject):
         """Remove the handler from loggers so records stop reaching a dead signal."""
         for name in (LOGGER_NAME, "asyncssh"):
             logging.getLogger(name).removeHandler(self._handler)
+        self._handler.close_file()
 
     def install(self, *, debug: bool) -> None:
         for name in (LOGGER_NAME, "asyncssh"):
@@ -673,6 +704,9 @@ class LogPanel(QWidget):
             cursor.removeSelectedText()
 
     def copy_all(self) -> None:
+        # QPlainTextEdit.copy() копирует только выделенный фрагмент; без
+        # выделения в буфер попадает пустая строка — выделяем весь лог.
+        self._view.selectAll()
         self._view.copy()
 
     def scroll_to_bottom(self) -> None:

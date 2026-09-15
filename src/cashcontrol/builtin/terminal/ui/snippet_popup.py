@@ -103,9 +103,10 @@ class SnippetPopup(QFrame):
     def _render_item(self, s) -> str:
         """HTML-представление сниппета в две строки."""
         name = html.escape(s.name)
-        cmd = html.escape(s.command)
-        if len(cmd) > 56:
-            cmd = cmd[:56] + "…"
+        raw_cmd = s.command
+        if len(raw_cmd) > 56:
+            raw_cmd = raw_cmd[:56] + "…"
+        cmd = html.escape(raw_cmd)
         tags_html = ""
         if s.tags:
             pill = " ".join(html.escape(t) for t in s.tags[:3])
@@ -149,7 +150,10 @@ class SnippetPopup(QFrame):
             self._apply_selection()
             return True
         if key == Qt.Key.Key_Down:
-            self._selected_index = min(len(self._items) - 1, self._selected_index + 1)
+            # до видимого числа пунктов, а не до длины полного списка
+            self._selected_index = min(
+                self.list_widget.count() - 1, self._selected_index + 1
+            )
             self._apply_selection()
             return True
         if key in (Qt.Key.Key_Tab, Qt.Key.Key_Return, Qt.Key.Key_Enter):

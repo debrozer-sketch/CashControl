@@ -293,14 +293,22 @@ def copy_user_content(out: Path) -> None:
     if icon.exists():
         shutil.copy2(icon, out / "icon.ico")
     def _soft_ignore(_d, names):
-        # Пользовательские данные KiTTY (кэш ключей, сессии, прокси) не
-        # должны попасть в dist и инсталлятор.
-        return {n for n in names if n in {"SshHostKeys", "Sessions", "Proxies", "reinstall"}}
+        # Пользовательские данные KiTTY (кэш ключей, сессии, прокси, настройки
+        # и случайный seed) не должны попасть в dist и инсталлятор.
+        return {n for n in names if n in {"SshHostKeys", "Sessions", "Proxies", "reinstall", "kitty.ini", "PUTTY.RND"}}
 
-    for d in ("docs", "commands", "collectors", "cash_types", "detection"):
+    # docs — read-only, едут как есть. commands/collectors/cash_types/detection
+    # уходят в defaults/: живой commands/ (где пользователь создаёт свои команды)
+    # в дистрибутив НЕ попадает, поэтому обновление никогда не перезаписывает
+    # пользовательский контент. Приложение досеивает отсутствующие примеры при
+    # первом старте (infrastructure/seed_defaults).
+    docs_src = REPO_ROOT / "docs"
+    if docs_src.exists():
+        shutil.copytree(docs_src, out / "docs")
+    for d in ("commands", "collectors", "cash_types", "detection"):
         src = REPO_ROOT / d
         if src.exists():
-            shutil.copytree(src, out / d)
+            shutil.copytree(src, out / "defaults" / d)
     soft_src = REPO_ROOT / "soft"
     if soft_src.exists():
         shutil.copytree(soft_src, out / "soft", ignore=_soft_ignore)

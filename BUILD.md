@@ -20,13 +20,19 @@ uv run python scripts/build_dist.py
 ```
 CashControl.cmd          ← запуск (pythonw + app/main)
 version.txt, icon.ico
-docs/ data/ logs/ commands/ collectors/ soft/ cash_types/ detection/ modules/
+docs/ data/ logs/ soft/ modules/ defaults/
 runtime/
   python/                ← embedded CPython + stdlib
   lib/site-packages.zip  ← чисто-Python зависимости
   lib/<pkg>/             ← пакеты с расширениями (PySide6, numpy, ...)
   app/cashcontrol/       ← код программы (.py)
 ```
+
+`defaults/` — это примеры (commands/collectors/cash_types/detection). Живые
+`commands/`, `collectors/` и т.д. в дистрибутиве НЕ лежат: приложение при
+первом старте копирует из `defaults/` только файлы, которых ещё нет
+(`infrastructure/seed_defaults`). Поэтому обновление никогда не затирает
+пользовательские команды, коллекторы и типы касс.
 
 Проверка сборки: перенести/переименовать папку → запустить `CashControl.exe`.
 Пользовательские данные (`data/`) создаются при первом запуске и уезжают
@@ -49,7 +55,12 @@ runtime/
 - обновление поверх старой версии — тот же AppId, данные сохраняются;
 - деинсталляция удаляет программу, но оставляет `data/` (настройки);
 - `data/` и `logs/` никогда не попадают в payload инсталлятора
-  (Excludes + purge в build_dist.py) — пароли из тестовой среды не утекут.
+  (Excludes + purge в build_dist.py) — пароли из тестовой среды не утекут;
+- Пользовательское содержимое `commands/`, `collectors/`, `cash_types/`,
+  `detection/` в payload не кладётся (едут только `defaults/`), поэтому
+  кастомные команды пользователя переживают установку новой версии поверх
+  старой. `soft/` несёт только бинарники (kitty/WinSCP/VNC), личные конфиги
+  (kitty.ini, PUTTY.RND, сессии, ключи) исключены.
 
 ## Разработка
 

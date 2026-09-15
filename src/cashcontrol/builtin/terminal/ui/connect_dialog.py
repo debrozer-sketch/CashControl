@@ -68,7 +68,8 @@ class ConnectDialog(QDialog):
 
         self.check_save = QPushButton("Сохранить профиль")
         self.check_save.setCheckable(True)
-        self.check_save.setChecked(True)
+        # выключено по умолчанию: в противном случае пароль хранится в JSON-профиле
+        self.check_save.setChecked(False)
         form.addRow("", self.check_save)
 
         layout.addLayout(form)

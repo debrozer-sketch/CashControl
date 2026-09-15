@@ -129,18 +129,35 @@ def find_layout_for_keyboard(keyboard_model: str) -> str | None:
         return None
     normalized = re.sub(r"[^a-z0-9]", "", keyboard_model.lower())
 
-    # 1. Direct alias match
-    for fragment, stem in _LAYOUT_ALIASES.items():
-        if fragment in normalized:
-            logger.debug(f"[Keyboard] alias match '{keyboard_model}' → '{stem}'")
-            return stem
+    # 1. Direct alias match — самый специфичный (длинный) фрагмент,
+    #    а не первый в порядке обхода
+    best_alias: str | None = None
+    for fragment in _LAYOUT_ALIASES:
+        if fragment in normalized and (
+            best_alias is None or len(fragment) > len(best_alias)
+        ):
+            best_alias = fragment
+    if best_alias:
+        logger.debug(f"[Keyboard] alias match '{keyboard_model}' → '{_LAYOUT_ALIASES[best_alias]}'")
+        return _LAYOUT_ALIASES[best_alias]
 
-    # 2. Filename-based fuzzy match
+    # 2. Filename-based fuzzy match: точное равенство важнее подстроки,
+    #    среди подстрок — самая длинная
+    exact: str | None = None
+    best_stem: str | None = None
     for stem in LAYOUTS:
         clean = re.sub(r"[^a-z0-9]", "", stem.lower())
-        if clean in normalized or normalized in clean:
-            logger.debug(f"[Keyboard] fuzzy match '{keyboard_model}' → '{stem}'")
-            return stem
+        if normalized == clean:
+            exact = stem
+            break
+        if (clean in normalized or normalized in clean) and (
+            best_stem is None or len(clean) > len(best_stem)
+        ):
+            best_stem = stem
+    found = exact or best_stem
+    if found:
+        logger.debug(f"[Keyboard] fuzzy match '{keyboard_model}' → '{found}'")
+        return found
 
     logger.warning(f"[Keyboard] no layout match for '{keyboard_model}'")
     return None

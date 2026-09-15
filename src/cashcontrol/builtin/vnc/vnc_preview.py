@@ -1445,6 +1445,9 @@ class VncClientWindow(QWidget):
 
     closed = Signal()
 
+    def update_ip(self, ip: str) -> None:
+        self.setWindowTitle(f"CashControl — VNC {ip}")
+
     _SS_HDR = (
         "QPushButton {"
         "  background: rgba(40,40,60,0.85);"
@@ -1759,6 +1762,7 @@ class VncPreviewWidget(QWidget):
         else:
             win = self._client_window
         # The window is created lazily; keep it in sync if the tab IP changes.
+        win.update_ip(self._ip)
         win.viewer._ip = self._ip
         return win
 

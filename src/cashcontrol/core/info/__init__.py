@@ -9,6 +9,7 @@ from cashcontrol.core.info.info_manager import (
     InfoCollector,
     InfoField,
     InfoSection,
+    get_info_collector,
 )
 from cashcontrol.core.info.rules import ProblemChecker
 
@@ -22,4 +23,5 @@ __all__ = [
     "InfoField",
     "InfoSection",
     "ProblemChecker",
+    "get_info_collector",
 ]

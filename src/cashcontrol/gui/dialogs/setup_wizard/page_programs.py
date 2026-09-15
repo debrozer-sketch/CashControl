@@ -81,3 +81,27 @@ class ProgramsPage(QWizardPage):
                 if isinstance(w, LineEdit):
                     return w
         return None
+
+    def load(self, config) -> None:
+        p = config.settings.programs
+        for index, value in (
+            (0, p.ssh_client_path),
+            (1, p.vnc_client_path),
+            (2, p.winscp_path),
+        ):
+            edit = self._find_row(index)
+            if edit is not None and value:
+                edit.setText(value)
+
+    def save(self, config) -> None:
+        """Persist the three program paths chosen on this page.
+
+        Called from the wizard on finish; previously the page was never saved,
+        so its edits were silently discarded.
+        """
+        config.update(
+            "programs",
+            ssh_client_path=self._find_row(0).text().strip() or None,
+            vnc_client_path=self._find_row(1).text().strip() or None,
+            winscp_path=self._find_row(2).text().strip() or None,
+        )

@@ -490,7 +490,7 @@ class TerminalEmulator:
             return None
         if ev.action == "release" and mode != 1003:
             # x11/utf8/urxvt не имеют release-кода (кроме 1003 all-motion)
-            if mode in (1000, 1002) and enc in ("x11", "utf8"):
+            if mode in (1000, 1002) and enc in ("x11", "utf8", "urxvt"):
                 return None
         btn = ev.button
         cb = 32 + btn

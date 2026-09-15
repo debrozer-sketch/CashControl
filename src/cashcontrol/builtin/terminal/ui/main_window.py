@@ -95,7 +95,6 @@ class MainWindow(QMainWindow):
         self.hint_bar = KeyHintBar()
         layout.addWidget(self.hint_bar)
         self.setCentralWidget(central)
-        self.tabs.setDocumentMode(True)  # компактные вкладки в стиле PuTTY
         self._setup_hints()
 
         # хоткеи (всё управление)
@@ -297,7 +296,12 @@ class MainWindow(QMainWindow):
         session = self._sessions.pop(widget, None)
         if session is not None:
             session.abort()
+            # разорвать взаимные Qt-связи сессии и виджета, иначе объекты
+            # переживают друг друга через сигналы (утечка в отдельном процессе)
+            session.disconnect()
+            session.deleteLater()
         self.tabs.removeTab(index)
+        widget.disconnect()
         widget.deleteLater()
         self._refresh_title()
 

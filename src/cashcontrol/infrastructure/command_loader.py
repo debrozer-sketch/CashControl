@@ -233,6 +233,8 @@ class CommandLoader:
                 lines.append("[command]")
                 continue
             if in_block:
+                if not stripped:
+                    continue
                 if stripped.startswith("#"):
                     content = stripped[1:].lstrip()
                     if "=" in content:

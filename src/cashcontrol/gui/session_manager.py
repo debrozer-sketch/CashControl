@@ -80,6 +80,7 @@ class SessionManager(QObject):
         task = self._ping_tasks.pop(ip, None)
         if task and not task.done():
             task.cancel()
+        self._ping_statuses.pop(ip, None)
 
     def set_ping_status(self, ip: str, status: str) -> None:
         self._ping_statuses[ip] = status

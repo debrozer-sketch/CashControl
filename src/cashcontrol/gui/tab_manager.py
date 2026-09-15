@@ -196,9 +196,6 @@ class TabManager(QWidget):
     def _start_ping(self, ip: str) -> None:
         self._session_mgr.start_ping(ip)
 
-    def _stop_ping(self) -> None:
-        self._session_mgr.stop_ping()
-
     # ── Tab management ─────────────────────────────────────
 
     def add_tab(self, ip: str, connect: bool = True) -> CashSessionWidget | None:
@@ -247,8 +244,11 @@ class TabManager(QWidget):
         if not self._session_mgr.has_session(ip):
             return
 
+        # Пинг-цикл живёт отдельной asyncio-задачей на каждый IP и должен
+        # останавливаться всегда, а не только для активной вкладки.
+        self._session_mgr.stop_ping(ip)
         if self._session_mgr.active_ip == ip:
-            self._stop_ping()
+            self._session_mgr.active_ip = None
 
         self._tab_bar.remove_tab(ip)
         self._session_mgr.kill_vnc(ip)
@@ -295,11 +295,19 @@ class TabManager(QWidget):
         if sw is None:
             return
 
+        # Задача пинга привязана к старому IP: переносим состояние на новый,
+        # иначе старый цикл пингует прежний хост бесконечно.
+        was_active = self._session_mgr.active_ip == old_ip
+        self._session_mgr.stop_ping(old_ip)
+
         self._session_mgr.add_session(new_ip, sw)
         self._tab_bar.update_route_key(old_ip, new_ip)
         self._session_mgr.move_vnc(old_ip, new_ip)
         self._session_mgr.save_sessions()
         logger.info(f"Tab IP changed: {old_ip} → {new_ip}")
+        if was_active:
+            self._session_mgr.active_ip = new_ip
+            self._start_ping(new_ip)
         asyncio.ensure_future(sw.reconnect_to(new_ip))
 
     # ── Sessions persistence ───────────────────────────────

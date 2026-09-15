@@ -70,17 +70,29 @@ class ConnectionTestPage(QWizardPage):
         ssh_passwords = conn_page.ssh_passwords.toPlainText().strip().splitlines()
         db_passwords = conn_page.db_passwords.toPlainText().strip().splitlines()
 
-        # Save credentials to config so CashSession/SSHSession can read them
+        # Применяем пароли к общему (singleton) конфигу только в памяти и
+        # восстанавливаем прежние значения после проверки. Писать их на диск
+        # здесь нельзя: «Проверить» не должен молча сохранять настройки
+        # (пользователь может потом нажать «Отмена» в мастере).
         from cashcontrol.core.security import encrypt_passwords
         from cashcontrol.infrastructure.config_manager import ConfigManager
+
         _cfg = ConfigManager()
-        _cfg.update("connection",
-            ssh_login=ssh_login, ssh_port=ssh_port,
-            ssh_passwords_encrypted=encrypt_passwords(ssh_passwords or [""]),
-            db_login=db_login, db_port=db_port,
-            db_passwords_encrypted=encrypt_passwords(db_passwords or [""]),
+        conn = _cfg.settings.connection
+        prev = (
+            conn.ssh_login,
+            conn.ssh_port,
+            conn.ssh_passwords_encrypted[:],
+            conn.db_login,
+            conn.db_port,
+            conn.db_passwords_encrypted[:],
         )
-        _cfg.save()
+        conn.ssh_login = ssh_login
+        conn.ssh_port = ssh_port
+        conn.ssh_passwords_encrypted = encrypt_passwords(ssh_passwords)
+        conn.db_login = db_login
+        conn.db_port = db_port
+        conn.db_passwords_encrypted = encrypt_passwords(db_passwords)
 
         from cashcontrol.core.session import CashSession
 
@@ -96,12 +108,22 @@ class ConnectionTestPage(QWizardPage):
                 else:
                     text += "DB:  не подключена (проверьте пароли БД)"
                 self.result_label.setText(text)
+                logger.info(f"Connection test OK for {ip} (ssh={ssh_port} db={db_port})")
             else:
                 self.result_label.setText(f"SSH: ошибка подключения к {ip}:{ssh_port}")
+                logger.info(f"Connection test failed (ssh) for {ip}:{ssh_port}")
         except Exception as e:
             self.result_label.setText(f"Ошибка: {e}")
             logger.exception(f"Connection test failed for {ip}")
         finally:
+            # восстановить прежние значения конфига (в памяти, без сохранения)
+            conn.ssh_login, conn.ssh_port = prev[0], prev[1]
+            conn.ssh_passwords_encrypted = prev[2]
+            conn.db_login, conn.db_port = prev[3], prev[4]
+            conn.db_passwords_encrypted = prev[5]
+            from cashcontrol.core.security.password_manager import PasswordManager
+
+            PasswordManager().clear_cache(ip)
             # ожидаемо: disconnect может упасть, если соединения уже нет
             with contextlib.suppress(Exception):
                 await session.disconnect()

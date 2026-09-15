@@ -741,7 +741,7 @@ class CashToolbar(QWidget):
 
         ping_was_active = self._session_mgr.active_ip == ip
         if ping_was_active:
-            self._session_mgr.stop_ping()
+            self._session_mgr.stop_ping(ip)
 
         try:
             result = await mw.registry.execute_action(action_name, session_widget.session, **extra_kwargs)

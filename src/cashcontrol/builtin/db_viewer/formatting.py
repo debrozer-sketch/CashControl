@@ -73,14 +73,18 @@ def _kind(t):
         return 'float'
     if t.startswith('bool'):
         return 'bool'
-    if t.startswith(('date', 'time', 'timestamp')):
+    if t.startswith('timestamp'):
+        return 'ts'
+    if t.startswith('date'):
+        return 'date'
+    if t.startswith('time'):
         return 'time'
     if t.startswith('json'):
         return 'json'
     return 'text'
 
 
-_EDITABLE = ('int', 'num', 'float', 'bool', 'time', 'json', 'text')
+_EDITABLE = ('int', 'num', 'float', 'bool', 'time', 'date', 'ts', 'json', 'text')
 
 
 def _parse_value(text, coltype):
@@ -103,6 +107,10 @@ def _parse_value(text, coltype):
                 return False
             raise ValueError(f'ожидалось true/false, а не «{text}»')
         if k == 'time':
+            return dtime.fromisoformat(s)
+        if k == 'date':
+            return date.fromisoformat(s)
+        if k == 'ts':
             return datetime.fromisoformat(s.replace('Z', '+00:00'))
         if k == 'json':
             return json.loads(s)

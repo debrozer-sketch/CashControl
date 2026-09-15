@@ -167,12 +167,13 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
         self._total = payload['count']
         # обновить список колонок локального поиска
         combo, cols = self._search_col, payload['meta']['columns']
+        col_names = [c['name'] for c in cols]
         combo.blockSignals(True)
         current = combo.currentText()
         combo.clear()
         combo.addItem('Все колонки')
-        combo.addItems(cols)
-        if current and current != 'Все колонки' and current in cols:
+        combo.addItems(col_names)
+        if current and current != 'Все колонки' and current in col_names:
             combo.setCurrentText(current)
         else:
             combo.setCurrentIndex(0)
@@ -192,7 +193,7 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
         col_name = self._search_col.currentText()
         if col_name and col_name != 'Все колонки' and self._meta:
             cols = self._meta.get('columns', [])
-            ci = cols.index(col_name) if col_name in cols else -1
+            ci = next((i for i, c in enumerate(cols) if c['name'] == col_name), -1)
         else:
             ci = -1
         for ri in range(grid.rowCount()):
@@ -450,6 +451,7 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
                     for j, t in mapped))
             cur = conn.cursor()
             rows = []
+            inserted = 0
             with open(opts['path'], encoding=opts['encoding'], newline='') as f:
                 reader = csv.reader(f, delimiter=opts['delimiter'])
                 for i, line in enumerate(reader):
@@ -459,13 +461,15 @@ class _DataPanel(QWidget):  # Открытая таблица: фильтр-ст
                                       else line[j] for j, t in mapped))
                     if len(rows) >= 500:
                         pgextras.execute_values(cur, ins, rows)
+                        inserted += cur.rowcount
                         rows = []
                         if worker is not None and worker.isInterruptionRequested():
                             raise _DbError('отменено')
             if rows:
                 pgextras.execute_values(cur, ins, rows)
+                inserted += cur.rowcount
             conn.commit()
-            return cur.rowcount
+            return inserted
         self._busy(True)
         w = _Worker(self._factory, job, database=self.database, parent=self)
         w.done.connect(lambda n: (self._busy(False),

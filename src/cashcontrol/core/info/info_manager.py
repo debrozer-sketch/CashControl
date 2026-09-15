@@ -168,6 +168,19 @@ class InfoCollector:
         """Register an extra collector (its .name must match a section)."""
         self._extra_collectors.append(collector)
 
+    def _ensure_collectors(self) -> None:
+        """Build the section→collector mapping once and reuse it.
+
+        Previously the mapping was rebuilt on every collect_all(), re-importing
+        and re-scanning the collectors/ directory per call.
+        """
+        if not self._collectors:
+            self.reload()
+
+    def reload(self) -> None:
+        """Rebuild the section→collector mapping (used after settings changes)."""
+        self._collectors = self._build_collectors()
+
     def _build_collectors(self) -> dict[str, Any]:
         """Build section → collector mapping (lazy imports via registry)."""
         from cashcontrol.core.info.registry import get_collector_for_section
@@ -218,7 +231,8 @@ class InfoCollector:
                 return cached_snapshot
 
         snapshot = CashInfoSnapshot(host=session.host)
-        collectors = self._build_collectors()
+        self._ensure_collectors()
+        collectors = dict(self._collectors)
         for extra in self._extra_collectors:
             name = getattr(extra, "name", "")
             if name and name not in collectors:
@@ -301,3 +315,18 @@ class InfoCollector:
 
     def get_cache_stats(self) -> dict[str, int]:
         return {"cached_hosts": len(self._cache), "cache_ttl": self._cache_ttl}
+
+
+_info_collector: InfoCollector | None = None
+
+
+def get_info_collector() -> InfoCollector:
+    """Return the shared InfoCollector instance.
+
+    The TTL cache lives on the instance, so it must be shared across
+    widgets/loads; a fresh instance per call would never hit the cache.
+    """
+    global _info_collector
+    if _info_collector is None:
+        _info_collector = InfoCollector()
+    return _info_collector
