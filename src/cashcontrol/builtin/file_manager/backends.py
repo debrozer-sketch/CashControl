@@ -466,6 +466,40 @@ def _translate_op_error(exc: BaseException) -> RemoteFilesError:
     return RemoteFilesError(str(exc))
 
 
+async def _sftp_rename_overwrite(sftp, old: str, new: str) -> None:
+    """Replace ``new`` with ``old`` over SFTP.
+
+    Обычный SFTPv3 ``SSH_FXP_RENAME`` НЕ перезаписывает существующий файл —
+    серверы без posix-rename (asyncssh SFTPServer, dropbear и т.п.) отвечают на
+    такую перезапись FX_FAILURE, из-за чего сохранение в редакторе падало с
+    "Failure". Пробуем расширение posix-rename (атомарно), а если оно не
+    поддержано — удаляем цель и переименовываем заново (с проверками, чтобы
+    не потерять оригинал при сбое).
+    """
+    first = None
+    try:
+        await sftp.posix_rename(old, new)
+        return
+    except (OSError, asyncssh.Error) as exc:
+        first = exc
+    assert first is not None
+
+    # posix-rename недоступен: убеждаемся, что и источник, и цель существуют,
+    # и что цель — обычный файл, прежде чем её удалять.
+    try:
+        await sftp.lstat(old)
+    except (OSError, asyncssh.Error):
+        raise first from None  # источника нет — настоящая ошибка, не политика перезаписи
+    try:
+        attrs = await sftp.lstat(new)
+    except (OSError, asyncssh.Error):
+        raise first from None  # цели нет — rename обязан был пройти, пробрасываем исходную ошибку
+    if _stat.S_ISDIR(attrs.permissions):
+        raise RemoteFilesError(f"{new} is a directory and cannot be replaced") from first
+    await sftp.remove(new)
+    await sftp.rename(old, new)
+
+
 class SftpBackend:
     """RemoteFsBackend implementation over asyncssh's SFTP subsystem."""
 
@@ -651,7 +685,7 @@ class SftpBackend:
             temp = self._temp_name(remote, options)
             try:
                 await sftp.put(str(local), temp, preserve=options.preserve_mtime, progress_handler=_progress)
-                await sftp.rename(temp, remote)
+                await _sftp_rename_overwrite(sftp, temp, remote)
             except BaseException as exc:
                 with suppress(OSError, asyncssh.Error):
                     await sftp.remove(temp)
@@ -711,7 +745,7 @@ class SftpBackend:
                 await handle.write(data)
             if mode is not None:
                 await sftp.chmod(temp, mode & 0o7777)
-            await sftp.rename(temp, path)
+            await _sftp_rename_overwrite(sftp, temp, path)
         except BaseException as exc:
             with suppress(OSError, asyncssh.Error):
                 await sftp.remove(temp)

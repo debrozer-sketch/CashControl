@@ -67,12 +67,6 @@ class SettingsDialog(QDialog):
             self._refresh_menu_icons
         )
 
-    def closeEvent(self, event) -> None:
-        if self._theme_conn is not None:
-            self._theme_conn.disconnect()
-            self._theme_conn = None
-        super().closeEvent(event)
-
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
         btn_row.addStretch()
@@ -146,3 +140,9 @@ class SettingsDialog(QDialog):
             InfoBar.success(title="Сохранено", content="Настройки применены",
                             parent=self, position=InfoBarPosition.TOP_RIGHT,
                             duration=2000)
+
+    def closeEvent(self, event) -> None:
+        if self._theme_conn is not None:
+            self._theme_conn.disconnect()
+            self._theme_conn = None
+        super().closeEvent(event)
