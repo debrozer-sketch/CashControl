@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import (
     QDialog,
@@ -63,7 +65,8 @@ class SettingsDialog(QDialog):
         self._menu.currentRowChanged.connect(self._stack.setCurrentIndex)
 
         from cashcontrol.gui.theme_engine import ThemeEngine
-        self._theme_conn = ThemeEngine.instance().theme_changed.connect(
+        self._theme_signal = ThemeEngine.instance().theme_changed
+        self._theme_conn = self._theme_signal.connect(
             self._refresh_menu_icons
         )
 
@@ -142,7 +145,9 @@ class SettingsDialog(QDialog):
                             duration=2000)
 
     def closeEvent(self, event) -> None:
-        if self._theme_conn is not None:
-            self._theme_conn.disconnect()
+        if getattr(self, "_theme_signal", None) is not None and self._theme_conn is not None:
+            with contextlib.suppress(Exception):
+                self._theme_signal.disconnect(self._refresh_menu_icons)
+            self._theme_signal = None
             self._theme_conn = None
         super().closeEvent(event)

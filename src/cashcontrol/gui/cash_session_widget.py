@@ -99,6 +99,7 @@ class CashSessionWidget(QWidget):
         self._theme_conn = ThemeEngine.instance().theme_changed.connect(
             self._refresh_theme
         )
+        self._theme_conn_signal = ThemeEngine.instance().theme_changed
         self._connect_task = None
 
     @property
@@ -829,9 +830,10 @@ class CashSessionWidget(QWidget):
         self.start_connecting()
 
     def cleanup(self) -> None:
-        if self._theme_conn is not None:
-            self._theme_conn.disconnect()
-            self._theme_conn = None
+        if getattr(self, "_theme_conn_signal", None) is not None:
+            with contextlib.suppress(Exception):
+                self._theme_conn_signal.disconnect(self._refresh_theme)
+            self._theme_conn_signal = None
         self._vnc_widget.cleanup()
 
     @override
