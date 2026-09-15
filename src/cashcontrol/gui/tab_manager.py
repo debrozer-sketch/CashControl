@@ -36,6 +36,7 @@ class TabManager(QWidget):
         self._session_mgr.ping_status_changed.connect(self._set_tab_dot)
         self._init_ui()
         self.apply_theme_styles()
+        self._restore_done = False
 
     def apply_theme_styles(self) -> None:
         """
@@ -319,6 +320,10 @@ class TabManager(QWidget):
         self._session_mgr.save_sessions()
 
     def restore_sessions(self) -> None:
+        if self._restore_done:
+            logger.debug("Skip restore_sessions: already restored once")
+            return
+        self._restore_done = True
         ips = self._session_mgr.restore_sessions()
         if not ips:
             return

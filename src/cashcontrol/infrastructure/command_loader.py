@@ -187,8 +187,8 @@ class CommandLoader:
             description=meta.get("description", name),
             category=meta.get("category", "other"),
             cash_types=meta.get("cash_types"),
-            requires_confirmation=meta.get("requires_confirmation", "false").lower() == "true",
-            show_output=meta.get("show_output", "true").lower() == "true",
+            requires_confirmation=str(meta.get("requires_confirmation", "false")).lower() == "true",
+            show_output=str(meta.get("show_output", "true")).lower() == "true",
             timeout=timeout,
             handler=handler,
             source=str(path),
@@ -217,7 +217,8 @@ class CommandLoader:
             return v
         return f'"{v}"'
 
-    def _parse_py_metadata(self, source: str) -> dict[str, Any]:
+    @staticmethod
+    def _parse_py_metadata(source: str) -> dict[str, Any]:
         """
         Parse # [command] block from the start of a Python file.
 
@@ -239,7 +240,7 @@ class CommandLoader:
                     content = stripped[1:].lstrip()
                     if "=" in content:
                         key, _, val = content.partition("=")
-                        content = f"{key.strip()} = {self._quote_toml_value(val)}"
+                        content = f"{key.strip()} = {CommandLoader._quote_toml_value(val)}"
                     lines.append(content)
                 else:
                     break

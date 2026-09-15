@@ -239,7 +239,13 @@ class InfoCollector:
                 collectors[name] = extra
 
         # Phase A: cash_type first (sequential)
-        ct_section = await self._collect_one(session, "cash_type", collectors["cash_type"])
+        ct_collector = collectors.get("cash_type")
+        if ct_collector is None:
+            ct_section = InfoSection(
+                "cash_type", CollectionStatus.ERROR, error="Коллектор типа кассы недоступен"
+            )
+        else:
+            ct_section = await self._collect_one(session, "cash_type", ct_collector)
         snapshot.cash_type = ct_section
         if on_section_ready:
             on_section_ready(ct_section)

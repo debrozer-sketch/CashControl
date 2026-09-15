@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+from typing import Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -45,18 +46,17 @@ from cashcontrol.infrastructure.path_resolver import get_commands_dir
 logger = get_logger()
 _LABEL_W = 150
 _PY_TEMPLATE = """\
-# description: Описание команды
-# requires_confirmation: false
-# timeout: 30
-
-# Ввод от пользователя — раскомментируй INPUT_PROMPT:
-# INPUT_PROMPT = "Введите значение:"
-# Значение будет доступно в kwargs["user_input"]
+# [command]
+# name        = "my_command"
+# description = "Описание команды"
+# category    = "user"
+# requires_confirmation = false
+# timeout     = 30
 
 async def execute(session, **kwargs):
-    # session.host               — IP кассы
-    # session.ssh.execute("cmd") — выполнить SSH команду
-    # session.cash_type          — тип кассы (pos, sco, sco3)
+    # session.host               - IP кассы
+    # session.ssh.execute("cmd") - выполнить SSH команду
+    # session.cash_type          - тип кассы (pos, sco, sco3)
     result = await session.ssh.execute("uptime")
     return result.stdout.strip()
 """
@@ -375,24 +375,62 @@ class CommandEditorDialog(QDialog):
     def _load_file(self, f):
         if f.suffix == ".py":
             src = f.read_text(encoding="utf-8")
-            desc, req, timeout = "", False, 30
-            for line in src.splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                if not line.startswith("#"):
-                    break
-                if line.startswith("# description:"):
-                    desc = line[len("# description:"):].strip()
-                elif line.startswith("# requires_confirmation:"):
-                    req = line[len("# requires_confirmation:"):].strip().lower() == "true"
-                elif line.startswith("# timeout:"):
-                    with contextlib.suppress(ValueError):
-                        timeout = int(line[len("# timeout:"):].strip())
-            return {"name": f.stem, "description": desc, "timeout": timeout,
-                    "requires_confirmation": req, "command_type": "python", "py_source": src}
+            meta = self._parse_py_meta(src)
+            return {
+                "name": meta.get("name") or f.stem,
+                "description": meta.get("description", ""),
+                "timeout": self._as_int(meta.get("timeout"), 30),
+                "requires_confirmation": str(meta.get("requires_confirmation", "false")).lower() == "true",
+                "show_output": str(meta.get("show_output", "true")).lower() != "false",
+                "command_type": "python",
+                "py_source": src,
+            }
         else:
             return json.loads(f.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _as_int(value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    @staticmethod
+    def _toml_basic_str(value: Any) -> str:
+        """Render a value as a TOML basic string (escaped and quoted)."""
+        text = str(value)
+        text = text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+        return f'"{text}"'
+
+    @staticmethod
+    def _parse_py_meta(src: str) -> dict:
+        """Parse the '# [command]' TOML metadata block; fall back to the legacy
+        '# description: …' header so old files still open for editing."""
+        from cashcontrol.infrastructure.command_loader import CommandLoader
+
+        meta = CommandLoader._parse_py_metadata(src)
+        if meta:
+            return meta
+        desc, req, outp, timeout = "", False, True, 30
+        for line in src.splitlines():
+            line = line.strip()
+            if not line or not line.startswith("#"):
+                break
+            if line.startswith("# description:"):
+                desc = line[len("# description:"):].strip()
+            elif line.startswith("# requires_confirmation:"):
+                req = line[len("# requires_confirmation:"):].strip().lower() == "true"
+            elif line.startswith("# show_output:"):
+                outp = line[len("# show_output:"):].strip().lower() != "false"
+            elif line.startswith("# timeout:"):
+                with contextlib.suppress(ValueError):
+                    timeout = int(line[len("# timeout:"):].strip())
+        return {
+            "description": desc,
+            "requires_confirmation": req,
+            "show_output": outp,
+            "timeout": timeout,
+        }
 
     def _on_select(self, item, _):
         if item is None or self._mode not in ("idle", "view"):
@@ -460,9 +498,13 @@ class CommandEditorDialog(QDialog):
             if is_py:
                 src = data.get("py_source", "")
                 header = "\n".join([
-                    f"# description: {data.get('description', '')}",
-                    f"# requires_confirmation: {str(data.get('requires_confirmation', False)).lower()}",
-                    f"# timeout: {data.get('timeout', 30)}",
+                    "# [command]",
+                    f"# name        = {self._toml_basic_str(data.get('name', ''))}",
+                    f"# description = {self._toml_basic_str(data.get('description', ''))}",
+                    "# category    = \"user\"",
+                    f"# requires_confirmation = {str(data.get('requires_confirmation', False)).lower()}",
+                    f"# show_output = {str(data.get('show_output', True)).lower()}",
+                    f"# timeout     = {self._as_int(data.get('timeout'), 30)}",
                 ])
                 lines = src.splitlines()
                 body_start = next((i for i, ln in enumerate(lines) if not ln.strip().startswith("#")), 0)
