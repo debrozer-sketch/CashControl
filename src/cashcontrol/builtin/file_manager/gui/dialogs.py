@@ -387,7 +387,7 @@ class PropertiesDialog(QDialog):
                 check = QCheckBox(label, self)
                 check.toggled.connect(self._sync_from_checks)
                 self._perm_checks.append(check)
-                grid.addWidget(check, i + 1, col * 3)
+                grid.addWidget(check, i + 1, col * 3, Qt.AlignmentFlag.AlignHCenter)
         perm_layout.addLayout(grid)
 
         self._octal_edit = QLineEdit(self)
