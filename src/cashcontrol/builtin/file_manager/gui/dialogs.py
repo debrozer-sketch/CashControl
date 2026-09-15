@@ -381,13 +381,13 @@ class PropertiesDialog(QDialog):
         for col, (_key, title) in enumerate(_PERM_COLUMNS):
             header = QLabel(title, self)
             header.setStyleSheet("font-weight: 600;")
-            grid.addWidget(header, 0, col * 3, 1, 3, Qt.AlignmentFlag.AlignHCenter)
+            grid.addWidget(header, 0, col, Qt.AlignmentFlag.AlignHCenter)
         for i, label in enumerate("rwx"):
             for col in range(3):
                 check = QCheckBox(label, self)
                 check.toggled.connect(self._sync_from_checks)
                 self._perm_checks.append(check)
-                grid.addWidget(check, i + 1, col * 3, Qt.AlignmentFlag.AlignHCenter)
+                grid.addWidget(check, i + 1, col, Qt.AlignmentFlag.AlignHCenter)
         perm_layout.addLayout(grid)
 
         self._octal_edit = QLineEdit(self)
