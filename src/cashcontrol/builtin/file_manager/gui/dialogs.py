@@ -26,7 +26,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QFrame,
-    QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QInputDialog,
@@ -371,24 +370,26 @@ class PropertiesDialog(QDialog):
         self._special = [QCheckBox(label, self) for label, _bit in _SPECIALS]
         special_row = QHBoxLayout()
         for check in self._special:
+            check.toggled.connect(self._sync_from_checks)
             special_row.addWidget(check)
         special_row.addStretch(1)
         perm_layout.addLayout(special_row)
 
         self._perm_checks: list[QCheckBox] = []
-        grid = QGridLayout()
-        grid.setSpacing(4)
-        for col, (_key, title) in enumerate(_PERM_COLUMNS):
+        cols = QHBoxLayout()
+        for _col, (_key, title) in enumerate(_PERM_COLUMNS):
+            column = QVBoxLayout()
             header = QLabel(title, self)
             header.setStyleSheet("font-weight: 600;")
-            grid.addWidget(header, 0, col, Qt.AlignmentFlag.AlignHCenter)
-        for i, label in enumerate("rwx"):
-            for col in range(3):
+            header.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+            column.addWidget(header)
+            for label in "rwx":
                 check = QCheckBox(label, self)
                 check.toggled.connect(self._sync_from_checks)
                 self._perm_checks.append(check)
-                grid.addWidget(check, i + 1, col, Qt.AlignmentFlag.AlignHCenter)
-        perm_layout.addLayout(grid)
+                column.addWidget(check, alignment=Qt.AlignmentFlag.AlignHCenter)
+            cols.addLayout(column, stretch=1)
+        perm_layout.addLayout(cols)
 
         self._octal_edit = QLineEdit(self)
         self._octal_edit.setMaxLength(4)

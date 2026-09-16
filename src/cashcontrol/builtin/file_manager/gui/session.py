@@ -346,22 +346,38 @@ class RemoteSession(QWidget):
             self.status_requested.emit("Переименовано")
         elif verb == "stat":
             info = payload[1]
-            dialog = PropertiesDialog(
-                info,
-                parent=self._host,
-                can_own=True,
-                apply_callback=functools.partial(self._apply_properties, "remote", info.path),
-            )
-            dialog.exec()
+            try:
+                dialog = PropertiesDialog(
+                    info,
+                    parent=self._host,
+                    can_own=True,
+                    apply_callback=functools.partial(self._apply_properties, "remote", info.path),
+                )
+                dialog.exec()
+            except Exception as exc:
+                logger.warning("Не удалось открыть свойства (%s): %s", info.path, exc, exc_info=True)
+                QMessageBox.warning(
+                    self._host,
+                    "Свойства",
+                    f"Не удалось открыть свойства «{info.path}»:\n{type(exc).__name__}: {exc}",
+                )
         elif verb == "stat_local":
             info = payload[1]
-            dialog = PropertiesDialog(
-                info,
-                parent=self._host,
-                can_own=False,
-                apply_callback=functools.partial(self._apply_properties, "local", info.path),
-            )
-            dialog.exec()
+            try:
+                dialog = PropertiesDialog(
+                    info,
+                    parent=self._host,
+                    can_own=False,
+                    apply_callback=functools.partial(self._apply_properties, "local", info.path),
+                )
+                dialog.exec()
+            except Exception as exc:
+                logger.warning("Не удалось открыть свойства (%s): %s", info.path, exc, exc_info=True)
+                QMessageBox.warning(
+                    self._host,
+                    "Свойства",
+                    f"Не удалось открыть свойства «{info.path}»:\n{type(exc).__name__}: {exc}",
+                )
         elif verb == "props_changed":
             self._refresh_panel(payload[1])
             self.status_requested.emit("Свойства обновлены")

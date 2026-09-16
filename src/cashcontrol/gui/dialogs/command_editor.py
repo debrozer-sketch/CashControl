@@ -77,6 +77,7 @@ class _CommandForm(QWidget):
         root = QVBoxLayout(self)
         root.setContentsMargins(4, 4, 4, 8)
         root.setSpacing(8)
+        self._row_labels: list[BodyLabel] = []
 
         # Имя
         self._name = LineEdit(self)
@@ -109,6 +110,8 @@ class _CommandForm(QWidget):
         tr.addLayout(self._row("Таймаут:", self._timeout))
         tr.addStretch()
         root.addLayout(tr)
+
+        self._align_row_labels()
 
         # Чекбоксы
         self._confirm = QCheckBox("Требует подтверждения", self)
@@ -165,11 +168,19 @@ class _CommandForm(QWidget):
         row = QHBoxLayout()
         row.setSpacing(8)
         lbl = BodyLabel(label, self)
-        lbl.setFixedWidth(85)
+        lbl.setWordWrap(False)
         lbl.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self._row_labels.append(lbl)
         row.addWidget(lbl)
         row.addWidget(widget)
         return row
+
+    def _align_row_labels(self):
+        width = _LABEL_W
+        for lbl in self._row_labels:
+            width = max(width, lbl.fontMetrics().horizontalAdvance(lbl.text()) + 8)
+        for lbl in self._row_labels:
+            lbl.setFixedWidth(width)
 
     def _switch(self, index):
         is_py = (index == 1)
