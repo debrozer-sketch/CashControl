@@ -11,7 +11,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QMimeData, QObject, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import (
+    QItemSelection,
+    QItemSelectionModel,
+    QMimeData,
+    QObject,
+    QRectF,
+    QSize,
+    Qt,
+    Signal,
+)
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -277,10 +286,13 @@ class FilePanel(QWidget):
         header.setSortIndicator(0, Qt.SortOrder.AscendingOrder)
         self._view.setSortingEnabled(True)
         self._apply_sort()
+        self._restore_paths: list[str] = []
         if kind == "local":
             self._model.directoryLoaded.connect(lambda _path: self._apply_sort())
+            self._model.directoryLoaded.connect(self._restore_selection)
         else:
             self._model.directory_loaded.connect(lambda _path: self._apply_sort())
+            self._model.directory_loaded.connect(self._restore_selection)
 
         self._address = BreadcrumbLineEdit(self)
         self._address.setPlaceholderText("Путь к каталогу")
@@ -368,13 +380,52 @@ class FilePanel(QWidget):
 
     def refresh(self) -> None:
         if self.kind == "remote":
+            self._restore_paths = self.selected_paths()
             self._model.refresh()
             return
         root = self._directory
-        if root:
-            self._model.setRootPath(root)
-            self._view.setRootIndex(self._model.index(root))
+        if not root:
+            return
+        self._restore_paths = self.selected_paths()
+        self._model.setRootPath(root)
+        self._view.setRootIndex(self._model.index(root))
         self._apply_sort()
+
+    def _restore_selection(self, _path: object) -> None:
+        """Restore the previously selected entries after a model reload.
+
+        ``beginResetModel()`` invalidates every existing QModelIndex, so Qt
+        clears the selection before the directory listing has been refetched
+        (see RemoteFileModel.refresh).  We snapshot the selected *paths* on
+        refresh() and, once the fresh listing lands here, re-select the rows
+        that still exist.
+        """
+        paths, self._restore_paths = self._restore_paths, []
+        if not paths or self._view.selectionModel() is None:
+            return
+        wanted = set(paths)
+        model = self._model
+        selection = QItemSelection()
+        if self.kind == "local":
+            root = model.index(self._directory or "")
+            for row in range(model.rowCount(root)):
+                if model.filePath(model.index(row, 0, root)) in wanted:
+                    top = model.index(row, 0, root)
+                    bottom = model.index(row, model.columnCount(root) - 1, root)
+                    selection.select(top, bottom)
+        else:
+            for row in range(model.rowCount()):
+                info = model.entry(row)
+                if info is not None and str(info.path) in wanted:
+                    top = model.index(row, 0)
+                    bottom = model.index(row, model.columnCount() - 1)
+                    selection.select(top, bottom)
+        if selection.indexes():
+            self._view.selectionModel().select(
+                selection,
+                QItemSelectionModel.SelectionFlag.Select
+                | QItemSelectionModel.SelectionFlag.Rows,
+            )
 
     def _apply_sort(self) -> None:
         section = self._view.header().sortIndicatorSection()

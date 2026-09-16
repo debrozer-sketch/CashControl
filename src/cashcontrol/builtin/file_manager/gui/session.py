@@ -554,12 +554,19 @@ class RemoteSession(QWidget):
             return
         sources = panel.selected_paths()
         if not sources:
+            self.status_requested.emit("Свойства: выделение отсутствует — выберите файл")
+            logger.debug(
+                "properties() ignored: no valid selection on %r (panel %s)",
+                panel.kind,
+                getattr(panel, "_directory", None),
+            )
             return
         path = sources[0]
         if panel.kind == "local":
             self._executor.submit(self._local_stat_coro(path))
         else:
             if self._service is None:
+                self.status_requested.emit("Свойства: нет подключения")
                 return
             self._executor.submit(self._remote_stat_coro(path))
 

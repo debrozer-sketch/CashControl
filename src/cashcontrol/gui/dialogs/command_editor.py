@@ -130,7 +130,7 @@ class _CommandForm(QWidget):
         # SSH-блок
         self._ssh_box = QGroupBox("Команды (по одной на строку):", self)
         sl = QVBoxLayout(self._ssh_box)
-        sl.setContentsMargins(6, 6, 6, 6)
+        sl.setContentsMargins(6, 16, 6, 6)
         hint = BodyLabel("Выполняются последовательно по SSH. Остановка при первой ошибке.", self)
         from cashcontrol.gui.theme_helper import color as _tc
         hint.setStyleSheet(f"color:{_tc('text_secondary')};font-size:11px;")
@@ -147,7 +147,7 @@ class _CommandForm(QWidget):
         # Python-блок
         self._py_box = QGroupBox("Python-скрипт:", self)
         pl = QVBoxLayout(self._py_box)
-        pl.setContentsMargins(6, 6, 6, 6)
+        pl.setContentsMargins(6, 16, 6, 6)
         ph = BodyLabel("Обязательно: async def execute(session, **kwargs)\nДоступно: session.ssh.execute(), session.host", self)
         from cashcontrol.gui.theme_helper import color as _tc
         ph.setStyleSheet(f"color:{_tc('text_secondary')};font-size:11px;")

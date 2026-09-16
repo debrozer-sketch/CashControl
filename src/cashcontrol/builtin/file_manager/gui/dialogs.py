@@ -366,9 +366,17 @@ class PropertiesDialog(QDialog):
 
         perm_box = QGroupBox("Права доступа", self)
         perm_layout = QVBoxLayout(perm_box)
+        perm_layout.setContentsMargins(12, 16, 12, 12)
+        perm_layout.setSpacing(10)
+        perm_box.setStyleSheet(
+            "QGroupBox::title { subcontrol-position: top left; left: 12px; padding: 0 4px; }"
+            "QCheckBox { spacing: 6px; }"
+            "QCheckBox::indicator { width: 16px; height: 16px; }"
+        )
 
         self._special = [QCheckBox(label, self) for label, _bit in _SPECIALS]
         special_row = QHBoxLayout()
+        special_row.setSpacing(12)
         for check in self._special:
             check.toggled.connect(self._sync_from_checks)
             special_row.addWidget(check)
@@ -377,14 +385,19 @@ class PropertiesDialog(QDialog):
 
         self._perm_checks: list[QCheckBox] = []
         cols = QHBoxLayout()
+        cols.setSpacing(12)
+        _column_width = 88
         for _col, (_key, title) in enumerate(_PERM_COLUMNS):
             column = QVBoxLayout()
+            column.setSpacing(6)
             header = QLabel(title, self)
             header.setStyleSheet("font-weight: 600;")
+            header.setFixedWidth(_column_width)
             header.setAlignment(Qt.AlignmentFlag.AlignHCenter)
             column.addWidget(header)
             for label in "rwx":
                 check = QCheckBox(label, self)
+                check.setFixedWidth(40)
                 check.toggled.connect(self._sync_from_checks)
                 self._perm_checks.append(check)
                 column.addWidget(check, alignment=Qt.AlignmentFlag.AlignHCenter)
