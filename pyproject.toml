@@ -26,6 +26,8 @@ dependencies = [
     "defusedxml>=0.7",
     # Built-in SSH terminal (vendored in src/cashcontrol/builtin/terminal)
     "pyte>=0.8,<1",
+    # Linux/macOS OS keyring (libsecret / KWallet — optional, graceful fallback)
+    "keyring>=24; sys_platform == 'linux'",
     # Windows-specific
     "pywin32>=306; sys_platform == 'win32'",
 ]

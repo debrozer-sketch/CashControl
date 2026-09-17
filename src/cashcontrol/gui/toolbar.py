@@ -9,6 +9,7 @@ Contains:
 from __future__ import annotations
 
 import asyncio
+import platform
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -81,9 +82,8 @@ class Toolbar(QWidget):
 
 def _make_labeled_btn(icon: FluentIcon, label: str, tooltip: str) -> QWidget:
     container = QWidget()
-    container.setFixedWidth(_TOOL_BTN_SIZE + 8)
     lay = QVBoxLayout(container)
-    lay.setContentsMargins(0, 2, 0, 2)
+    lay.setContentsMargins(2, 2, 2, 2)
     lay.setSpacing(1)
     lay.setAlignment(Qt.AlignmentFlag.AlignHCenter)
 
@@ -96,9 +96,8 @@ def _make_labeled_btn(icon: FluentIcon, label: str, tooltip: str) -> QWidget:
     lbl = QLabel(label, container)
     from cashcontrol.gui.theme_helper import color
     lbl.setStyleSheet(
-        f"font-size: 9px; color: {color('text_secondary')}; background: transparent;"
+        "font-size: 8px; color: {}; background: transparent; qproperty-alignment: AlignCenter;".format(color('text_secondary'))
     )
-    lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
     lbl.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
     lay.addWidget(lbl, 0, Qt.AlignmentFlag.AlignHCenter)
 
@@ -113,7 +112,6 @@ def _make_keyboard_btn(on_keyboard, on_keyboard_menu) -> QWidget:
     lay.setSpacing(0)
 
     main_c = QWidget(container)
-    main_c.setFixedWidth(68)
     main_vbox = QVBoxLayout(main_c)
     main_vbox.setContentsMargins(0, 2, 0, 2)
     main_vbox.setSpacing(1)
@@ -129,9 +127,8 @@ def _make_keyboard_btn(on_keyboard, on_keyboard_menu) -> QWidget:
     kb_lbl = QLabel("Клавиатура", main_c)
     from cashcontrol.gui.theme_helper import color as _tc
     kb_lbl.setStyleSheet(
-        f"font-size: 9px; color: {_tc('text_secondary')}; background: transparent;"
+        "font-size: 8px; color: {}; background: transparent; qproperty-alignment: AlignCenter;".format(_tc('text_secondary'))
     )
-    kb_lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
     kb_lbl.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
     main_vbox.addWidget(kb_lbl, 0, Qt.AlignmentFlag.AlignHCenter)
     lay.addWidget(main_c)
@@ -407,38 +404,54 @@ class CashToolbar(QWidget):
         conn = self._config.settings.connection
 
         from cashcontrol.builtin.ssh_terminal_launcher import should_use_builtin_ssh
+        from cashcontrol.infrastructure.config_manager import _IS_LINUX
 
         if should_use_builtin_ssh(p.ssh_client_path):
             self._open_builtin_ssh_terminal(session)
             return
-
-        exe = Path(p.ssh_client_path or "")
 
         ip = session.ip
         password = None
         if session.session and session.session.ssh_connected:
             password = session.session.ssh.successful_password
 
-        if password:
-            cmd = [
-                str(exe),
-                f"{conn.ssh_login}@{ip}",
-                "-pw", password,
-                "-auto-store-sshkey",
-            ]
-            logger.info(f"Launching KiTTY with auto-login for {ip}")
+        if _IS_LINUX:
+            # Linux: используем ssh или выбранный терминал
+            client = p.ssh_client_path or "ssh"
+            if client == "ssh":
+                cmd = ["ssh", f"{conn.ssh_login}@{ip}", "-o", "StrictHostKeyChecking=no",
+                       "-o", "PasswordAuthentication=yes"]
+                if password:
+                    # Используем sshpass или встроенный терминал
+                    import shutil
+                    if shutil.which("sshpass"):
+                        cmd = ["sshpass", "-p", password, *cmd]
+                    else:
+                        self._open_builtin_ssh_terminal(session)
+                        return
+            else:
+                # Терминал с ssh
+                cmd = [client, "-e", f"ssh {conn.ssh_login}@{ip}"]
         else:
-            cmd = [str(exe), f"{conn.ssh_login}@{ip}"]
-            logger.info(f"Launching KiTTY without password for {ip}")
+            exe = Path(p.ssh_client_path or "")
+            if password:
+                logger.info(f"Launching KiTTY with auto-login for {ip}")
+                cmd = [str(exe), f"{conn.ssh_login}@{ip}", "-pw", password, "-auto-store-sshkey"]
+            else:
+                logger.info(f"Launching KiTTY without password for {ip}")
+                cmd = [str(exe), f"{conn.ssh_login}@{ip}"]
 
         audit_log(action_type="tool", action_name="ssh_client", target=ip, result="success")
 
         def _run():
             time.sleep(0.2)
             try:
-                subprocess.Popen(cmd, creationflags=0x08000000)
+                kwargs = dict()
+                if platform.system() == "Windows":
+                    kwargs["creationflags"] = 0x08000000
+                subprocess.Popen(cmd, **kwargs)
             except Exception as e:
-                logger.error(f"KiTTY launch failed: {e}")
+                logger.error(f"SSH launch failed: {e}")
 
         threading.Thread(target=_run, daemon=True).start()
 
@@ -526,7 +539,10 @@ class CashToolbar(QWidget):
                 def _run():
                     time.sleep(0.2)
                     try:
-                        subprocess.Popen(cmd, creationflags=0x08000000)
+                        kwargs = dict()
+                        if platform.system() == "Windows":
+                            kwargs["creationflags"] = 0x08000000
+                        subprocess.Popen(cmd, **kwargs)
                     except Exception as e:
                         logger.error(f"WinSCP launch failed: {e}")
 

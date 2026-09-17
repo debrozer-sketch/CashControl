@@ -177,14 +177,14 @@ def _page_settings_programs() -> str:
 <p>Пути к внешним утилитам. Открывается кнопкой <b>«Настройки»</b> в боковой панели.</p>
 
 <h2>SSH Клиент (KiTTY)</h2>
-<p>Путь к <code>kitty.exe</code>. Если не задан — используется <code>soft/kitty.exe</code>
+<p>Путь к <code>kitty</code>. Если не задан — используется <code>soft/kitty</code>
 рядом с программой. KiTTY подключается автоматически: программа передаёт хост, порт,
-логин и пароль через аргументы командной строки.</p>
+логин и пароль через аргументы командной строки. (Linux: <code>/usr/bin/kitty</code> или аналог)</p>
 {_screenshot("kitty_window", "KiTTY с автоматическим подключением")}
 
 <h2>VNC Клиент</h2>
-<p>Путь к VNC-клиенту (<code>vncviewer.exe</code> от TightVNC, UltraVNC или RealVNC)
-и шаблон аргументов.</p>
+<p>Путь к VNC-клиенту (<code>vncviewer</code> от TightVNC, UltraVNC или RealVNC)
+и шаблон аргументов. На Linux: <code>/usr/bin/vncviewer</code> или <code>tightvncviewer</code>.</p>
 <p>Переменные для аргументов:</p>
 <table>
   <tr><th>Переменная</th><th>Значение</th></tr>
@@ -199,12 +199,12 @@ def _page_settings_programs() -> str:
 </ul>
 
 <h2>WinSCP</h2>
-<p>Путь к <code>WinSCP.exe</code>. Протокол и аргументы подставляются автоматически:
-SCP для TinyCore, SFTP для Ubuntu. Пароль берётся из настроек подключения.</p>
+<p>Путь к <code>WinSCP</code>. Протокол и аргументы подставляются автоматически:
+SCP для TinyCore, SFTP для Ubuntu. Пароль берётся из настроек подключения. (Linux: <code>/usr/bin/winscp.exe</code> через Wine)</p>
 
 <h2>PostgreSQL Клиент</h2>
 <p>Внешний DB-клиент (psql, DBeaver, pgAdmin). Если <b>не задан</b> — открывается
-встроенный <b>DB Viewer</b>. Если задан — запускается указанный exe с аргументами.</p>
+встроенный <b>DB Viewer</b>. Если задан — запускается указанная программа с аргументами.</p>
 <p>Переменные для аргументов:</p>
 <table>
   <tr><th>Переменная</th><th>Значение</th></tr>
@@ -414,12 +414,12 @@ def _page_first_start() -> str:
 <h3>2. Настройки программ</h3>
 <p>Откройте <b>Программы</b> и укажите пути к:</p>
 <ul>
-  <li><code>kitty.exe</code> — SSH-клиент</li>
-  <li><code>vncviewer.exe</code> — VNC-клиент</li>
-  <li><code>WinSCP.exe</code> — файловый менеджер</li>
+  <li><code>kitty</code> — SSH-клиент</li>
+  <li><code>vncviewer</code> — VNC-клиент</li>
+  <li><code>WinSCP</code> — файловый менеджер</li>
 </ul>
-<div class="tip">Если положить <code>kitty.exe</code> в папку <code>soft/</code>
-рядом с программой — путь задавать не нужно.</div>
+<div class="tip">Если положить <code>kitty</code> в папку <code>soft/</code>
+рядом с программой — путь задавать не нужно. На Linux утилиты обычно в <code>/usr/bin/</code>.</div>
 
 <h3>3. Добавить кассу</h3>
 <p>Нажмите <b>+</b> на панели вкладок и введите IP-адрес кассы.
@@ -429,7 +429,7 @@ def _page_first_start() -> str:
 <h2>Структура папок программы</h2>
 <table>
   <tr><th>Папка/файл</th><th>Содержимое</th></tr>
-  <tr><td><code>soft/</code></td><td>kitty.exe, vncviewer.exe и другие утилиты</td></tr>
+  <tr><td><code>soft/</code></td><td>SSH, VNC и другие утилиты</td></tr>
   <tr><td><code>commands/</code></td><td>JSON-файлы пользовательских команд</td></tr>
   <tr><td><code>data/</code></td><td>Настройки, сессии, журнал</td></tr>
   <tr><td><code>docs/screenshots/</code></td><td>Скриншоты для справочника</td></tr>

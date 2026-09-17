@@ -1,6 +1,6 @@
 # CashControl
 
-Десктопное приложение для Windows, которое собирает всю работу с POS-кассами
+Десктопное приложение, которое собирает всю работу с POS-кассами
 SetRetail в одно окно: подключение по SSH, терминал, обмен файлами, просмотр
 экрана кассы, работа с базой PostgreSQL и диагностика оборудования.
 Всё, что раньше разбиралось отдельными программами и забытыми паролями,
@@ -19,8 +19,9 @@ Linux-системами, где есть SSH.
   VNC-вьюер, psql) остаются опцией, но не обязательны: есть собственные
   реализации для всех задач.
 - **Безопасность по умолчанию.** Пароли шифруются (Fernet), мастер-ключ
-  защищён DPAPI Windows, ключи хостов проверяются по схеме TOFU
-  (Trust On First Use), пароли не светятся в списке процессов.
+  защищён DPAPI (Windows) или OS keyring/libsecret (Linux), ключи хостов
+  проверяются по схеме TOFU (Trust On First Use), пароли не светятся
+  в списке процессов.
 - **Расширяемость без программирования.** Информация, проблемы, команды и
   типы касс описываются TOML-файлами и подхватываются на лету.
 
@@ -90,7 +91,7 @@ Linux-системами, где есть SSH.
 | `Ctrl+V` | подключить встроенный VNC-просмотр кассы |
 | `Ctrl+Shift+V` | открыть доступный VNC-клиент (внешний или встроенное окно) |
 | `Ctrl+S` | встроенный SSH-терминал |
-| `Ctrl+W` | файловый менеджер (WinSCP) |
+| `Ctrl+W` | файловый менеджер (WinSCP или встроенный) |
 | `Ctrl+D` | редактор PostgreSQL |
 | `Ctrl+R` | перезапуск ПО кассы |
 | `Ctrl+Shift+R` | перезагрузка кассы |
@@ -104,29 +105,30 @@ Linux-системами, где есть SSH.
 
 ## Требования
 
-- Windows 10/11
+- Windows 10/11 или Linux (x86_64, glibc)
 - Python **3.12–3.13**
 - [uv](https://docs.astral.sh/uv/) (рекомендуется) или pip
+- Для Linux: `libsecret-1` (для keyring) + `libpq-dev` (для psycopg2)
 
 ---
 
 ## Запуск из исходников
 
-```bat
+```bash
 git clone https://github.com/debrozer-sketch/CashControl.git
 cd CashControl
 
 uv venv --python 3.12 .venv
 uv pip install -e .
 
-.venv\Scripts\python -m cashcontrol.main
+.venv/bin/python -m cashcontrol.main
 ```
 
 или через pip:
 
-```bat
-py -3.12 -m venv .venv
-.venv\Scripts\activate
+```bash
+python3.12 -m venv .venv
+.venv/bin/activate
 pip install -e .
 python -m cashcontrol.main
 ```
@@ -140,7 +142,7 @@ python -m cashcontrol.main
 
 ## Сборка
 
-Portable-сборка (embedded Python, без Nuitka):
+Portable-сборка (embedded Python, без Nuitka) — Windows:
 
 ```bat
 uv run python scripts/build_dist.py
@@ -157,6 +159,26 @@ uv run python scripts/build_dist.py
 Результат — `dist\installer\CashControl-setup-<версия>.exe`: установка
 per-user без прав администратора, обновление поверх старых версий сохраняет
 настройки. Подробнее — `BUILD.md`.
+
+Portable-сборка для Linux (python-build-standalone + tarball):
+
+```bash
+uv run python scripts/build_linux.py
+```
+
+Результат — `dist/CashControl/` (портативная папка) и
+`dist/CashControl-linux-x86_64.tar.gz`. Распакуйте куда угодно и запускайте:
+
+```bash
+cd CashControl
+./run.sh
+```
+
+Для установки в систему:
+```bash
+sudo cp CashControl.desktop /usr/share/applications/
+sudo cp icon.png /usr/share/icons/hicolor/128x128/apps/
+```
 
 ---
 
@@ -181,7 +203,7 @@ tests/            тесты
 
 ## Тесты
 
-```bat
+```bash
 pytest tests -v
 ```
 
@@ -194,7 +216,8 @@ pytest tests -v
 
 ## Безопасность
 
-- Пароли шифруются **Fernet**, мастер-ключ защищён **DPAPI** Windows;
+- Пароли шифруются **Fernet**, мастер-ключ защищён **DPAPI** (Windows) или
+  **OS keyring/libsecret** (Linux);
 - SSH-ключи хостов проверяются по **TOFU**;
 - Пароли при запуске встроенного терминала передаются через stdin, а не в
   командной строке;

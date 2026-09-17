@@ -17,13 +17,13 @@ class ProgramsPage(QWizardPage):
 
         layout.addWidget(SubtitleLabel("Пути к программам", self))
 
-        self.kitty_row = self._path_row("KiTTY:", "kitty.exe", "kitty.exe")
+        self.kitty_row = self._path_row("KiTTY:", "kitty", "kitty")
         layout.addLayout(self.kitty_row)
 
-        self.vnc_row = self._path_row("VNC:", "vncviewer_new.exe", "vncviewer_new.exe")
+        self.vnc_row = self._path_row("VNC:", "vncviewer", "vncviewer")
         layout.addLayout(self.vnc_row)
 
-        self.winscp_row = self._path_row("WinSCP:", "WinSCP.exe", "WinSCP.exe")
+        self.winscp_row = self._path_row("WinSCP:", "WinSCP", "WinSCP")
         layout.addLayout(self.winscp_row)
 
         auto_btn = PushButton("Автопоиск", self)
@@ -64,9 +64,9 @@ class ProgramsPage(QWizardPage):
     def _auto_find(self) -> None:
         soft_dir = get_soft_dir()
         defaults = {
-            "kitty.exe": self._find_row(0),
-            "vncviewer_new.exe": self._find_row(1),
-            "WinSCP.exe": self._find_row(2),
+            "kitty": self._find_row(0),
+            "vncviewer": self._find_row(1),
+            "WinSCP": self._find_row(2),
         }
         for name, edit in defaults.items():
             candidate = soft_dir / name

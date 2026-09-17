@@ -26,7 +26,7 @@ def test_should_use_builtin_ssh_existing_file(tmp_path):
 
 def test_build_command_carries_connection_args():
     cmd = build_terminal_command("10.0.0.5", 2222, "tc", False)
-    assert cmd[0].endswith("pythonw.exe") or cmd[0].endswith("python.exe")
+    assert cmd[0].endswith("pythonw.exe") or cmd[0].endswith("python.exe") or cmd[0].endswith("/python")
     assert cmd[1].endswith("main.py")
     assert "--host" in cmd and "10.0.0.5" in cmd
     assert "--port" in cmd and "2222" in cmd

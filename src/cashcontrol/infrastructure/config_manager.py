@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import platform
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -13,6 +14,9 @@ from pydantic import BaseModel, Field
 from cashcontrol.infrastructure.audit_logger import get_logger
 
 logger = get_logger()
+
+_IS_WINDOWS = platform.system() == "Windows"
+_IS_LINUX = platform.system() == "Linux"
 
 
 class ConnectionSettings(BaseModel):
@@ -44,6 +48,10 @@ class ProgramsSettings(BaseModel):
     def _default_client(self, field: str | None, exe: str) -> str:
         if field and field.strip():
             return field
+        # On Linux, external clients are .exe — always return empty so
+        # callers fall back to built-in tools.
+        if _IS_LINUX:
+            return ""
         from cashcontrol.infrastructure.path_resolver import get_soft_dir
         return str(get_soft_dir() / exe)
 
@@ -51,7 +59,7 @@ class ProgramsSettings(BaseModel):
         return self._default_client(self.ssh_client_path, "kitty.exe")
 
     def get_vnc_client(self) -> str:
-        return self._default_client(self.vnc_client_path, "vncviewer_new.exe")
+        return self._default_client(self.vnc_client_path, "vncviewer.exe")
 
     def get_winscp(self) -> str:
         return self._default_client(self.winscp_path, "WinSCP.exe")

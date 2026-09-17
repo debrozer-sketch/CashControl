@@ -8,7 +8,7 @@ Layout:
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSettings, QSize, QTimer
+from PySide6.QtCore import QKeyCombination, QSettings, QSize, Qt, QTimer
 from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 
@@ -86,29 +86,33 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(self._tab_manager, stretch=1)
 
         # Ctrl+T — быстрое добавление новой кассы
-        sc_new_tab = QShortcut(QKeySequence("Ctrl+T"), self)
+        sc_new_tab = QShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_T)), self)
+        sc_new_tab.setContext(Qt.ShortcutContext.WindowShortcut)
         sc_new_tab.activated.connect(self._tab_manager.open_add_tab_dialog)
 
         # Горячие клавиши быстрого запуска инструментов.
         # QKeySequence привязывается по коду клавиши — работает на любой раскладке.
         toolbar_hotkeys = {
-            "Ctrl+S": "_on_ssh",
-            "Ctrl+W": "_on_winscp",
-            "Ctrl+D": "_on_postgres",
-            "Ctrl+R": "_on_restart_pos",
-            "Ctrl+Shift+R": "_on_reboot_terminal",
-            "F5": "_on_refresh_info",
-            "F6": "_on_postgres",
-            "F7": "_on_keyboard",
-            "F8": "_on_commands_clicked",
+            QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_S)): "_on_ssh",
+            QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_W)): "_on_winscp",
+            QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_D)): "_on_postgres",
+            QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_R)): "_on_restart_pos",
+            QKeySequence(QKeyCombination(Qt.ControlModifier | Qt.ShiftModifier, Qt.Key_R)): "_on_reboot_terminal",
+            QKeySequence(Qt.Key_F5): "_on_refresh_info",
+            QKeySequence(Qt.Key_F6): "_on_postgres",
+            QKeySequence(Qt.Key_F7): "_on_keyboard",
+            QKeySequence(Qt.Key_F8): "_on_commands_clicked",
         }
         for seq, handler in toolbar_hotkeys.items():
             sc = QShortcut(QKeySequence(seq), self)
+            sc.setContext(Qt.ShortcutContext.WindowShortcut)
             sc.activated.connect(getattr(self._tab_manager.cash_toolbar, handler))
 
-        sc_vnc = QShortcut(QKeySequence("Ctrl+V"), self)
+        sc_vnc = QShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_V)), self)
+        sc_vnc.setContext(Qt.ShortcutContext.WindowShortcut)
         sc_vnc.activated.connect(self._hotkey_vnc_embedded)
-        sc_vnc_ext = QShortcut(QKeySequence("Ctrl+Shift+V"), self)
+        sc_vnc_ext = QShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier | Qt.ShiftModifier, Qt.Key_V)), self)
+        sc_vnc_ext.setContext(Qt.ShortcutContext.WindowShortcut)
         sc_vnc_ext.activated.connect(self._hotkey_vnc_external)
 
         self._status_bar = CashStatusBar(self)
