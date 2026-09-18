@@ -13,8 +13,8 @@ import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QPoint, QSize, Qt, Signal
-from PySide6.QtGui import QAction
+from PySide6.QtCore import QObject, QPoint, QSize, Qt, Signal
+from PySide6.QtGui import QAction, QContextMenuEvent, QMouseEvent
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -44,6 +44,27 @@ logger = get_logger()
 
 _TOOL_BTN_SIZE = 32
 _TOOL_ICON_SIZE = 16
+
+
+class KbButtonEventFilter(QObject):
+    def __init__(self, on_click, on_menu) -> None:
+        super().__init__()
+        self._on_click = on_click
+        self._on_menu = on_menu
+
+    def eventFilter(self, obj, event) -> bool:
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.Type.ContextMenu and isinstance(event, QContextMenuEvent):
+            self._on_menu()
+            return True
+        if (
+            event.type() == QEvent.Type.MouseButtonPress
+            and isinstance(event, QMouseEvent)
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            self._on_click()
+            return True
+        return super().eventFilter(obj, event)
 
 
 # ── Top toolbar ───────────────────────────────────────────────
@@ -106,7 +127,7 @@ def _make_labeled_btn(icon: FluentIcon, label: str, tooltip: str) -> QWidget:
     return container
 
 
-def _make_keyboard_btn(on_keyboard, on_keyboard_menu) -> QWidget:
+def _make_keyboard_btn(on_keyboard, on_keyboard_menu) -> tuple:
     container = QWidget()
     lay = QHBoxLayout(container)
     lay.setContentsMargins(0, 0, 0, 0)
@@ -124,6 +145,9 @@ def _make_keyboard_btn(on_keyboard, on_keyboard_menu) -> QWidget:
     kb_btn.setIconSize(QSize(_TOOL_ICON_SIZE, _TOOL_ICON_SIZE))
     kb_btn.setToolTip("Виртуальная клавиатура")
     kb_btn.clicked.connect(on_keyboard)
+    kb_btn.setMouseTracking(True)
+    kb_btn._kb_filter = KbButtonEventFilter(on_keyboard, on_keyboard_menu)
+    kb_btn.installEventFilter(kb_btn._kb_filter)
     main_vbox.addWidget(kb_btn, 0, Qt.AlignmentFlag.AlignHCenter)
 
     kb_lbl = QLabel("Клавиатура", main_c)
@@ -136,14 +160,7 @@ def _make_keyboard_btn(on_keyboard, on_keyboard_menu) -> QWidget:
     main_vbox.addWidget(kb_lbl, 0, Qt.AlignmentFlag.AlignHCenter)
     lay.addWidget(main_c)
 
-    kb_arrow_btn = ToolButton(FluentIcon.MORE, container)
-    kb_arrow_btn.setFixedSize(18, _TOOL_BTN_SIZE + 22)
-    kb_arrow_btn.setIconSize(QSize(12, 12))
-    kb_arrow_btn.setToolTip("Дополнительно")
-    kb_arrow_btn.clicked.connect(on_keyboard_menu)
-    lay.addWidget(kb_arrow_btn)
-
-    return container, kb_btn, kb_arrow_btn
+    return container, kb_btn
 
 
 class CashToolbar(QWidget):
@@ -160,6 +177,9 @@ class CashToolbar(QWidget):
         self._session_mgr = session_mgr
         self._config = ConfigManager()
         self._kb_container: QWidget | None = None
+        # Кэш выбранного вручную шаблона по IP: повторное открытие кассы
+        # должно показывать тот же шаблон, который оператор выбрал раньше.
+        self._kb_layout_by_ip: dict[str, str] = {}
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -201,7 +221,7 @@ class CashToolbar(QWidget):
         layout.addWidget(c)
 
         # Keyboard
-        kb_container, self._kb_btn, self._kb_arrow_btn = _make_keyboard_btn(
+        kb_container, self._kb_btn = _make_keyboard_btn(
             self._on_keyboard, self._on_keyboard_menu
         )
         self._kb_container = kb_container
@@ -250,7 +270,13 @@ class CashToolbar(QWidget):
 
     def update_for_cash_type(self, cash_type: str | None) -> None:
         if self._kb_container:
-            self._kb_container.setVisible(has_feature(cash_type, "keyboard"))
+            # Тип ещё не определён (идёт сбор информации) — кнопку показываем:
+            # шаблон при клике подберёт _resolve_keyboard_layout. Скрываем
+            # только когда тип известен и не имеет фичи keyboard (sco/sco3).
+            known = get_cash_type_registry().has(cash_type)
+            self._kb_container.setVisible(
+                True if not known else has_feature(cash_type, "keyboard")
+            )
 
     def set_busy(self, busy: bool, message: str = "") -> None:
         btns = [
@@ -274,10 +300,13 @@ class CashToolbar(QWidget):
 
     def _on_keyboard_menu(self) -> None:
         menu = RoundMenu(parent=self)
-        action = QAction(FluentIcon.EDIT.icon(), "Конструктор клавиатуры", self)
-        action.triggered.connect(self._on_keyboard_editor)
-        menu.addAction(action)
-        btn = self._kb_arrow_btn
+        open_action = QAction(FluentIcon.EDIT.icon(), "Открыть клавиатуру", self)
+        open_action.triggered.connect(self._on_keyboard)
+        menu.addAction(open_action)
+        designer_action = QAction(FluentIcon.EDIT.icon(), "Открыть конструктор", self)
+        designer_action.triggered.connect(self._on_keyboard_editor)
+        menu.addAction(designer_action)
+        btn = self._kb_btn
         pos = btn.mapToGlobal(btn.rect().bottomLeft())
         menu.exec(pos)
 
@@ -290,8 +319,7 @@ class CashToolbar(QWidget):
             return None
         session = tm.get_active_session()
         if not session:
-            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
-                            parent=self, position=InfoBarPosition.TOP, duration=3000)
+            self._show_info(title="Нет активной вкладки", content="Откройте вкладку с кассой", level="warning", duration=3000)
             return None
         return session.ip
 
@@ -303,6 +331,16 @@ class CashToolbar(QWidget):
                 return parent
             parent = parent.parent()
         return None
+
+    def _show_info(self, title: str, content: str, level: str = "info", duration: int = 3000) -> None:
+        """Show InfoBar positioned on screen, not behind tabs."""
+        mw = self._get_main_window()
+        parent = mw if mw else self
+        level_map = {"error": InfoBar.error, "warning": InfoBar.warning,
+                     "success": InfoBar.success, "info": InfoBar.info}
+        show = level_map.get(level, InfoBar.info)
+        show(title=title, content=content, parent=parent,
+             position=InfoBarPosition.TOP_SCREEN, duration=duration)
 
     def _get_active_session_widget(self):
         mw = self.window()
@@ -399,8 +437,7 @@ class CashToolbar(QWidget):
 
         session = self._get_active_session_widget()
         if not session:
-            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
-                            parent=self, position=InfoBarPosition.TOP, duration=3000)
+            self._show_info(title="Нет активной вкладки", content="Откройте вкладку с кассой", level="warning", duration=3000)
             return
 
         p = self._config.settings.programs
@@ -481,8 +518,7 @@ class CashToolbar(QWidget):
 
         session = self._get_active_session_widget()
         if not session:
-            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
-                            parent=self, position=InfoBarPosition.TOP, duration=3000)
+            self._show_info(title="Нет активной вкладки", content="Откройте вкладку с кассой", level="warning", duration=3000)
             return
 
         p = self._config.settings.programs
@@ -609,8 +645,7 @@ class CashToolbar(QWidget):
     def _on_commands_clicked(self) -> None:
         session = self._get_active_session_widget()
         if not session:
-            InfoBar.warning(title="Нет активной вкладки", content="Откройте вкладку с кассой",
-                            parent=self, position=InfoBarPosition.TOP, duration=3000)
+            self._show_info(title="Нет активной вкладки", content="Откройте вкладку с кассой", level="warning", duration=3000)
             return
 
         mw = self._get_main_window()
@@ -764,52 +799,99 @@ class CashToolbar(QWidget):
 
     # ── Keyboard handlers ───────────────────────────────────
 
-    def _on_keyboard(self) -> None:
-        if not self._session_mgr.active_ip:
-            return
-        session = self._session_mgr.get_session(self._session_mgr.active_ip)
-        if not session:
-            return
+    def _resolve_keyboard_layout(self, ip: str, keyboard_model: str | None) -> str:
+        """Выбор шаблона: модель → ручной выбор по IP → предупреждение + дефолт."""
+        from cashcontrol.gui.widgets.virtual_keyboard import LAYOUTS, find_layout_for_keyboard
+        logger.warning(f"[Toolbar] _resolve_keyboard_layout: ip={ip}, model={keyboard_model!r}")
 
-        keyboard_model = session.keyboard_model
+        if keyboard_model:
+            stem = find_layout_for_keyboard(keyboard_model)
+            if stem:
+                self._kb_layout_by_ip[ip] = stem
+                return stem
+            logger.warning(
+                f"[Keyboard] unrecognized model '{keyboard_model}' for {ip}"
+            )
+
+        remembered = self._kb_layout_by_ip.get(ip)
+        if remembered in LAYOUTS:
+            return remembered
+
+        stem = next(iter(LAYOUTS))
+        self._kb_layout_by_ip[ip] = stem
+        model_txt = keyboard_model or "не определена"
+        self._show_info(
+            title="Шаблон клавиатуры",
+            content=(
+                f"Модель «{model_txt}» не распознана. Открыт шаблон "
+                f"«{LAYOUTS[stem][2]}». Переключить можно в конструкторе "
+                "клавиатуры или в самом окне."
+            ),
+            level="warning", duration=5000,
+        )
+        return stem
+
+    def _remember_keyboard_layout(self, ip: str, stem: str) -> None:
+        if ip:
+            self._kb_layout_by_ip[ip] = stem
+
+    def _on_keyboard(self) -> None:
+        ip = self._session_mgr.active_ip
+        if not ip:
+            self._show_info(title="Клавиатура", content="Нет активного подключения", level="error", duration=3000)
+            return
+        session = self._session_mgr.get_session(ip)
+        if not session:
+            self._show_info(title="Клавиатура", content="Сессия не найдена", level="error", duration=3000)
+            return
 
         from cashcontrol.gui.widgets.virtual_keyboard import (
-            LAYOUTS,
             VirtualKeyboardWindow,
-            find_layout_for_keyboard,
         )
-
-        layout_stem = find_layout_for_keyboard(keyboard_model or "")
-        if not layout_stem:
-            layout_stem = next(iter(LAYOUTS))
-            logger.warning(
-                f"[Keyboard] no layout for '{keyboard_model}', using {layout_stem}"
-            )
 
         cash_session = session.session
         if not cash_session:
+            self._show_info(
+                title="Клавиатура",
+                content=f"Сессия {ip}: session=None",
+                level="warning", duration=5000,
+            )
             return
-        kb = VirtualKeyboardWindow(session=cash_session, layout_stem=layout_stem, parent=self)
-        kb.show()
-        kb.raise_()
+
+        try:
+            layout_stem = self._resolve_keyboard_layout(ip, session.keyboard_model)
+            kb = VirtualKeyboardWindow(
+                session=cash_session,
+                layout_stem=layout_stem,
+                parent=self,
+                layout_changed=lambda s, i=ip: self._remember_keyboard_layout(i, s),
+            )
+            kb.show()
+            kb.raise_()
+        except Exception as e:
+            import traceback
+            logger.error(f"[Keyboard] VirtualKeyboardWindow creation failed: {e}")
+            traceback.print_exc()
+            self._show_info(title="Клавиатура", content=f"Ошибка: {e}", level="error", duration=5000)
 
     def _on_keyboard_editor(self) -> None:
+        ip = self._session_mgr.active_ip
         keyboard_model = None
-        if self._session_mgr.active_ip:
-            session = self._session_mgr.get_session(self._session_mgr.active_ip)
+        if ip:
+            session = self._session_mgr.get_session(ip)
             if session:
                 keyboard_model = session.keyboard_model
 
         from cashcontrol.gui.widgets.virtual_keyboard import (
-            LAYOUTS,
             KeyboardEditorWindow,
-            find_layout_for_keyboard,
         )
 
-        layout_stem = find_layout_for_keyboard(keyboard_model or "")
-        if not layout_stem:
-            layout_stem = next(iter(LAYOUTS))
+        layout_stem = self._resolve_keyboard_layout(ip, keyboard_model)
 
-        editor = KeyboardEditorWindow(layout_stem=layout_stem, parent=self)
+        editor = KeyboardEditorWindow(
+            layout_stem=layout_stem,
+            parent=self,
+            layout_changed=lambda s, i=ip: self._remember_keyboard_layout(i, s),
+        )
         editor.show()
         editor.raise_()

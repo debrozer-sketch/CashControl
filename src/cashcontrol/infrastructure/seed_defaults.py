@@ -27,6 +27,7 @@ _DEFAULT_DIRS = (
     ("collectors", "collectors"),
     ("cash_types", "cash_types"),
     ("detection", "detection"),
+    ("data", "data"),
 )
 
 

@@ -210,10 +210,13 @@ class TabManager(QWidget):
 
         max_tabs = self._config.settings.general.max_tabs
         if self._session_mgr.session_count() >= max_tabs:
+            mw = self.window()
+            if type(mw).__name__ != "MainWindow":
+                mw = None
             InfoBar.warning(
                 title="Лимит вкладок",
                 content=f"Максимальное количество вкладок: {max_tabs}",
-                parent=self, position=InfoBarPosition.TOP, duration=3000)
+                parent=mw if mw else self, position=InfoBarPosition.TOP_SCREEN, duration=3000)
             return None
 
         session_widget = CashSessionWidget(ip, parent=self)
@@ -227,6 +230,11 @@ class TabManager(QWidget):
         self._tab_bar.add_tab(ip)
         self._tab_bar.set_active(ip)
         self._stack.setCurrentWidget(session_widget)
+
+        # Кнопки тулбара сразу отражают состояние новой вкладки: пока тип
+        # неизвестен, keyboard-кнопка видна (решит _resolve_keyboard_layout),
+        # иначе она не появляется до завершения сбора информации.
+        self._cash_toolbar.update_for_cash_type(session_widget.cash_type)
 
         # Автоподключение и сбор информации сразу при открытии вкладки.
         # При массовом восстановлении connect=False — волны задаёт
@@ -287,9 +295,12 @@ class TabManager(QWidget):
             return
 
         if self._session_mgr.has_session(new_ip):
+            mw = self.window()
+            if type(mw).__name__ != "MainWindow":
+                mw = None
             InfoBar.warning(title="Вкладка уже открыта",
                             content=f"Вкладка для {new_ip} уже существует",
-                            parent=self, position=InfoBarPosition.TOP, duration=3000)
+                            parent=mw if mw else self, position=InfoBarPosition.TOP_SCREEN, duration=3000)
             return
 
         sw = self._session_mgr.remove_session(old_ip)

@@ -287,6 +287,7 @@ class FilePanel(QWidget):
         self._view.setSortingEnabled(True)
         self._apply_sort()
         self._restore_paths: list[str] = []
+        self._saved_scroll: int = 0
         if kind == "local":
             self._model.directoryLoaded.connect(lambda _path: self._apply_sort())
             self._model.directoryLoaded.connect(self._restore_selection)
@@ -381,12 +382,14 @@ class FilePanel(QWidget):
     def refresh(self) -> None:
         if self.kind == "remote":
             self._restore_paths = self.selected_paths()
+            self._saved_scroll = self._view.verticalScrollBar().value()
             self._model.refresh()
             return
         root = self._directory
         if not root:
             return
         self._restore_paths = self.selected_paths()
+        self._saved_scroll = self._view.verticalScrollBar().value()
         self._model.setRootPath(root)
         self._view.setRootIndex(self._model.index(root))
         self._apply_sort()
@@ -426,6 +429,10 @@ class FilePanel(QWidget):
                 QItemSelectionModel.SelectionFlag.Select
                 | QItemSelectionModel.SelectionFlag.Rows,
             )
+        scroll = getattr(self, "_saved_scroll", 0)
+        if scroll > 0:
+            self._view.verticalScrollBar().setValue(scroll)
+            self._saved_scroll = 0
 
     def _apply_sort(self) -> None:
         section = self._view.header().sortIndicatorSection()

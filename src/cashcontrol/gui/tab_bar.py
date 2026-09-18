@@ -90,6 +90,8 @@ class CashTabBar(QWidget):
         idx = self._find_tab_index(ip)
         if idx >= 0:
             self._bar.setCurrentIndex(idx)
+            # Notify that tab was selected programmatically
+            self.tab_selected.emit(ip)
 
     def set_ping_status(self, ip: str, status: str) -> None:
         idx = self._find_tab_index(ip)

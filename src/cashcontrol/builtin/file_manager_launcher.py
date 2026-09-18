@@ -68,6 +68,7 @@ def open_file_manager(
             protocol=protocol,
         )
         apply_window_icon(win)
+        win._rfiles_key = key
         _windows[key] = win
         win.destroyed.connect(lambda _key=key: _windows.pop(_key, None))
 

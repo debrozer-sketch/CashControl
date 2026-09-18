@@ -299,6 +299,15 @@ class RemoteFilesWindow(QMainWindow):
             session = self._tabs.widget(index)
             if session is not None:
                 session.shutdown()
+        # Повторное открытие через open_file_manager должно создавать свежее
+        # окно с новым подключением: shutdown() останавливает цикл исполнителя,
+        # и «оживлённый» старый экземпляр остаётся пустым навсегда.
+        key = getattr(self, "_rfiles_key", None)
+        if key is not None:
+            from cashcontrol.builtin.file_manager_launcher import _windows
+
+            _windows.pop(key, None)
+        self.deleteLater()
         super().closeEvent(event)
 
 

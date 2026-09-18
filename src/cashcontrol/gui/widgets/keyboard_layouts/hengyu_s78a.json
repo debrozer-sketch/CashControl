@@ -1,0 +1,392 @@
+[
+  {
+    "name": "btn_0",
+    "text": "Сброс",
+    "action": "Insert"
+  },
+  {
+    "name": "btn_1",
+    "text": "Формат",
+    "action": "F1"
+  },
+  {
+    "name": "btn_2",
+    "text": "Регистр",
+    "action": "F2"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_3"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_4"
+  },
+  {
+    "name": "btn_5",
+    "text": "Поиск",
+    "action": "F5"
+  },
+  {
+    "name": "btn_6",
+    "text": "РедактЧек",
+    "action": "F6"
+  },
+  {
+    "name": "btn_7",
+    "text": "Печать",
+    "action": "F7"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_8"
+  },
+  {
+    "name": "btn_9",
+    "text": "Копия",
+    "action": "F9"
+  },
+  {
+    "name": "btn_10",
+    "text": "Ящик",
+    "action": "F10"
+  },
+  {
+    "name": "btn_11",
+    "text": "Выход",
+    "action": "F11"
+  },
+  {
+    "name": "btn_12",
+    "text": "Ввод",
+    "action": "F12"
+  },
+  {
+    "name": "btn_13",
+    "text": "Мясо",
+    "action": "Q"
+  },
+  {
+    "name": "btn_14",
+    "text": "Хлеб",
+    "action": "W"
+  },
+  {
+    "name": "btn_15",
+    "text": "Молоко",
+    "action": "E"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_16"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_17"
+  },
+  {
+    "name": "btn_18",
+    "text": "Овощи",
+    "action": "Y"
+  },
+  {
+    "name": "btn_19",
+    "text": "Фрукты",
+    "action": "U"
+  },
+  {
+    "name": "btn_20",
+    "text": "Сладкое",
+    "action": "I"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_21"
+  },
+  {
+    "name": "btn_22",
+    "text": "Пакеты",
+    "action": "O"
+  },
+  {
+    "name": "btn_23",
+    "text": "Карта",
+    "action": "P"
+  },
+  {
+    "name": "btn_24",
+    "text": "Скидки",
+    "action": "["
+  },
+  {
+    "name": "btn_25",
+    "text": "Лояльность",
+    "action": "]"
+  },
+  {
+    "name": "btn_26",
+    "text": "Рыба",
+    "action": "A"
+  },
+  {
+    "name": "btn_27",
+    "text": "Заморозка",
+    "action": "S"
+  },
+  {
+    "name": "btn_28",
+    "text": "Выпечка",
+    "action": "D"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_29"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_30"
+  },
+  {
+    "name": "btn_31",
+    "text": "7",
+    "action": "7"
+  },
+  {
+    "name": "btn_32",
+    "text": "8",
+    "action": "8"
+  },
+  {
+    "name": "btn_33",
+    "text": "9",
+    "action": "9"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_34"
+  },
+  {
+    "name": "btn_35",
+    "text": "Контейнер",
+    "action": "J"
+  },
+  {
+    "name": "btn_36",
+    "text": "Вес",
+    "action": "K"
+  },
+  {
+    "name": "btn_37",
+    "text": "Валюта",
+    "action": "L"
+  },
+  {
+    "name": "btn_38",
+    "text": "Итог",
+    "action": ";"
+  },
+  {
+    "name": "btn_39",
+    "text": "Цитрусы",
+    "action": "Z"
+  },
+  {
+    "name": "btn_40",
+    "text": "Сезонные",
+    "action": "X"
+  },
+  {
+    "name": "btn_41",
+    "text": "Конфеты",
+    "action": "C"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_42"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_43"
+  },
+  {
+    "name": "btn_44",
+    "text": "4",
+    "action": "4"
+  },
+  {
+    "name": "btn_45",
+    "text": "5",
+    "action": "5"
+  },
+  {
+    "name": "btn_46",
+    "text": "6",
+    "action": "6"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_47"
+  },
+  {
+    "name": "btn_48",
+    "text": "Сбер",
+    "action": "M"
+  },
+  {
+    "name": "btn_49",
+    "text": ",",
+    "action": "."
+  },
+  {
+    "name": "btn_50",
+    "text": "QR",
+    "action": "/"
+  },
+  {
+    "name": "btn_51",
+    "text": "Пробел",
+    "action": "Space"
+  },
+  {
+    "name": "btn_52",
+    "text": "Вверх",
+    "action": "\\"
+  },
+  {
+    "name": "btn_53",
+    "text": "Ввод",
+    "action": "`"
+  },
+  {
+    "name": "btn_54",
+    "text": "Телефон",
+    "action": "N"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_55"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_56"
+  },
+  {
+    "name": "btn_57",
+    "text": "1",
+    "action": "1"
+  },
+  {
+    "name": "btn_58",
+    "text": "2",
+    "action": "2"
+  },
+  {
+    "name": "btn_59",
+    "text": "3",
+    "action": "3"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_60"
+  },
+  {
+    "name": "btn_61",
+    "text": "Домой",
+    "action": "Home"
+  },
+  {
+    "name": "btn_62",
+    "text": "PageUp",
+    "action": "PageUp"
+  },
+  {
+    "name": "btn_63",
+    "text": "Сброс",
+    "action": "F4"
+  },
+  {
+    "name": "btn_64",
+    "text": "Все ГК",
+    "action": "T"
+  },
+  {
+    "name": "btn_65",
+    "text": "ГК 1",
+    "action": "G"
+  },
+  {
+    "name": "btn_66",
+    "text": "ГК 2",
+    "action": "B"
+  },
+  {
+    "name": "btn_67",
+    "text": "ГК 3",
+    "action": "H"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_68"
+  },
+  {
+    "text": "",
+    "action": "",
+    "name": "btn_69"
+  },
+  {
+    "name": "btn_70",
+    "text": "0",
+    "action": "0"
+  },
+  {
+    "name": "btn_71",
+    "text": "00",
+    "action": "-"
+  },
+  {
+    "name": "btn_72",
+    "text": ",",
+    "action": ","
+  },
+  {
+    "name": "btn_73",
+    "text": "Конец",
+    "action": "End"
+  },
+  {
+    "name": "btn_74",
+    "text": "PageDown",
+    "action": "PageDown"
+  },
+  {
+    "name": "btn_75",
+    "text": "ScrollLock",
+    "action": "ScrollLock"
+  },
+  {
+    "name": "btn_76",
+    "text": "Ввод",
+    "action": "Enter"
+  },
+  {
+    "name": "btn_77",
+    "text": "Ввод",
+    "action": "Enter"
+  }
+]

@@ -118,6 +118,10 @@ class CashSessionWidget(QWidget):
     def os_type(self) -> str:
         return self._os_type
 
+    @property
+    def cash_type(self) -> str:
+        return self._cash_type
+
     # ── UI ──────────────────────────────────────────────────────────────────
 
     def _init_ui(self) -> None:
@@ -444,6 +448,7 @@ class CashSessionWidget(QWidget):
 
             self._last_info_ok = time.monotonic()
             cash_type = snapshot.cash_type.data.get("cash_type") or ""
+            self._cash_type = cash_type
             self.info_loaded.emit(cash_type)
 
             # Check for known problems after all sections are collected
@@ -835,6 +840,21 @@ class CashSessionWidget(QWidget):
                 self._theme_conn_signal.disconnect(self._refresh_theme)
             self._theme_conn_signal = None
         self._vnc_widget.cleanup()
+
+        # Поднимается и при закрытии вкладки (deleteLater не эмитит closeEvent),
+        # поэтому останавливаем фоновую работу и рвём SSH/БД, иначе закрытые
+        # вкладки держат соединение с кассой и следующее подключение падает.
+        for attr in ("_connect_task", "_info_task"):
+            task = getattr(self, attr, None)
+            if task and not task.done():
+                task.cancel()
+        if self._session is not None:
+            db_task = getattr(self._session, "db_connect_task", None)
+            if db_task and not db_task.done():
+                db_task.cancel()
+            with contextlib.suppress(Exception):
+                self._session.ssh.abort()
+            self._session = None
 
     @override
     def closeEvent(self, event) -> None:

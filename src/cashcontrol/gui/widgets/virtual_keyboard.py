@@ -58,9 +58,10 @@ logger = get_logger()
 
 # Fixed layout definitions: file_stem → (rows, cols, display_name)
 LAYOUTS: dict[str, tuple[int, int, str]] = {
-    "csi_hengyu_s84e": (7, 8, "CSI Hengyu S84E"),
+    "csi_hengyu_s84e": (7, 12, "CSI Hengyu S84E"),
     "vioteh_kb66":     (6, 11, "Vioteh KB66"),
-    "hengyu_s78d":     (7, 8, "Hengyu S78D"),
+    "hengyu_s78d":     (6, 13, "Hengyu S78D"),
+    "hengyu_s78a":     (6, 13, "Hengyu S78A"),
 }
 
 # Aliases: normalized fragments of localizedName → layout stem
@@ -75,6 +76,8 @@ _LAYOUT_ALIASES: dict[str, str] = {
     "vioteh":     "vioteh_kb66",
     "s78d":       "hengyu_s78d",
     "s78":        "hengyu_s78d",
+    "s78a":       "hengyu_s78a",
+    "hengyus78a": "hengyu_s78a",
 }
 
 # Keymap: our internal names → xdotool key names
@@ -109,10 +112,18 @@ def get_layouts_dir() -> Path:
     Layouts are stored under cashcontrol/gui/widgets/keyboard_layouts/ in prod,
     matching the structure build.bat creates (external files under cashcontrol/).
     In dev they sit next to virtual_keyboard.py in src/cashcontrol/gui/widgets/.
+
+    Если внешний prod-каталог пуст (свежая сборка), читаем и пишем раскладки
+    рядом с кодом (runtime/app/...), иначе пользователь получит пустую
+    клавиатуру до ручного копирования файлов.
     """
     from cashcontrol.infrastructure.path_resolver import _is_production
     if _is_production():
         d = get_app_root() / "cashcontrol" / "gui" / "widgets" / "keyboard_layouts"
+        if not any(d.glob("*.json")):
+            packaged = Path(__file__).parent / "keyboard_layouts"
+            if any(packaged.glob("*.json")):
+                return packaged
     else:
         d = Path(__file__).parent / "keyboard_layouts"
     d.mkdir(parents=True, exist_ok=True)
@@ -125,9 +136,11 @@ def find_layout_for_keyboard(keyboard_model: str) -> str | None:
     Uses normalized alphanumeric comparison + alias table.
     Returns layout stem (e.g. 'csi_hengyu_s84e') or None.
     """
+    logger.debug(f"[Keyboard] find_layout_for_keyboard input: {keyboard_model!r}")
     if not keyboard_model:
         return None
     normalized = re.sub(r"[^a-z0-9]", "", keyboard_model.lower())
+    logger.debug(f"[Keyboard] normalized: {normalized}")
 
     # 1. Direct alias match — самый специфичный (длинный) фрагмент,
     #    а не первый в порядке обхода
@@ -491,7 +504,8 @@ class KeyboardEditorWindow(QMainWindow):
     """
 
     def __init__(self, layout_stem: str | None = None,
-                 parent: QWidget | None = None):
+                 parent: QWidget | None = None,
+                 layout_changed=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Конструктор клавиатуры")
         self.setWindowFlags(
@@ -500,6 +514,7 @@ class KeyboardEditorWindow(QMainWindow):
             Qt.WindowType.WindowMinimizeButtonHint
         )
         self._layout_stem = layout_stem or next(iter(LAYOUTS))
+        self._layout_changed = layout_changed
         self._buttons: list[_KeyButton] = []
         self._init_ui()
         self._load()
@@ -600,6 +615,8 @@ class KeyboardEditorWindow(QMainWindow):
                 btn.setChecked(s == stem)
         self._update_window_size()
         self._load()
+        if self._layout_changed:
+            self._layout_changed(stem)
 
     def _open_settings(self, btn: _KeyButton) -> None:
         dlg = _ButtonSettingsDialog(
@@ -640,7 +657,8 @@ class VirtualKeyboardWindow(QMainWindow):
     """
 
     def __init__(self, session: CashSession, layout_stem: str,
-                 parent: QWidget | None = None):
+                 parent: QWidget | None = None,
+                 layout_changed=None) -> None:
         super().__init__(parent)
         _, _, display_name = LAYOUTS.get(layout_stem, (7, 8, layout_stem))
         self.setWindowTitle(f"Клавиатура — {display_name}")
@@ -651,6 +669,7 @@ class VirtualKeyboardWindow(QMainWindow):
         )
         self._session = session
         self._layout_stem = layout_stem
+        self._layout_changed = layout_changed
         self._xdotool_ready = False
         self._bg_tasks: set[asyncio.Task] = set()
         self._init_ui()
@@ -675,8 +694,21 @@ class VirtualKeyboardWindow(QMainWindow):
         top_row.setContentsMargins(12, 0, 12, 0)
 
         _, _, name = LAYOUTS.get(self._layout_stem, (7, 8, self._layout_stem))
-        lbl = StrongBodyLabel(f"Шаблон: {name}")
-        top_row.addWidget(lbl)
+        self._template_lbl = StrongBodyLabel(f"Шаблон: {name}")
+        top_row.addWidget(self._template_lbl)
+
+        # Переключатель шаблона прямо в окне оператора: если модель
+        # определилась неверно, можно сразу поправить без конструктора.
+        self._switcher_btns: dict[str, PushButton] = {}
+        for s, (_, _, s_name) in LAYOUTS.items():
+            b = PushButton(s_name)
+            b.setCheckable(True)
+            b.setChecked(s == self._layout_stem)
+            b.setFixedHeight(28)
+            b.clicked.connect(lambda _c, stem=s: self._switch_layout(stem))
+            self._switcher_btns[s] = b
+            top_row.addWidget(b)
+
         top_row.addStretch()
 
         self._status_lbl = BodyLabel("Инициализация…")
@@ -691,12 +723,7 @@ class VirtualKeyboardWindow(QMainWindow):
         self._grid_vbox.setContentsMargins(0, 0, 0, 0)
         root.addWidget(self._grid_container, stretch=1)
 
-        rows, cols, _ = LAYOUTS.get(self._layout_stem, (7, 8, ""))
-        btn = _KeyButton.BTN_SIZE
-        sp = 6
-        w = cols * btn + (cols - 1) * sp + 20 + 24
-        h = rows * btn + (rows - 1) * sp + 20 + 36 + 48
-        self.resize(w, h)
+        self._update_window_size()
 
     def _load(self) -> None:
         for i in reversed(range(self._grid_vbox.count())):
@@ -718,6 +745,28 @@ class VirtualKeyboardWindow(QMainWindow):
         wl.addLayout(grid)
         wl.addStretch()
         self._grid_vbox.addWidget(wrapper)
+
+    def _switch_layout(self, stem: str) -> None:
+        if stem == self._layout_stem:
+            return
+        self._layout_stem = stem
+        for s, b in self._switcher_btns.items():
+            b.setChecked(s == stem)
+        _, _, name = LAYOUTS.get(stem, (7, 8, stem))
+        self._template_lbl.setText(f"Шаблон: {name}")
+        self.setWindowTitle(f"Клавиатура — {name}")
+        self._update_window_size()
+        self._load()
+        if self._layout_changed:
+            self._layout_changed(stem)
+
+    def _update_window_size(self) -> None:
+        rows, cols, _ = LAYOUTS.get(self._layout_stem, (7, 8, ""))
+        btn = _KeyButton.BTN_SIZE
+        sp = 6
+        w = cols * btn + (cols - 1) * sp + 20 + 24
+        h = rows * btn + (rows - 1) * sp + 20 + 36 + 48
+        self.resize(w, h)
 
     def _set_status(self, text: str) -> None:
         self._status_lbl.setText(text)

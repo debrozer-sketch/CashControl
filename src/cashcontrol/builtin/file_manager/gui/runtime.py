@@ -59,6 +59,7 @@ if TYPE_CHECKING:
     )
 
 MAX_IN_MEMORY = 8 * 1024 * 1024
+_UPLOAD_BATCH = 3
 
 
 # ── Qt↔asyncio bridge ───────────────────────────────────────────────────────
@@ -100,6 +101,10 @@ class AsyncExecutor(QObject):
             loop.run_forever()
         finally:
             self._loop = None
+
+    def is_running(self) -> bool:
+        """True, пока фоновый цикл жив. После shutdown() — False."""
+        return self._loop is not None and self._loop.is_running()
 
     def submit(self, coro: Awaitable, report: bool = True) -> None:
         """Run ``coro`` on the background loop; report result/error by default."""
@@ -258,7 +263,7 @@ class ConflictPrompter(QObject):
 
     def __init__(self, parent: Any = None) -> None:
         super().__init__(parent)
-        self._reply_ready = threading.Event()
+        self._reply_ready = asyncio.Event()
         self._decision: tuple[str, bool] = ("skip", False)
         self._apply_all = False
         self._cached_action: str | None = None
@@ -275,8 +280,15 @@ class ConflictPrompter(QObject):
         self._reply_ready.clear()
         self._decision = ("skip", False)
         self._request.emit(conflict)
-        while not self._reply_ready.wait(0.05):
-            pass
+        while True:
+            try:
+                self._reply_ready.wait(0.05)
+                if self._reply_ready.is_set():
+                    break
+            except (RuntimeError, SystemExit):
+                self._reply_ready.clear()
+                self._decision = ("skip", False)
+                break
         action, apply_all = self._decision
         if apply_all and action in ("overwrite", "overwrite_if_newer", "rename", "skip"):
             self._apply_all = True
@@ -323,21 +335,26 @@ def enqueue_upload(
 ) -> str:
     options = TransferOptions(overwrite_policy=OverwritePolicy.ASK)
 
-    async def runner(job: TransferJob) -> TransferResult:
-        prompter.reset()
+    def _chunk(paths: list[str]) -> list[list[str]]:
+        if len(paths) <= _UPLOAD_BATCH:
+            return [paths]
+        return [paths[i:i + _UPLOAD_BATCH] for i in range(0, len(paths), _UPLOAD_BATCH)]
+
+    async def _runner(paths: list[str], job: TransferJob) -> TransferResult:
         result = await service.upload(
-            [Path(path) for path in local_paths],
+            [Path(p) for p in paths],
             remote_dir,
             options,
             on_conflict=prompter.resolve,
             progress=_progress_updater(job),
         )
-        if move and result.success:
-            removed = await local_remove(local_paths, recursive=True)
-            result.transferred_files += removed
         return result
 
-    return queue.enqueue("upload", _label(local_paths), remote_dir, runner)
+    first = ""
+    for chunk in _chunk(local_paths):
+        first = queue.enqueue("upload", _label(chunk), remote_dir,
+                              lambda job, c=chunk: _runner(c, job))
+    return first
 
 
 def enqueue_download(
@@ -350,20 +367,23 @@ def enqueue_download(
 ) -> str:
     options = TransferOptions(overwrite_policy=OverwritePolicy.ASK)
 
-    async def runner(job: TransferJob) -> TransferResult:
-        prompter.reset()
+    async def _runner(paths: list[str], job: TransferJob) -> TransferResult:
         result = await service.download(
-            remote_paths,
+            paths,
             Path(local_dir),
             options,
             on_conflict=prompter.resolve,
             progress=_progress_updater(job),
         )
         if move and result.success:
-            await service.remove(remote_paths, recursive=True)
+            await service.remove(paths, recursive=True)
         return result
 
-    return queue.enqueue("download", _label(remote_paths), local_dir, runner)
+    first = ""
+    for chunk in _chunk(remote_paths):
+        first = queue.enqueue("download", _label(chunk), local_dir,
+                              lambda job, c=chunk: _runner(c, job))
+    return first
 
 
 def enqueue_delete(
@@ -396,13 +416,17 @@ def enqueue_local_copy(
     dest_dir: str,
     move: bool = False,
 ) -> str:
-    async def runner(job: TransferJob) -> TransferResult:
-        copied = await local_copy_into(local_paths, dest_dir, overwrite=False)
+    async def _runner(paths: list[str], job: TransferJob) -> TransferResult:
+        copied = await local_copy_into(paths, dest_dir, overwrite=False)
         if move and copied:
-            await local_remove(local_paths, recursive=False)
+            await local_remove(paths, recursive=False)
         return TransferResult(operation="copy", transferred_files=copied)
 
-    return queue.enqueue("copy", _label(local_paths), dest_dir, runner)
+    first = ""
+    for chunk in _chunk(local_paths):
+        first = queue.enqueue("copy", _label(chunk), dest_dir,
+                              lambda job, c=chunk: _runner(c, job))
+    return first
 
 
 def enqueue_remote_copy(
@@ -699,6 +723,10 @@ class RemoteFileModel(QAbstractItemModel):
         self.refresh()
 
     def refresh(self) -> None:
+        if self._loading and not self._executor.is_running():
+            # Цикл исполнителя остановлен при незавершённой загрузке
+            # (закрытие окна/вкладки): колбэк не придёт никогда, сбрасываем.
+            self._loading = False
         if self._directory is None or self._loading:
             return
         self._refresh_seq += 1

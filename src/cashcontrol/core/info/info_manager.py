@@ -228,6 +228,16 @@ class InfoCollector:
         if not force and session.host in self._cache:
             cached_time, cached_snapshot = self._cache[session.host]
             if (time.time() - cached_time) < self._cache_ttl:
+                # Кэш-хит: панели рендерятся через on_section_ready, поэтому
+                # отдадим секции закешированного снапшота так же, как при
+                # живом сборе, иначе UI навсегда останется на скелетонах.
+                if on_section_ready:
+                    from dataclasses import fields as _dc_fields
+
+                    for f in _dc_fields(cached_snapshot):
+                        section = getattr(cached_snapshot, f.name, None)
+                        if isinstance(section, InfoSection):
+                            on_section_ready(section)
                 return cached_snapshot
 
         snapshot = CashInfoSnapshot(host=session.host)

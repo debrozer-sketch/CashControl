@@ -279,10 +279,15 @@ def build_modules_overlay(out: Path) -> None:
             shutil.copy2(f, dst)
     layouts_src = SRC_PKG / "gui" / "widgets" / "keyboard_layouts"
     if layouts_src.exists():
-        dst = modules / "gui" / "widgets" / "keyboard_layouts"
-        dst.mkdir(parents=True, exist_ok=True)
-        for f in layouts_src.glob("*.json"):
-            shutil.copy2(f, dst / f.name)
+        # Два назначения: modules/ (hot-swap overlay) и корневой cashcontrol/ —
+        # именно там их ищет get_layouts_dir() в production (структура build.bat).
+        for dst in (
+            modules / "gui" / "widgets" / "keyboard_layouts",
+            out / "cashcontrol" / "gui" / "widgets" / "keyboard_layouts",
+        ):
+            dst.mkdir(parents=True, exist_ok=True)
+            for f in layouts_src.glob("*.json"):
+                shutil.copy2(f, dst / f.name)
     log("modules/ overlay built")
 
 
@@ -309,6 +314,16 @@ def copy_user_content(out: Path) -> None:
         src = REPO_ROOT / d
         if src.exists():
             shutil.copytree(src, out / "defaults" / d)
+    # Канонические справочники оборудования уезжают в defaults/data/ и
+    # досеиваются в живой data/ при первом старте (seed_defaults), чтобы
+    # маппинг сканеров/весов/дисплея работал в собранной версии, а сам
+    # живой data/ оставался чисто пользовательским (purge_user_data + seed).
+    for name in ("usb_id_mapping.json", "port_mapping.json"):
+        src = REPO_ROOT / "data" / name
+        if src.exists():
+            dst = out / "defaults" / "data" / name
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
     soft_src = REPO_ROOT / "soft"
     if soft_src.exists():
         shutil.copytree(soft_src, out / "soft", ignore=_soft_ignore)
