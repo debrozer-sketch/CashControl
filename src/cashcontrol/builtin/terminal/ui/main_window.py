@@ -8,11 +8,46 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import platform
 from collections import deque
 from typing import Optional
 
-from PySide6.QtCore import QPoint, Qt, QTimer
+from PySide6.QtCore import QKeyCombination, QPoint, Qt, QTimer
 from PySide6.QtGui import QAction, QFont, QKeySequence, QShortcut
+
+
+# Трансляция строковых хоткеев в QKeyCombination (работает на любой раскладке)
+def _to_key_combo(key_str: str) -> QKeyCombination:
+    """Convert string like 'Ctrl+N' to QKeyCombination."""
+    parts = key_str.split("+")
+    mods = 0
+    key = parts[-1]
+    for p in parts[:-1]:
+        p = p.strip()
+        if p == "Ctrl":
+            mods |= Qt.ControlModifier
+        elif p == "Shift":
+            mods |= Qt.ShiftModifier
+        elif p == "Alt":
+            mods |= Qt.AltModifier
+        elif p == "Meta":
+            mods |= Qt.MetaModifier
+    # Map key name to Qt.Key
+    key_map = {
+        "N": Qt.Key_N,
+        "T": Qt.Key_T,
+        "W": Qt.Key_W,
+        "Tab": Qt.Key_Tab,
+        "Plus": Qt.Key_Plus,
+        "Equal": Qt.Key_Equal,
+        "Minus": Qt.Key_Minus,
+        "0": Qt.Key_0,
+        "M": Qt.Key_M,
+        "D": Qt.Key_D,
+        "Space": Qt.Key_Space,
+    }
+    qt_key = key_map.get(key, getattr(Qt, f"Key_{key}", Qt.Key_unknown))
+    return QKeyCombination(mods, qt_key)
 from PySide6.QtWidgets import (
     QInputDialog,
     QMainWindow,
@@ -195,51 +230,51 @@ class MainWindow(QMainWindow):
 
     def _setup_system_menu(self) -> None:
         """Добавить пункты в системное меню окна (значок в заголовке)."""
-        try:
-            import ctypes
-            from ctypes import wintypes
+        if platform.system() != "Windows":
+            return
+        import ctypes
+        from ctypes import wintypes
 
-            hwnd = int(self.winId())
-            hmenu = ctypes.windll.user32.GetSystemMenu(hwnd, False)
-            if not hmenu:
-                return
-            AppendMenuW = ctypes.windll.user32.AppendMenuW
-            AppendMenuW(hmenu, 0x0800, 0, None)  # MF_SEPARATOR
-            AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 1, "Новое подключение\tCtrl+N")
-            AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 2, "Дублировать подключение")
-            AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 3, "Настройки…")
-            AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 4, "Сниппеты…")
-            AppendMenuW(hmenu, 0x0800, 0, None)
-            AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 5, "Шрифт крупнее\tCtrl++")
-            AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 6, "Шрифт мельче\tCtrl+-")
-            AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 7, "Очистить буфер")
-            self._sys_menu_hwnd = hwnd
-            self._native = ctypes.windll.user32  # держим ссылку
-        except Exception as exc:  # noqa: BLE001 - Windows-only фича
-            _LOG.debug("system menu unavailable: %s", exc)
+        hwnd = int(self.winId())
+        hmenu = ctypes.windll.user32.GetSystemMenu(hwnd, False)
+        if not hmenu:
+            return
+        AppendMenuW = ctypes.windll.user32.AppendMenuW
+        AppendMenuW(hmenu, 0x0800, 0, None)  # MF_SEPARATOR
+        AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 1, "Новое подключение\tCtrl+N")
+        AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 2, "Дублировать подключение")
+        AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 3, "Настройки…")
+        AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 4, "Сниппеты…")
+        AppendMenuW(hmenu, 0x0800, 0, None)
+        AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 5, "Шрифт крупнее\tCtrl++")
+        AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 6, "Шрифт мельче\tCtrl+-")
+        AppendMenuW(hmenu, 0x0000, _SYS_MENU_MARKER + 7, "Очистить буфер")
+        self._sys_menu_hwnd = hwnd
+        self._native = ctypes.windll.user32  # держим ссылку
 
     def nativeEvent(self, event_type, message):
         """Ловим WM_SYSCOMMAND для своих пунктов системного меню."""
-        if event_type == "windows_generic_MSG":
-            import ctypes
+        if platform.system() != "Windows" or event_type != "windows_generic_MSG":
+            return super().nativeEvent(event_type, message)
+        import ctypes
 
-            msg = ctypes.wintypes.MSG.from_address(int(message))
-            if msg.message == 0x0112:  # WM_SYSCOMMAND
-                cmd = int(msg.wParam) & 0xFFF0
-                if cmd > _SYS_MENU_MARKER:
-                    choice = cmd - _SYS_MENU_MARKER
-                    dispatch = {
-                        1: self.new_connection,
-                        2: lambda: self.duplicate_tab(self.tabs.currentIndex()),
-                        3: self._open_settings,
-                        4: self._open_snippet_manager,
-                        5: self._font_up,
-                        6: self._font_down,
-                        7: self._clear_scrollback,
-                    }
-                    if choice in dispatch:
-                        QTimer.singleShot(0, dispatch[choice])
-                        return True, 0
+        msg = ctypes.wintypes.MSG.from_address(int(message))
+        if msg.message == 0x0112:  # WM_SYSCOMMAND
+            cmd = int(msg.wParam) & 0xFFF0
+            if cmd > _SYS_MENU_MARKER:
+                choice = cmd - _SYS_MENU_MARKER
+                dispatch = {
+                    1: self.new_connection,
+                    2: lambda: self.duplicate_tab(self.tabs.currentIndex()),
+                    3: self._open_settings,
+                    4: self._open_snippet_manager,
+                    5: self._font_up,
+                    6: self._font_down,
+                    7: self._clear_scrollback,
+                }
+                if choice in dispatch:
+                    QTimer.singleShot(0, dispatch[choice])
+                    return True, 0
         return super().nativeEvent(event_type, message)
 
     # ==================== ПОДКЛЮЧЕНИЕ / ВКЛАДКИ ====================
@@ -481,7 +516,9 @@ class MainWindow(QMainWindow):
             if idx is not None:
                 self.insert_snippet(items[idx])
 
-    def _add_widget_shortcut(self, widget: TerminalWidget, key: str, handler) -> None:
+    def _add_widget_shortcut(self, widget: TerminalWidget, key, handler) -> None:
+        if isinstance(key, str):
+            key = _to_key_combo(key)
         sc = QShortcut(QKeySequence(key), widget)
         sc.activated.connect(handler)
 
@@ -499,7 +536,9 @@ class MainWindow(QMainWindow):
         if not self.tabs.count():
             self.new_connection()
 
-    def _add_shortcut(self, key: str, handler) -> None:
+    def _add_shortcut(self, key, handler) -> None:
+        if isinstance(key, str):
+            key = _to_key_combo(key)
         sc = QShortcut(QKeySequence(key), self)
         sc.activated.connect(handler)
 

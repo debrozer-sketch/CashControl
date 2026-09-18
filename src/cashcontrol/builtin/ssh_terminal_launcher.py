@@ -13,6 +13,7 @@ stdin (first line), so it never appears in the process list.
 from __future__ import annotations
 
 import logging
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -21,7 +22,7 @@ from cashcontrol.infrastructure.audit_logger import audit_log
 
 logger = logging.getLogger("cashcontrol.builtin.ssh_terminal")
 
-_CREATE_NO_WINDOW = 0x08000000
+_IS_WINDOWS = platform.system() == "Windows"
 
 
 def builtin_terminal_root() -> Path:
@@ -41,17 +42,18 @@ def should_use_builtin_ssh(client_path: str | None) -> bool:
 
 
 def terminal_python() -> str:
-    """Interpreter for the child process: pythonw when available.
+    """Interpreter for the child process.
 
-    The packaged app runs under runtime/python/pythonw.exe; in dev python.exe
-    is used — switch to its pythonw sibling to avoid a flash of console window.
+    On Windows use pythonw.exe (no console window) when available; on Linux
+    just return sys.executable — there is no pythonw.
     """
-    exe = sys.executable
-    if Path(exe).name.lower() == "python.exe":
-        w = Path(exe).with_name("pythonw.exe")
-        if w.is_file():
-            return str(w)
-    return exe
+    if _IS_WINDOWS:
+        exe = sys.executable
+        if Path(exe).name.lower() == "python.exe":
+            w = Path(exe).with_name("pythonw.exe")
+            if w.is_file():
+                return str(w)
+    return sys.executable
 
 
 def build_terminal_command(host: str, port: int, login: str, password_stdin: bool) -> list[str]:
@@ -97,10 +99,10 @@ def launch_builtin_terminal(
         proc = subprocess.Popen(
             cmd,
             cwd=str(main_py.parent),
-            creationflags=_CREATE_NO_WINDOW,
             stdout=subprocess.DEVNULL,
             stderr=err_handle,
             stdin=subprocess.PIPE if use_password else None,
+            **(dict(creationflags=0x08000000) if _IS_WINDOWS else {}),
         )
     except Exception as e:  # pragma: no cover - defensive, subprocess spawn
         err_handle.close()

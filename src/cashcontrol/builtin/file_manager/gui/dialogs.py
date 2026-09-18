@@ -6,7 +6,7 @@ from __future__ import annotations
 import stat as _stat
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QKeyCombination, QSize, Qt, Signal
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -669,7 +669,7 @@ class FileEditorDialog(QDialog):
         self._replace_action.setShortcut(QKeySequence.StandardKey.Replace)
         self._replace_action.triggered.connect(lambda: self._show_find(True))
         self._goto_action = QAction("Перейти к строке…", self)
-        self._goto_action.setShortcut(QKeySequence("Ctrl+G"))
+        self._goto_action.setShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_G)))
         self._goto_action.triggered.connect(self._go_to_line_dialog)
         self._save_action = QAction("Сохранить", self)
         self._save_action.setShortcut(QKeySequence.StandardKey.Save)

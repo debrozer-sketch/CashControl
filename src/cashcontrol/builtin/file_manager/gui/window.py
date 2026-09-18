@@ -7,7 +7,7 @@ import logging
 import sys
 from typing import Any
 
-from PySide6.QtCore import QEvent, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QKeyCombination, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QDockWidget,
@@ -174,12 +174,12 @@ class RemoteFilesWindow(QMainWindow):
 
         file_menu = menubar.addMenu("&Файл")
         connect_action = QAction("Подключение", self)
-        connect_action.setShortcut(QKeySequence("Ctrl+O"))
+        connect_action.setShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_O)))
         connect_action.triggered.connect(self._ask_connect)
         file_menu.addAction(connect_action)
         file_menu.addSeparator()
         close_tab_action = QAction("Закрыть вкладку", self)
-        close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
+        close_tab_action.setShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_W)))
         close_tab_action.triggered.connect(lambda: self._tabs.count() and self._close_tab(self._tabs.currentIndex()))
         file_menu.addAction(close_tab_action)
         file_menu.addSeparator()
@@ -203,7 +203,7 @@ class RemoteFilesWindow(QMainWindow):
 
         view_menu = menubar.addMenu("&Вид")
         refresh_action = QAction("Обновить", self)
-        refresh_action.setShortcut(QKeySequence("Ctrl+R"))
+        refresh_action.setShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_R)))
         refresh_action.triggered.connect(self._refresh_active)
         view_menu.addAction(refresh_action)
         self.addAction(refresh_action)
@@ -238,10 +238,10 @@ class RemoteFilesWindow(QMainWindow):
         logger.info("Технический режим (DEBUG) %s", "включён" if enabled else "выключен")
 
     def _build_shortcuts(self) -> None:
-        QShortcut(QKeySequence("F4"), self, activated=self._edit_file)
-        QShortcut(QKeySequence("Ctrl+L"), self, activated=self._focus_address)
-        QShortcut(QKeySequence("Backspace"), self, activated=self._backspace_up)
-        QShortcut(QKeySequence("Ctrl+A"), self, activated=self._select_all)
+        QShortcut(QKeySequence(Qt.Key_F4), self, activated=self._edit_file)
+        QShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_L)), self, activated=self._focus_address)
+        QShortcut(QKeySequence(Qt.Key_Backspace), self, activated=self._backspace_up)
+        QShortcut(QKeySequence(QKeyCombination(Qt.ControlModifier, Qt.Key_A)), self, activated=self._select_all)
         QShortcut(QKeySequence(Qt.Key.Key_Delete), self, activated=self._delete_key)
 
     def _edit_file(self) -> None:

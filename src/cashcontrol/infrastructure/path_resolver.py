@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import platform
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -9,13 +10,24 @@ from pathlib import Path
 # ── Environment ───────────────────────────────────────────────────────────
 
 def _runtime_layout_root() -> Path | None:
-    """Program root for the packaged runtime layout (gap_report §8.2):
-    <root>/runtime/python/<python.exe>, with version.txt + runtime/ at <root>.
-    Returns None outside such a layout."""
-    exe_dir = Path(sys.executable).parent      # .../CashControl/runtime/python
-    candidate = exe_dir.parent.parent          # .../CashControl
+    """Program root for the packaged runtime layout.
+
+    Windows: <root>/runtime/python/<python.exe>, with version.txt + runtime/ at
+    <root>.
+    Linux:   <root>/runtime/bin/python (same version.txt + runtime/ layout).
+
+    Returns None outside such a layout.
+    """
+    exe_dir = Path(sys.executable).parent
+    # Windows layout: …/runtime/python/python.exe → parent.parent = root
+    candidate = exe_dir.parent.parent
     if (candidate / "version.txt").exists() and (candidate / "runtime").exists():
         return candidate
+    # Linux layout: …/runtime/bin/python → parent.parent = root
+    if exe_dir.name == "bin":
+        candidate = exe_dir.parent.parent
+        if (candidate / "version.txt").exists() and (candidate / "runtime").exists():
+            return candidate
     return None
 
 
@@ -23,9 +35,11 @@ _dll_dirs_done = False
 
 
 def _add_runtime_dll_dirs(root: Path) -> None:
-    """Make native deps (pywin32_system32, *.libs, ...) resolvable from runtime/lib."""
+    """Make native deps (pywin32_system32, *.libs, …) resolvable on Windows."""
     global _dll_dirs_done
     if _dll_dirs_done:
+        return
+    if platform.system() != "Windows":
         return
     _dll_dirs_done = True
     lib = root / "runtime" / "lib"

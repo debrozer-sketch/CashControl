@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import os
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QScrollArea,
@@ -121,7 +121,7 @@ class TabLogs(QWidget):
     def _open_logs_folder(self) -> None:
         logs_dir = get_logs_dir()
         if logs_dir.exists():
-            os.startfile(str(logs_dir))
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(logs_dir)))
         else:
             MessageBox("Папка логов", f"Папка не найдена:\n{logs_dir}", self).exec()
 
