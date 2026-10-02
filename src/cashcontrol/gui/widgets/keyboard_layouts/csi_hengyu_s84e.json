@@ -1,0 +1,422 @@
+[
+  {
+    "name": "btn_0",
+    "text": "Все ГК",
+    "action": "F6"
+  },
+  {
+    "name": "btn_1",
+    "text": "",
+    "action": "F7"
+  },
+  {
+    "name": "btn_2",
+    "text": "",
+    "action": "F8"
+  },
+  {
+    "name": "btn_3",
+    "text": "",
+    "action": "F1"
+  },
+  {
+    "name": "btn_4",
+    "text": "",
+    "action": "F9"
+  },
+  {
+    "name": "btn_5",
+    "text": "",
+    "action": "F2"
+  },
+  {
+    "name": "btn_6",
+    "text": "Кассир",
+    "action": "F10"
+  },
+  {
+    "name": "btn_7",
+    "text": "Меню",
+    "action": "F3"
+  },
+  {
+    "name": "btn_8",
+    "text": "Копия",
+    "action": "F11"
+  },
+  {
+    "name": "btn_9",
+    "text": "Ящик",
+    "action": "F4"
+  },
+  {
+    "name": "btn_10",
+    "text": "Выход",
+    "action": "F12"
+  },
+  {
+    "name": "btn_11",
+    "text": "ESC",
+    "action": "F5"
+  },
+  {
+    "name": "btn_12",
+    "text": "Фрукты",
+    "action": "Q"
+  },
+  {
+    "name": "btn_13",
+    "text": "Хлеб батоны",
+    "action": "W"
+  },
+  {
+    "name": "btn_14",
+    "text": "Мясо замороз",
+    "action": "E"
+  },
+  {
+    "name": "btn_15",
+    "text": "",
+    "action": "R"
+  },
+  {
+    "name": "btn_16",
+    "text": "",
+    "action": "T"
+  },
+  {
+    "name": "btn_17",
+    "text": "",
+    "action": "Y"
+  },
+  {
+    "name": "btn_18",
+    "text": "",
+    "action": "U"
+  },
+  {
+    "name": "btn_19",
+    "text": "",
+    "action": "I"
+  },
+  {
+    "name": "btn_20",
+    "text": "Лояльность",
+    "action": "O"
+  },
+  {
+    "name": "btn_21",
+    "text": "Сторно немедл",
+    "action": "P"
+  },
+  {
+    "name": "btn_22",
+    "text": "Регист",
+    "action": "["
+  },
+  {
+    "name": "btn_23",
+    "text": "Забой",
+    "action": "]"
+  },
+  {
+    "name": "btn_24",
+    "text": "Овощи",
+    "action": "A"
+  },
+  {
+    "name": "btn_25",
+    "text": "Сладкая сдоба",
+    "action": "S"
+  },
+  {
+    "name": "btn_26",
+    "text": "Рыба замороз",
+    "action": "D"
+  },
+  {
+    "name": "btn_27",
+    "text": "",
+    "action": "F"
+  },
+  {
+    "name": "btn_28",
+    "text": "",
+    "action": "G"
+  },
+  {
+    "name": "btn_29",
+    "text": "",
+    "action": "H"
+  },
+  {
+    "name": "btn_30",
+    "text": "",
+    "action": "J"
+  },
+  {
+    "name": "btn_31",
+    "text": "",
+    "action": "K"
+  },
+  {
+    "name": "btn_32",
+    "text": "Телефон",
+    "action": "L"
+  },
+  {
+    "name": "btn_33",
+    "text": "Cashout",
+    "action": ";"
+  },
+  {
+    "name": "btn_34",
+    "text": "Скидка",
+    "action": "'"
+  },
+  {
+    "name": "btn_35",
+    "text": "Списание бонусов",
+    "action": "\\"
+  },
+  {
+    "name": "btn_36",
+    "text": "Яблоки",
+    "action": "Z"
+  },
+  {
+    "name": "btn_37",
+    "text": "Несладкая Сдоба",
+    "action": "X"
+  },
+  {
+    "name": "btn_38",
+    "text": "ПФ замороз",
+    "action": "C"
+  },
+  {
+    "name": "btn_39",
+    "text": "",
+    "action": "V"
+  },
+  {
+    "name": "btn_40",
+    "text": "",
+    "action": "B"
+  },
+  {
+    "name": "btn_41",
+    "text": "",
+    "action": "Backspace"
+  },
+  {
+    "name": "btn_42",
+    "text": "7",
+    "action": "7"
+  },
+  {
+    "name": "btn_43",
+    "text": "8",
+    "action": "8"
+  },
+  {
+    "name": "btn_44",
+    "text": "9",
+    "action": "9"
+  },
+  {
+    "name": "btn_45",
+    "text": "Весы",
+    "action": "N"
+  },
+  {
+    "name": "btn_46",
+    "text": "QR",
+    "action": "M"
+  },
+  {
+    "name": "btn_47",
+    "text": "Итог",
+    "action": ","
+  },
+  {
+    "name": "btn_48",
+    "text": "Цитрусы",
+    "action": "."
+  },
+  {
+    "name": "btn_49",
+    "text": "Х/Б прочее",
+    "action": "/"
+  },
+  {
+    "name": "btn_50",
+    "text": "ФРОВ замороз",
+    "action": "`"
+  },
+  {
+    "name": "btn_51",
+    "text": "",
+    "action": "Insert"
+  },
+  {
+    "name": "btn_52",
+    "text": "",
+    "action": "Delete"
+  },
+  {
+    "name": "btn_53",
+    "text": "",
+    "action": "Home"
+  },
+  {
+    "name": "btn_54",
+    "text": "4",
+    "action": "4"
+  },
+  {
+    "name": "btn_55",
+    "text": "5",
+    "action": "5"
+  },
+  {
+    "name": "btn_56",
+    "text": "6",
+    "action": "6"
+  },
+  {
+    "name": "btn_57",
+    "text": "Сбер",
+    "action": "End"
+  },
+  {
+    "name": "btn_58",
+    "text": "Валюта",
+    "action": "Page Up"
+  },
+  {
+    "name": "btn_59",
+    "text": "Итог",
+    "action": "+ (Num Pad)"
+  },
+  {
+    "name": "btn_60",
+    "text": "Мясо охл",
+    "action": "Page Down"
+  },
+  {
+    "name": "btn_61",
+    "text": "Конфеты",
+    "action": "Up"
+  },
+  {
+    "name": "btn_62",
+    "text": "Бакалея",
+    "action": "Shift+1"
+  },
+  {
+    "name": "btn_63",
+    "text": "",
+    "action": "Shift+2"
+  },
+  {
+    "name": "btn_64",
+    "text": "",
+    "action": "Shift+3"
+  },
+  {
+    "name": "btn_65",
+    "text": "",
+    "action": "Shift+4"
+  },
+  {
+    "name": "btn_66",
+    "text": "1",
+    "action": "1"
+  },
+  {
+    "name": "btn_67",
+    "text": "2",
+    "action": "2"
+  },
+  {
+    "name": "btn_68",
+    "text": "3",
+    "action": "3"
+  },
+  {
+    "name": "btn_69",
+    "text": "Влево",
+    "action": "Shift+5"
+  },
+  {
+    "name": "btn_70",
+    "text": "Вверх",
+    "action": "Shift+6"
+  },
+  {
+    "name": "btn_71",
+    "text": "Ввод",
+    "action": "Shift+7"
+  },
+  {
+    "name": "btn_72",
+    "text": "Рыба хк",
+    "action": "Left"
+  },
+  {
+    "name": "btn_73",
+    "text": "Хоз товары",
+    "action": "Down"
+  },
+  {
+    "name": "btn_74",
+    "text": "текстиль одежда обувь",
+    "action": "Right"
+  },
+  {
+    "name": "btn_75",
+    "text": "",
+    "action": "Shift+-"
+  },
+  {
+    "name": "btn_76",
+    "text": "",
+    "action": "Esc"
+  },
+  {
+    "name": "btn_77",
+    "text": "",
+    "action": "Shift+8"
+  },
+  {
+    "name": "btn_78",
+    "text": "0",
+    "action": "0"
+  },
+  {
+    "name": "btn_79",
+    "text": "00",
+    "action": "Shift+9"
+  },
+  {
+    "name": "btn_80",
+    "text": ",",
+    "action": "Shift+0"
+  },
+  {
+    "name": "btn_81",
+    "text": "Вправо",
+    "action": "-"
+  },
+  {
+    "name": "btn_82",
+    "text": "Вниз",
+    "action": "="
+  },
+  {
+    "name": "btn_83",
+    "text": "Ввод",
+    "action": "Enter"
+  }
+]

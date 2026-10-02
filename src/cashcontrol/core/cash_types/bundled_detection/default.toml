@@ -1,0 +1,5 @@
+[[rules]]
+id = "crystal_register_modules"
+priority = 100
+strategy = "xml_keywords"
+path = "/home/tc/storage/crystal-cash/config/register-modules.xml"

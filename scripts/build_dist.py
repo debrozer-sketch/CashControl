@@ -1,0 +1,600 @@
+"""Build portable CashControl distribution (layout per gap_report §8.2).
+
+Target layout:
+    CashControl/
+    ├── CashControl.cmd          launcher (pythonw, relative paths)
+    ├── version.txt
+    ├── icon.ico
+    ├── docs/  data/  logs/  commands/  collectors/  soft/  modules/
+    └── runtime/
+        ├── python/              embedded CPython + stdlib
+        ├── lib/site-packages.zip   pure-python deps (single zip)
+        ├── lib/<pkg>/           packages with binary extensions
+        └── app/cashcontrol/     program code (.py files)
+
+Usage: uv run python scripts/build_dist.py [--output DIR]
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import shutil
+import subprocess
+import sys
+import urllib.request
+import zipfile
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+SRC_PKG = REPO_ROOT / "src" / "cashcontrol"
+VENV_SP = REPO_ROOT / ".venv" / "Lib" / "site-packages"
+CACHE_DIR = REPO_ROOT / ".build_cache"
+DEFAULT_OUT = REPO_ROOT / "dist" / "CashControl"
+
+# У каждого варианта свой каталог: сборка идёт через clean_out, и общий каталог
+# означал бы, что вторая затирает первую. Инсталляторы тоже различаются
+# суффиксом в имени — иначе они перезапишут друг друга.
+VARIANT_DIRS = {
+    "department": "CashControl",
+    "public": "CashControl-public",
+}
+ISCC = Path(r"C:\Program Files (x86)\Inno Setup 6\ISCC.exe")
+ISSUER = REPO_ROOT / "CashControl.iss"
+
+PY_VERSION = "3.12.10"
+EMBED_URL = f"https://www.python.org/ftp/python/{PY_VERSION}/python-{PY_VERSION}-embed-amd64.zip"
+
+SKIP_PKGS = {
+    "pip", "setuptools", "wheel", "pkg_resources", "__pycache__",
+    "_distutils_hack", "loguru", "win32_setctime",
+}
+BIN_EXTS = {".pyd", ".dll", ".so"}
+COPY_EXTS = {".py", ".pyw", ".json", ".ico", ".png", ".svg", ".qss", ".txt", ".toml"}
+
+HOT_FILES = [
+    ("gui", ["toolbar.py"]),
+    ("builtin/db_viewer", [
+        "__init__.py",
+        "constants.py", "formatting.py", "storage.py", "workers.py", "sql.py",
+        "data_grid.py", "data_panel.py", "csv_import.py",
+        "sql_console.py", "tables_panel.py", "widget.py",
+    ]),
+    ("builtin/vnc", ["vnc_preview.py"]),
+    ("builtin/file_manager", [
+        "__init__.py",
+        "models.py", "backends.py", "service.py", "cli.py",
+        "gui/__init__.py", "gui/dialogs.py", "gui/runtime.py",
+        "gui/session.py", "gui/widgets.py", "gui/window.py",
+    ]),
+    ("gui/dialogs", [
+        "command_editor.py", "command_result_dialog.py", "logs_viewer.py",
+        "help_dialog.py", "alias_editor.py", "add_cash_dialog.py",
+    ]),
+    ("gui/dialogs/settings", [
+        "settings_dialog.py", "tab_connection.py", "tab_general.py",
+        "tab_logs.py", "tab_programs.py",
+    ]),
+    ("gui/widgets", [
+        "info_section_widget.py", "virtual_keyboard.py",
+    ]),
+]
+
+PTH_CONTENT = """python312.zip
+.
+..\\lib
+..\\lib\\site-packages.zip
+..\\lib\\win32
+..\\lib\\win32\\lib
+..\\app
+"""
+
+# Qt modules actually used by the app (GUI + qasync network loop).
+# Everything else (WebEngine/QML/Quick/3D/Multimedia/Pdf/Designer/...)
+# is pruned after dependency installation.
+KEEP_QT_DLLS = {
+    "Qt6Core", "Qt6Gui", "Qt6Widgets", "Qt6Network", "Qt6Svg",
+    "Qt6Concurrent", "Qt6OpenGL", "Qt6Xml", "Qt6SvgWidgets",
+}
+KEEP_QT_PYDS = {
+    "QtCore", "QtGui", "QtWidgets", "QtNetwork", "QtSvg", "QtXml",
+    "QtSvgWidgets",
+}
+KEEP_PLUGIN_DIRS = {"platforms", "imageformats", "iconengines", "styles"}
+DELETE_PYSIDE_DIRS = [
+    "qml", "metatypes", "include", "doc", "glue", "scripts", "QtAsyncio",
+    "__pycache__",
+]
+DELETE_ROOT_EXTS = {".exe": None, ".lib": None, ".pyi": None}
+
+
+def log(msg: str) -> None:
+    print(f"[build_dist] {msg}")
+
+
+def sync_version() -> str:
+    script = REPO_ROOT / "scripts" / "sync_version.py"
+    subprocess.run([sys.executable, str(script)], check=True, cwd=REPO_ROOT)
+    version = (REPO_ROOT / "version.txt").read_text(encoding="utf-8").strip()
+    return version
+
+
+def clean_out(out: Path) -> None:
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
+
+
+def ensure_embedded_python(cache: Path) -> Path:
+    cache.mkdir(parents=True, exist_ok=True)
+    zip_path = cache / f"python-{PY_VERSION}-embed-amd64.zip"
+    if not zip_path.exists():
+        log(f"downloading {EMBED_URL}")
+        urllib.request.urlretrieve(EMBED_URL, zip_path)
+    return zip_path
+
+
+def install_runtime_python(out: Path) -> None:
+    py_dir = out / "runtime" / "python"
+    py_dir.mkdir(parents=True)
+    with zipfile.ZipFile(ensure_embedded_python(CACHE_DIR)) as zf:
+        zf.extractall(py_dir)
+    pth_file = py_dir / f"python{PY_VERSION.rpartition('.')[0].replace('.', '')}._pth"
+    pth_file.write_text(PTH_CONTENT, encoding="utf-8")
+    log(f"embedded python -> {py_dir}")
+
+
+def has_binaries(path: Path) -> bool:
+    if path.is_file():
+        return path.suffix.lower() in BIN_EXTS
+    return any(item.suffix.lower() in BIN_EXTS for item in path.rglob("*"))
+
+
+def install_deps(out: Path) -> tuple[list[str], list[str]]:
+    lib_dir = out / "runtime" / "lib"
+    lib_dir.mkdir(parents=True)
+    zip_path = lib_dir / "site-packages.zip"
+    binaries: list[str] = []
+    pure: list[str] = []
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for entry in sorted(VENV_SP.iterdir()):
+            name = entry.name
+            if name.lower() in SKIP_PKGS or name.endswith(".dist-info"):
+                continue
+            if has_binaries(entry):
+                dest = lib_dir / name
+                if entry.is_dir():
+                    shutil.copytree(entry, dest)
+                else:
+                    shutil.copy2(entry, dest)
+                binaries.append(name)
+            else:
+                if entry.is_dir():
+                    for f in entry.rglob("*"):
+                        if f.is_file() and f.suffix != ".pyc":
+                            zf.write(f, f.relative_to(VENV_SP))
+                else:
+                    zf.write(entry, name)
+                pure.append(name)
+
+    log(f"binary pkgs: {len(binaries)}, pure pkgs: {len(pure)}")
+    return binaries, pure
+
+
+def place_win32_dlls(out: Path) -> None:
+    src = out / "runtime" / "lib" / "pywin32_system32"
+    dst = out / "runtime" / "python"
+    if not src.is_dir():
+        return
+    for f in src.glob("*.dll"):
+        shutil.copy2(f, dst / f.name)
+
+
+def _rmtree(path: Path) -> None:
+    if path.exists():
+        shutil.rmtree(path, ignore_errors=True)
+
+
+def prune_runtime(out: Path) -> None:
+    """Drop Qt modules and dev artifacts the app never loads (§8 size notes)."""
+    lib = out / "runtime" / "lib"
+
+    # caches and test suites inside binary packages
+    for pkg in lib.iterdir():
+        if not pkg.is_dir():
+            continue
+        for cache in list(pkg.rglob("__pycache__")):
+            _rmtree(cache)
+        for tests in list(pkg.rglob("tests")):
+            if tests.is_dir():
+                _rmtree(tests)
+
+    pyside = lib / "PySide6"
+    if not pyside.is_dir():
+        return
+
+    for d in DELETE_PYSIDE_DIRS:
+        _rmtree(pyside / d)
+    for f in pyside.iterdir():
+        if f.is_file() and (
+            f.suffix in DELETE_ROOT_EXTS or f.suffix == ".typed"
+        ):
+            f.unlink()
+
+    def stem(f: Path) -> str:
+        return f.name.split(".")[0]
+
+    def keep_dll(f: Path) -> bool:
+        if f.stem.endswith(".abi3"):   # pyside6.abi3.dll, shiboken6.abi3.dll
+            return True
+        return f.name.split(".")[0] in KEEP_QT_DLLS
+
+    for f in list(pyside.glob("*.dll")):
+        if not keep_dll(f):
+            f.unlink()
+    for f in list(pyside.glob("*.pyd")):
+        if stem(f) not in KEEP_QT_PYDS:
+            f.unlink()
+
+    plugins = pyside / "plugins"
+    if plugins.is_dir():
+        for d in list(plugins.iterdir()):
+            if d.is_dir() and d.name not in KEEP_PLUGIN_DIRS:
+                _rmtree(d)
+
+    translations = pyside / "translations"
+    if translations.is_dir():
+        for f in translations.iterdir():
+            if f.is_file() and not f.name.endswith("_ru.qm"):
+                f.unlink()
+            elif f.is_dir():
+                for sub in f.iterdir():
+                    if sub.is_file() and not sub.name.endswith("_ru.qm"):
+                        sub.unlink()
+
+    log("runtime pruned")
+
+
+def _app_ignore(directory: str, names: list[str]) -> list[str]:
+    """Что исключаем из копии app-кода: __pycache__ и dev/runtime-артефакты
+    встроенного SSH-терминала (README/requirements/run.bat, логи, data/app)."""
+    src = Path(directory)
+    ignored = {n for n in names if n == "__pycache__"}
+    if src.name == "terminal":
+        ignored |= {n for n in names if n in {"README.md", "requirements.txt", "run.bat", "logs"}}
+    if src.name == "data" and "app" in names:
+        ignored.add("app")
+    return sorted(ignored)
+
+
+def copy_app_code(out: Path, variant: str) -> None:
+    app_pkg = out / "runtime" / "app" / "cashcontrol"
+
+    shutil.copytree(SRC_PKG, app_pkg, ignore=_app_ignore)
+    log(f"app code -> {app_pkg}")
+
+    if variant == "public":
+        strip_internal(app_pkg)
+
+
+def strip_internal(app_pkg: Path) -> None:
+    """Убрать каталог ``internal`` — границу публичной сборки.
+
+    Внутри него сборщики, диагностические проверки и исправления конкретного
+    торговля: названия банков, названия секций, значения для записи на кассу.
+    Всё, что их перечисляет, живёт вне каталога и спрашивает реестр, поэтому
+    программа без него запускается и просто показывает меньше.
+
+    Удаление, а не отключение флагом: в публичный репозиторий должен уехать
+    исходник без этих строк, а не с выключенными галочками.
+    """
+    internal = app_pkg / "internal"
+    if not internal.is_dir():
+        raise SystemExit(
+            f"ERROR: public build expects an internal package to strip: {internal}"
+        )
+    _rmtree(internal)
+    log("variant public: internal/ removed")
+
+
+def build_modules_overlay(out: Path) -> None:
+    modules = out / "modules"
+    for rel_dir, files in HOT_FILES:
+        target = modules / rel_dir
+        target.mkdir(parents=True, exist_ok=True)
+        src_dir = SRC_PKG / rel_dir
+        for fname in files:
+            f = src_dir / fname
+            if not f.exists():
+                continue
+            dst = target / fname
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, dst)
+    layouts_src = SRC_PKG / "gui" / "widgets" / "keyboard_layouts"
+    if layouts_src.exists():
+        # Два назначения: modules/ (hot-swap overlay) и корневой cashcontrol/ —
+        # именно там их ищет get_layouts_dir() в production (структура build.bat).
+        for dst in (
+            modules / "gui" / "widgets" / "keyboard_layouts",
+            out / "cashcontrol" / "gui" / "widgets" / "keyboard_layouts",
+        ):
+            dst.mkdir(parents=True, exist_ok=True)
+            for f in layouts_src.glob("*.json"):
+                shutil.copy2(f, dst / f.name)
+    log("modules/ overlay built")
+
+
+def _defaults_ignore(_directory: str, names: list[str]) -> list[str]:
+    """Что не попадает в defaults/ из живых папок пользователя.
+
+    Кэш байткодов бесполезен в сборке и привязан к версии интерпретатора
+    машины, на которой шла сборка.
+    """
+    skip = {"__pycache__", ".pytest_cache", ".mypy_cache"}
+    return sorted({n for n in names if n in skip or n.endswith(".pyc")})
+
+
+def copy_user_content(out: Path) -> None:
+    (REPO_ROOT / "version.txt").read_bytes()
+    shutil.copy2(REPO_ROOT / "version.txt", out / "version.txt")
+    icon = SRC_PKG / "gui" / "resources" / "icon.ico"
+    if icon.exists():
+        shutil.copy2(icon, out / "icon.ico")
+    def _soft_ignore(_d, names):
+        # Пользовательские данные KiTTY (кэш ключей, сессии, прокси, настройки
+        # и случайный seed) не должны попасть в dist и инсталлятор.
+        skip = {"SshHostKeys", "Sessions", "Proxies", "reinstall", "kitty.ini", "PUTTY.RND"}
+        # cc-updater — артефакт прошлой системы обновлений. Код его нигде не
+        # вызывает, но файл лежал в soft/ и уезжал в инсталлятор целиком.
+        return {n for n in names if n in skip or n.lower().startswith("cc-updater")}
+
+    # docs — read-only, едут как есть. commands/collectors/cash_types/detection
+    # уходят в defaults/: живой commands/ (где пользователь создаёт свои команды)
+    # в дистрибутив НЕ попадает, поэтому обновление никогда не перезаписывает
+    # пользовательский контент. Приложение досеивает отсутствующие примеры при
+    # первом старте (infrastructure/seed_defaults).
+    docs_src = REPO_ROOT / "docs"
+    if docs_src.exists():
+        shutil.copytree(docs_src, out / "docs")
+    for d in ("commands", "collectors", "cash_types", "detection"):
+        src = REPO_ROOT / d
+        if src.exists():
+            # Справочники копируются из живой рабочей папки, где рядом
+            # с исходниками лежит __pycache__ от запуска тестов. В сборку
+            # он попадать не должен: это мусор, который занимает место и
+            # зависит от версии интерпретатора машины разработчика.
+            shutil.copytree(src, out / "defaults" / d, ignore=_defaults_ignore)
+    # Канонические справочники оборудования уезжают в defaults/data/ и
+    # досеиваются в живой data/ при первом старте (seed_defaults), чтобы
+    # маппинг сканеров/весов/дисплея работал в собранной версии, а сам
+    # живой data/ оставался чисто пользовательским (purge_user_data + seed).
+    for name in ("usb_id_mapping.json", "port_mapping.json"):
+        src = REPO_ROOT / "data" / name
+        if src.exists():
+            dst = out / "defaults" / "data" / name
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+    soft_src = REPO_ROOT / "soft"
+    if soft_src.exists():
+        shutil.copytree(soft_src, out / "soft", ignore=_soft_ignore)
+    # Встроенный SSH-терминал уходит вместе с app-кодом (copy_app_code):
+    # из dist-копии исключаются dev-файлы, логи и runtime-данные — они
+    # создаются самим терминалом при первом запуске.
+    for d in ("data", "logs"):
+        (out / d).mkdir(exist_ok=True)
+    log("root content copied")
+
+
+def numeric_version(label: str) -> str:
+    """Числовая часть версии для ресурсов Windows — всегда четыре числа.
+
+    Метка версии может быть любой строкой: в сборке 3.8.6 она была и такой,
+    и вроде ``Vova_Edition``. Но ``AssemblyVersion`` и ``AssemblyFileVersion``
+    требуют строго ``a.b.c.d``, и ``csc`` отказывается компилировать
+    ``Vova_Edition.0`` с CS0647. Поэтому числовая часть выводится отдельно, а
+    не берётся из метки напрямую.
+
+    Из метки достаётся первая точечная группа цифр: у ``3.8.6`` это ``3.8.6``
+    и результат ``3.8.6.0``. Точки сохраняются — сдвинутые вместе цифры
+    превратили бы ``3.8.6`` в ``386.0.0.0``, и это уже другая версия.
+    Отсутствие цифр даёт ``0.0.0.0``: подставлять релизный номер молча опаснее,
+    метка перестала бы соответствовать тому, что собрано.
+
+    Каждая часть ограничена 65535: ``csc`` отвергнет и переполнение, а
+    ``AssemblyVersion`` используется ещё и при сверке сборок.
+    """
+    match = re.search(r"\d+(?:\.\d+)*", label)
+    if not match:
+        return "0.0.0.0"
+    parts = [min(int(p), 65535) for p in match.group(0).split(".")[:4]]
+    while len(parts) < 4:
+        parts.append(0)
+    return ".".join(str(p) for p in parts)
+
+
+LAUNCHER_CS = """// CashControl portable launcher — starts embedded pythonw with app main.
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+
+[assembly: AssemblyTitle("CashControl")]
+[assembly: AssemblyProduct("CashControl")]
+[assembly: AssemblyCompany("CashControl Team")]
+[assembly: AssemblyFileVersion("{numeric_version}")]
+[assembly: AssemblyVersion("{numeric_version}")]
+
+static class Launcher
+{
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int MessageBoxW(IntPtr hWnd, string text, string caption, uint type);
+
+    [STAThread]
+    static int Main()
+    {
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string python = Path.Combine(baseDir, "runtime", "python", "pythonw.exe");
+        string script = Path.Combine(baseDir, "runtime", "app", "cashcontrol", "main.py");
+
+        if (!File.Exists(python) || !File.Exists(script))
+        {
+            MessageBoxW(IntPtr.Zero,
+                "runtime\\\\python\\\\pythonw.exe не найден. Раскладка установки повреждена.",
+                "CashControl", 0x10);
+            return 1;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = python,
+            Arguments = "\\"" + script + "\\"",
+            WorkingDirectory = baseDir,
+            UseShellExecute = false,
+        });
+        return 0;
+    }
+}
+"""
+
+
+def _find_csc() -> Path | None:
+    for candidate in (
+        Path(r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"),
+        Path(r"C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe"),
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def build_launcher(out: Path, version: str) -> None:
+    """Compile a tiny .NET-Framework exe (icon included) that starts pythonw."""
+    csc = _find_csc()
+    icon = out / "icon.ico"
+    if csc is None:
+        log("csc.exe not found — falling back to CashControl.cmd")
+        write_launcher_cmd(out)
+        return
+    src = CACHE_DIR / f"launcher_{version}.cs"
+    src.parent.mkdir(parents=True, exist_ok=True)
+    src.write_text(
+        LAUNCHER_CS.replace("{numeric_version}", numeric_version(version)),
+        encoding="utf-8-sig",
+    )
+    exe = out / "CashControl.exe"
+    args = [
+        str(csc), "/nologo", "/target:winexe", f"/out:{exe}",
+        "/r:System.dll", f"/win32icon:{icon}", str(src),
+    ]
+    subprocess.run(args, check=True)
+    size_kb = exe.stat().st_size // 1024
+    log(f"launcher written: CashControl.exe ({size_kb} KB)")
+
+
+def write_launcher_cmd(out: Path) -> None:
+    (out / "CashControl.cmd").write_text(
+        '@echo off\r\n'
+        'start "" "%~dp0runtime\\python\\pythonw.exe" '
+        '"%~dp0runtime\\app\\cashcontrol\\main.py"\r\n',
+        encoding="utf-8",
+    )
+    log("fallback launcher written: CashControl.cmd")
+
+def purge_user_data(out: Path) -> None:
+    """Final safety: user data must never ship (also protects the installer
+    payload if the app was launched from dist after building)."""
+    for d in ("data", "logs"):
+        target = out / d
+        if target.is_dir():
+            for f in target.iterdir():
+                shutil.rmtree(f, ignore_errors=True) if f.is_dir() else f.unlink()
+            log(f"purged {d}/")
+
+
+def build_installer(variant: str) -> Path:
+    """Собрать инсталлятор варианта через Inno Setup.
+
+    Имя файла и каталог исходников приходят ключами ``/D``, а не правкой
+    ``CashControl.iss``: иначе две сборки делили бы один файл и одна
+    затирала бы другую.
+    """
+    if not ISCC.is_file():
+        raise SystemExit(f"ERROR: Inno Setup compiler not found: {ISCC}")
+
+    cmd = [
+        str(ISCC),
+        f"/DVariant={variant}",
+        f"/DSourceDir=dist\\{VARIANT_DIRS[variant]}",
+        str(ISSUER),
+    ]
+    log(f"installer ({variant}): {' '.join(cmd)}")
+    result = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+    if result.returncode != 0:
+        log(result.stdout)
+        log(result.stderr)
+        raise SystemExit(f"ERROR: installer failed ({variant})")
+
+    suffix = "-public" if variant == "public" else ""
+    built = REPO_ROOT / "dist" / "installer" / f"CashControl{suffix}-setup-{_last_version()}.exe"
+    if not built.is_file():
+        raise SystemExit(f"ERROR: installer not produced: {built}")
+    log(f"installer ready: {built} ({built.stat().st_size} bytes)")
+    return built
+
+
+def _last_version() -> str:
+    return (REPO_ROOT / "version.txt").read_text(encoding="utf-8").strip()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="каталог portable-сборки; по умолчанию свой для каждого варианта",
+    )
+    parser.add_argument(
+        "--variant",
+        choices=("department", "public"),
+        default="department",
+        help=(
+            "department — полная сборка для отдела, со внутренними сборщиками "
+            "и диагностикой; public — та же программа без каталога internal, "
+            "для публичного репозитория"
+        ),
+    )
+    parser.add_argument(
+        "--installer",
+        action="store_true",
+        help="после portable-сборки собрать инсталлятор этого варианта",
+    )
+    args = parser.parse_args()
+
+    if not VENV_SP.exists():
+        print(f"ERROR: venv site-packages not found: {VENV_SP}", file=sys.stderr)
+        return 1
+
+    output = args.output or (REPO_ROOT / "dist" / VARIANT_DIRS[args.variant])
+    version = sync_version()
+    log(f"building CashControl v{version} ({args.variant}) -> {output}")
+    clean_out(output)
+    install_runtime_python(output)
+    install_deps(output)
+    prune_runtime(output)
+    place_win32_dlls(output)
+    copy_app_code(output, args.variant)
+    build_modules_overlay(output)
+    copy_user_content(output)
+    build_launcher(output, version)
+    purge_user_data(output)
+    log(f"DONE: {output}")
+
+    if args.installer:
+        build_installer(args.variant)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

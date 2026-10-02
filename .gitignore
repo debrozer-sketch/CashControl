@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+dist/
+.build_cache/
+
+# Runtime data (keystore, passwords, sessions — never commit)
+/data/
+/logs/
+
+# Vendored SSH terminal runtime data (code in builtin/terminal/data/*.py is tracked)
+src/cashcontrol/builtin/terminal/data/app/
+
+# Bundled binaries and their configs
+soft/*.exe
+soft/*.ini
+soft/*.RND
+soft/Sessions/
+soft/SshHostKeys/
+soft/Proxies/
+soft/reinstall/
+
+# Мёртвый артефакт прежней системы обновлений — код его нигде не вызывает
+soft/cc-updater*
+
+# Design rollback / file backups
+*.bak
+
+# Recovery bycatch / local artifacts
+Old_backup/
+Ready/
+modules/
+dev/
+.ruff_cache/
+.pytest_cache/
+*.log
+*.7z
+launch_err.txt
+launch_out.txt
+/ssh_terminal_release.zip
+
+# OS
+Thumbs.db
+.DS_Store
+_recovered_src/
+data.*.bak/
+
+modules.stale.bak/
+installer/
+
+# Local AI design drafts
+ai/
+# Design rollback backups
+backups/
+
+# Кэш графов Joern: бинарные файлы, десятки мегабайт, восстанавливаются командой build
+.cpg-cache/
+
+# Служебное пространство навыков
+.superpowers/

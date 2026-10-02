@@ -1,0 +1,19 @@
+[collector]
+name       = "cpu"
+label      = "CPU"
+group      = "system"
+icon       = ""
+cash_types = ["pos", "touch", "sco", "sco3"]
+order      = 2
+
+[[fields]]
+key      = "cpu_model"
+label    = "Model"
+command  = "grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs"
+fallback = "unknown"
+
+[[fields]]
+key      = "cpu_cores"
+label    = "Cores"
+command  = "nproc 2>/dev/null || grep -c ^processor /proc/cpuinfo"
+fallback = "unknown"

@@ -1,0 +1,1034 @@
+"""
+Toolbar — top toolbar with main actions and per-tab action buttons.
+
+Contains:
+- Toolbar (top): add cash, settings, refresh
+- CashToolbar (per-tab): restart, reboot, VNC, SSH, WinSCP, DB, keyboard, commands
+"""
+
+from __future__ import annotations
+
+import platform
+import subprocess
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from PySide6.QtCore import QObject, QPoint, QSize, Qt
+from PySide6.QtGui import QAction, QContextMenuEvent, QMouseEvent
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+from qfluentwidgets import (
+    FluentIcon,
+    RoundMenu,
+    ToolButton,
+)
+
+from cashcontrol.core.cash_types import get_cash_type_registry, has_feature
+from cashcontrol.gui import feedback
+from cashcontrol.gui.notification_manager import Level
+from cashcontrol.gui.prefetch import get_prefetcher
+from cashcontrol.gui.theme_helper import font_size
+from cashcontrol.infrastructure.audit_logger import audit_log, get_logger
+from cashcontrol.infrastructure.config_manager import ConfigManager
+from cashcontrol.infrastructure.task_runner import spawn
+
+if TYPE_CHECKING:
+    from cashcontrol.gui.session_manager import SessionManager
+
+logger = get_logger()
+
+_TOOL_BTN_SIZE = 32
+_TOOL_ICON_SIZE = 16
+
+
+class KbButtonEventFilter(QObject):
+    def __init__(self, on_click, on_menu) -> None:
+        super().__init__()
+        self._on_click = on_click
+        self._on_menu = on_menu
+
+    def eventFilter(self, obj, event) -> bool:
+        from PySide6.QtCore import QEvent
+        if event.type() == QEvent.Type.ContextMenu and isinstance(event, QContextMenuEvent):
+            self._on_menu()
+            return True
+        if (
+            event.type() == QEvent.Type.MouseButtonPress
+            and isinstance(event, QMouseEvent)
+            and event.button() == Qt.MouseButton.LeftButton
+        ):
+            self._on_click()
+            return True
+        return super().eventFilter(obj, event)
+
+
+# ── Per-tab toolbar ───────────────────────────────────────────
+
+def _make_labeled_btn(icon: FluentIcon, label: str, tooltip: str) -> QWidget:
+    container = QWidget()
+    lay = QVBoxLayout(container)
+    lay.setContentsMargins(2, 2, 2, 2)
+    lay.setSpacing(1)
+    lay.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+    btn = ToolButton(icon, container)
+    btn.setFixedSize(_TOOL_BTN_SIZE, _TOOL_BTN_SIZE)
+    btn.setIconSize(QSize(_TOOL_ICON_SIZE, _TOOL_ICON_SIZE))
+    btn.setToolTip(tooltip)
+    lay.addWidget(btn, 0, Qt.AlignmentFlag.AlignHCenter)
+
+    lbl = QLabel(label, container)
+    from cashcontrol.gui.theme_helper import color
+    lbl.setStyleSheet(
+        f"font-size: {font_size('micro')}px; color: {color('text_secondary')}; "
+        "background: transparent; qproperty-alignment: AlignCenter;"
+    )
+    lbl.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+    lay.addWidget(lbl, 0, Qt.AlignmentFlag.AlignHCenter)
+
+    container.btn = btn
+    return container
+
+
+def _make_keyboard_btn(on_keyboard, on_keyboard_menu) -> tuple:
+    container = QWidget()
+    lay = QHBoxLayout(container)
+    lay.setContentsMargins(0, 0, 0, 0)
+    lay.setSpacing(0)
+
+    main_c = QWidget(container)
+    main_vbox = QVBoxLayout(main_c)
+    main_vbox.setContentsMargins(0, 2, 0, 2)
+    main_vbox.setSpacing(1)
+    main_vbox.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+    kb_btn = ToolButton(FluentIcon.APPLICATION, main_c)
+    kb_btn.setFixedSize(_TOOL_BTN_SIZE, _TOOL_BTN_SIZE)
+    kb_btn.setIconSize(QSize(_TOOL_ICON_SIZE, _TOOL_ICON_SIZE))
+    kb_btn.setToolTip("Виртуальная клавиатура")
+    kb_btn.clicked.connect(on_keyboard)
+    kb_btn.setMouseTracking(True)
+    kb_btn._kb_filter = KbButtonEventFilter(on_keyboard, on_keyboard_menu)
+    kb_btn.installEventFilter(kb_btn._kb_filter)
+    main_vbox.addWidget(kb_btn, 0, Qt.AlignmentFlag.AlignHCenter)
+
+    kb_lbl = QLabel("Клавиатура", main_c)
+    from cashcontrol.gui.theme_helper import color as _tc
+    kb_lbl.setStyleSheet(
+        f"font-size: {font_size('micro')}px; color: {_tc('text_secondary')}; "
+        "background: transparent; qproperty-alignment: AlignCenter;"
+    )
+    kb_lbl.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+    main_vbox.addWidget(kb_lbl, 0, Qt.AlignmentFlag.AlignHCenter)
+    lay.addWidget(main_c)
+
+    return container, kb_btn
+
+
+class CashToolbar(QWidget):
+    """
+    Per-tab toolbar with action buttons (restart, reboot, VNC, SSH, etc.).
+
+    Emits signals for each action — TabManager coordinates the response.
+    """
+
+
+
+    def __init__(self, session_mgr: SessionManager, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._session_mgr = session_mgr
+        self._config = ConfigManager()
+        self._kb_container: QWidget | None = None
+        # Кэш выбранного вручную шаблона по IP: повторное открытие кассы
+        # должно показывать тот же шаблон, который оператор выбрал раньше.
+        self._kb_layout_by_ip: dict[str, str] = {}
+        self._setup_ui()
+
+    def _setup_ui(self) -> None:
+        self.setFixedHeight(_TOOL_BTN_SIZE + 22)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(6)
+
+        # Cash control group
+        c = _make_labeled_btn(FluentIcon.SYNC, "Рестарт", "Перезагрузить ПО (cash restart)")
+        self._restart_btn = c.btn
+        self._restart_btn.clicked.connect(self._on_restart_pos)
+        layout.addWidget(c)
+
+        c = _make_labeled_btn(FluentIcon.POWER_BUTTON, "Ребут", "Перезагрузить кассу (reboot)")
+        self._reboot_btn = c.btn
+        self._reboot_btn.clicked.connect(self._on_reboot_terminal)
+        layout.addWidget(c)
+
+        # External tools group
+        c = _make_labeled_btn(FluentIcon.VIEW, "VNC", "VNC — удалённый просмотр экрана кассы")
+        self._vnc_btn = c.btn
+        self._vnc_btn.clicked.connect(self._on_vnc)
+        layout.addWidget(c)
+
+        c = _make_labeled_btn(FluentIcon.COMMAND_PROMPT, "SSH", "SSH — терминал (встроенный или KiTTY)")
+        self._ssh_btn = c.btn
+        self._ssh_btn.clicked.connect(self._on_ssh)
+        layout.addWidget(c)
+
+        c = _make_labeled_btn(FluentIcon.FOLDER, "WinSCP", "WinSCP — файловый менеджер")
+        self._winscp_btn = c.btn
+        self._winscp_btn.clicked.connect(self._on_winscp)
+        layout.addWidget(c)
+
+        c = _make_labeled_btn(FluentIcon.LIBRARY, "БД", "PostgreSQL — редактор базы данных")
+        self._pg_btn = c.btn
+        self._pg_btn.clicked.connect(self._on_postgres)
+        layout.addWidget(c)
+
+        c = _make_labeled_btn(
+            FluentIcon.DOWNLOAD, "Логи", "Собрать логи и данные кассы в архив"
+        )
+        self._collect_btn = c.btn
+        self._collect_btn.clicked.connect(self._on_collect)
+        layout.addWidget(c)
+
+        # Keyboard
+        kb_container, self._kb_btn = _make_keyboard_btn(
+            self._on_keyboard, self._on_keyboard_menu
+        )
+        self._kb_container = kb_container
+        self._kb_container.hide()
+        layout.addWidget(self._kb_container)
+
+        # Data group
+        c = _make_labeled_btn(FluentIcon.UPDATE, "Обновить", "Обновить данные кассы")
+        self._refresh_btn = c.btn
+        self._refresh_btn.clicked.connect(self._on_refresh_info)
+        layout.addWidget(c)
+
+        # Commands
+        c = _make_labeled_btn(FluentIcon.SCROLL, "Команды", "Выбрать и выполнить команду на кассе")
+        self._commands_btn = c.btn
+        self._commands_btn.clicked.connect(self._on_commands_clicked)
+        layout.addWidget(c)
+
+        # Hover-prefetch: наведение греет TCP-маршрут до кассы (см. gui/prefetch.py)
+        self._prefetch = get_prefetcher()
+        for btn in (
+            self._restart_btn, self._reboot_btn, self._vnc_btn,
+            self._ssh_btn, self._winscp_btn, self._pg_btn,
+            self._commands_btn, self._refresh_btn,
+        ):
+            btn.installEventFilter(self)
+            btn.setMouseTracking(True)
+
+        layout.addStretch()
+
+    def eventFilter(self, obj, event) -> bool:
+        from PySide6.QtCore import QEvent
+
+        if event.type() == QEvent.Type.Enter and obj in (
+            self._restart_btn, self._reboot_btn, self._vnc_btn,
+            self._ssh_btn, self._winscp_btn, self._pg_btn,
+            self._refresh_btn,
+        ):
+            self._prefetch.schedule_tcp(
+                self._session_mgr.active_ip,
+                ConfigManager().settings.connection.ssh_port,
+            )
+        return super().eventFilter(obj, event)
+
+    # ── Public API ──────────────────────────────────────────
+
+    def update_for_cash_type(self, cash_type: str | None) -> None:
+        if self._kb_container:
+            # Тип ещё не определён (идёт сбор информации) — кнопку показываем:
+            # шаблон при клике подберёт _resolve_keyboard_layout. Скрываем
+            # только когда тип известен и не имеет фичи keyboard (sco/sco3).
+            known = get_cash_type_registry().has(cash_type)
+            self._kb_container.setVisible(
+                True if not known else has_feature(cash_type, "keyboard")
+            )
+
+    def set_busy(self, busy: bool, message: str = "") -> None:
+        btns = [
+            self._restart_btn, self._reboot_btn,
+            self._vnc_btn, self._ssh_btn, self._winscp_btn,
+            self._pg_btn, self._commands_btn, self._refresh_btn,
+        ]
+        for btn in btns:
+            btn.setEnabled(not busy)
+
+        from cashcontrol.gui.main_window import MainWindow
+
+        mw = self.window()
+        while mw is not None:
+            if isinstance(mw, MainWindow):
+                mw.set_status(message if busy else "\u0413\u043e\u0442\u043e\u0432\u043e")
+                break
+            mw = mw.parent() if hasattr(mw, "parent") else None
+
+    # ── Keyboard menu ───────────────────────────────────────
+
+    def _on_keyboard_menu(self) -> None:
+        menu = RoundMenu(parent=self)
+        open_action = QAction(FluentIcon.EDIT.icon(), "Открыть клавиатуру", self)
+        open_action.triggered.connect(self._on_keyboard)
+        menu.addAction(open_action)
+        designer_action = QAction(FluentIcon.EDIT.icon(), "Открыть конструктор", self)
+        designer_action.triggered.connect(self._on_keyboard_editor)
+        menu.addAction(designer_action)
+        btn = self._kb_btn
+        pos = btn.mapToGlobal(btn.rect().bottomLeft())
+        menu.exec(pos)
+
+    # ── Helpers ─────────────────────────────────────────────
+
+    def _require_active_tab(self) -> str | None:
+        mw = self.window()
+        tm = getattr(mw, '_tab_manager', None) or getattr(mw, 'tab_manager', None)
+        if tm is None:
+            return None
+        session = tm.get_active_session()
+        if not session:
+            self._notify_no_active_tab()
+            return None
+        return session.ip
+
+    def _notify_no_active_tab(self, title: str = "") -> None:
+        # Заголовок необязателен: девять кнопок его не передают, у
+        # клавиатуры он терялся вместе с переходом на общий отказ и
+        # оставлял журнал без указания, какая кнопка нажата.
+        feedback.notify(
+            "Нет активной вкладки: откройте вкладку с кассой",
+            Level.WARNING,
+            title=title,
+            parent=self,
+        )
+
+    def _get_main_window(self):
+        from cashcontrol.gui.main_window import MainWindow
+        parent = self.parent()
+        while parent is not None:
+            if isinstance(parent, MainWindow):
+                return parent
+            parent = parent.parent()
+        return None
+
+    def _get_active_session_widget(self):
+        mw = self.window()
+        tm = getattr(mw, '_tab_manager', None) or getattr(mw, 'tab_manager', None)
+        if tm is None:
+            return None
+        return tm.get_active_session()
+
+    # ── Cash operations ─────────────────────────────────────
+
+    def _on_restart_pos(self) -> None:
+        ip = self._require_active_tab()
+        if ip:
+            spawn(self._exec_action(ip, "restart_cash", title="Перезагрузка ПО"))
+
+    def _on_reboot_terminal(self) -> None:
+        ip = self._require_active_tab()
+        if ip:
+            if not feedback.confirm(
+                "Перезагрузка кассы",
+                f"Перезагрузить кассу {ip}?\nСистема будет перезагружена.",
+                parent=self,
+                yes_text="Перезагрузить",
+            ):
+                return
+            spawn(self._exec_action(ip, "reboot_cash", title="Перезагрузка кассы"))
+
+    # ── External program launchers ─────────────────────────
+
+    def _launch_program(self, exe_path: str | None, args_template: str, program_name: str) -> None:
+        session_widget = self._get_active_session_widget()
+        if not session_widget:
+            self._notify_no_active_tab()
+            return
+
+        if not exe_path or not exe_path.strip():
+            feedback.notify(
+                f"{program_name}: путь не задан: Настройки → Программы",
+                Level.WARNING,
+                parent=self,
+            )
+            return
+
+        exe = Path(exe_path)
+        if not exe.exists():
+            feedback.notify(
+                f"{program_name}: файл не найден: {exe_path}",
+                Level.ERROR,
+                parent=self,
+            )
+            return
+
+        conn = self._config.settings.connection
+        template_vars = {
+            "host": session_widget.ip,
+            "port": str(conn.ssh_port),
+            "login": conn.ssh_login,
+            "db_port": str(conn.db_port),
+            "db_login": conn.db_login,
+            "display": "0",
+        }
+
+        try:
+            args_str = args_template.format(**template_vars)
+        except KeyError as e:
+            feedback.notify(
+                f"{program_name}: ошибка шаблона: Неизвестная переменная: {e}",
+                Level.ERROR,
+                parent=self,
+            )
+            return
+
+        cmd_parts = [str(exe), *args_str.split()]
+        try:
+            subprocess.Popen(cmd_parts, close_fds=True)
+            logger.info(f"Launched {program_name}: {' '.join(cmd_parts)}")
+            feedback.notify(
+                f"Запущен {program_name}: {session_widget.ip}", Level.INFO, parent=self
+            )
+        except Exception as e:
+            logger.error(f"Failed to launch {program_name}: {e}")
+            feedback.notify(
+                f"Ошибка запуска {program_name}: {str(e)[:120]}", Level.ERROR, parent=self
+            )
+
+    def _on_vnc(self) -> None:
+        session_widget = self._get_active_session_widget()
+        if not session_widget:
+            self._notify_no_active_tab()
+            return
+
+        session_widget.open_vnc_client(
+            fullscreen=self._config.settings.builtin.vnc_start_mode == "fullscreen"
+        )
+
+    def _on_ssh(self) -> None:
+        spawn(self._launch_kitty())
+
+    async def _launch_kitty(self) -> None:
+        import threading
+        import time
+
+        session = self._get_active_session_widget()
+        if not session:
+            self._notify_no_active_tab()
+            return
+
+        p = self._config.settings.programs
+        conn = self._config.settings.connection
+
+        from cashcontrol.builtin.ssh_terminal_launcher import should_use_builtin_ssh
+        from cashcontrol.infrastructure.config_manager import _IS_LINUX
+
+        if should_use_builtin_ssh(p.ssh_client_path):
+            self._open_builtin_ssh_terminal(session)
+            return
+
+        ip = session.ip
+        password = None
+        if session.session and session.session.ssh_connected:
+            password = session.session.ssh.successful_password
+
+        if _IS_LINUX:
+            # Linux: используем ssh или выбранный терминал
+            client = p.ssh_client_path or "ssh"
+            if client == "ssh":
+                cmd = ["ssh", f"{conn.ssh_login}@{ip}", "-o", "StrictHostKeyChecking=no",
+                       "-o", "PasswordAuthentication=yes"]
+                if password:
+                    # Используем sshpass или встроенный терминал
+                    import shutil
+                    if shutil.which("sshpass"):
+                        cmd = ["sshpass", "-p", password, *cmd]
+                    else:
+                        self._open_builtin_ssh_terminal(session)
+                        return
+            else:
+                # Терминал с ssh
+                cmd = [client, "-e", f"ssh {conn.ssh_login}@{ip}"]
+        else:
+            exe = Path(p.ssh_client_path or "")
+            if password:
+                logger.info(f"Launching KiTTY with auto-login for {ip}")
+                cmd = [str(exe), f"{conn.ssh_login}@{ip}", "-pw", password, "-auto-store-sshkey"]
+            else:
+                logger.info(f"Launching KiTTY without password for {ip}")
+                cmd = [str(exe), f"{conn.ssh_login}@{ip}"]
+
+        audit_log(action_type="tool", action_name="ssh_client", target=ip, result="success")
+
+        def _run():
+            time.sleep(0.2)
+            try:
+                kwargs = dict()
+                if platform.system() == "Windows":
+                    kwargs["creationflags"] = 0x08000000
+                subprocess.Popen(cmd, **kwargs)
+            except Exception as e:
+                logger.error(f"SSH launch failed: {e}")
+
+        threading.Thread(target=_run, daemon=True).start()
+
+    def _open_builtin_ssh_terminal(self, session) -> None:
+        from cashcontrol.builtin.ssh_terminal_launcher import launch_builtin_terminal
+        from cashcontrol.core.security.password_manager import PasswordManager
+
+        conn = self._config.settings.connection
+        password = None
+        if session.session and session.session.ssh_connected:
+            password = session.session.ssh.successful_password
+        else:
+            passwords = list(PasswordManager().get_passwords_for_ip(session.ip, "ssh"))
+            password = passwords[0] if passwords else None
+
+        win = launch_builtin_terminal(
+            host=session.ip,
+            port=conn.ssh_port,
+            login=conn.ssh_login,
+            password=password,
+            parent=self,
+        )
+        if win is None:
+            feedback.notify(
+                "Не удалось открыть встроенный SSH терминал: компонент отсутствует",
+                Level.ERROR,
+                parent=self,
+            )
+        else:
+            feedback.notify(
+                f"SSH терминал: {session.ip}:{conn.ssh_port}", Level.INFO, parent=self
+            )
+
+    def _on_winscp(self) -> None:
+        spawn(self._launch_winscp())
+
+    async def _launch_winscp(self) -> None:
+        import threading
+        import time
+
+        session = self._get_active_session_widget()
+        if not session:
+            self._notify_no_active_tab()
+            return
+
+        p = self._config.settings.programs
+        conn = self._config.settings.connection
+
+        ip = session.ip
+        password = None
+        os_type = "tinycore"
+
+        if session.session and session.session.ssh_connected:
+            password = session.session.ssh.successful_password
+            os_type = session.os_type
+
+        if not password:
+            feedback.notify(
+                f"Не удалось получить пароль для {ip}. Проверьте настройки подключения.",
+                Level.ERROR,
+                title="Нет пароля",
+                parent=self,
+            )
+            return
+
+        protocol = "sftp" if os_type.lower() == "ubuntu" else "scp"
+
+        exe_str = (p.winscp_path or "").strip()
+        if exe_str:
+            exe = Path(exe_str).expanduser()
+            if exe.is_file():
+                uri = f"{protocol}://{conn.ssh_login}:{password}@{ip}/"
+
+                cmd = [
+                    str(exe),
+                    uri,
+                    "/hostkey=*",
+                    "/rawsettings",
+                    "AuthKI=0",
+                    "AuthTIS=0",
+                    "AuthGSSAPI=0",
+                ]
+
+                audit_log(action_type="tool", action_name="winscp", target=ip, result="success")
+                logger.info(f"Launching WinSCP for {ip} protocol={protocol}")
+
+                def _run():
+                    time.sleep(0.2)
+                    try:
+                        kwargs = dict()
+                        if platform.system() == "Windows":
+                            kwargs["creationflags"] = 0x08000000
+                        subprocess.Popen(cmd, **kwargs)
+                    except Exception as e:
+                        logger.error(f"WinSCP launch failed: {e}")
+
+                threading.Thread(target=_run, daemon=True).start()
+                return
+
+        from cashcontrol.builtin.file_manager_launcher import open_file_manager
+
+        open_file_manager(
+            host=ip,
+            port=conn.ssh_port,
+            login=conn.ssh_login,
+            password=password,
+            start_dir=self._config.settings.builtin.file_manager_start_dir or "/home/tc/storage",
+            protocol=protocol,
+        )
+        logger.info("Opened built-in file manager for %s protocol=%s", ip, protocol)
+
+    def _on_collect(self) -> None:
+        """Собрать логи и данные кассы в архив.
+
+        Аналог функции «скачать логи» в SetConsole: упаковка на кассе
+        через tar, скачивание архива, отчёт о размерах каталогов.
+        """
+        from cashcontrol.core.collect import Progress
+        from cashcontrol.gui.collect_progress import CollectBridge
+
+        session = self._get_active_session_widget()
+        if session is None or session.session is None:
+            feedback.notify(
+                "Откройте вкладку с подключённой кассой",
+                Level.WARNING,
+                title="Сбор данных",
+                parent=self,
+            )
+            return
+
+        cash_session = session.session
+        if not cash_session.is_connected:
+            feedback.notify(
+                f"{session.ip}: нет подключения, сбор невозможен",
+                Level.WARNING,
+                parent=self,
+            )
+            return
+
+        status = getattr(session, "collect_status", None)
+        if status is None:
+            feedback.notify(
+                f"{session.ip}: строка состояния недоступна",
+                Level.ERROR,
+                parent=self,
+            )
+            return
+
+        bridge = CollectBridge()
+        bridge.progress.connect(status.show_progress)
+        self._collect_btn.setEnabled(False)
+        status.show_progress(
+            Progress(stage="measure", percent=-1, detail="Подготовка к сбору")
+        )
+        spawn(
+            self._run_collect(cash_session, session.ip, status, bridge),
+            label=f"collect:{session.ip}",
+        )
+
+    async def _run_collect(self, cash_session, ip: str, status, bridge) -> None:
+        """Упаковка на кассе, скачивание архива, итог и открытие папки."""
+        from cashcontrol.core.collect import (
+            collect_logs,
+            default_dest_dir,
+            human_size,
+            largest_source,
+        )
+        from cashcontrol.infrastructure.path_resolver import open_in_explorer
+
+        try:
+            result = await collect_logs(
+                cash_session, default_dest_dir(), on_progress=bridge.publish
+            )
+        except Exception as exc:
+            logger.error("Сбор данных с %s не удался: %s", ip, exc, exc_info=True)
+            status.show_error(str(exc)[:200])
+            feedback.notify(
+                f"{ip}: сбор не удался — {exc}"[:120], Level.ERROR, parent=self
+            )
+            return
+        finally:
+            btn = getattr(self, "_collect_btn", None)
+            if btn is not None:
+                btn.setEnabled(True)
+
+        if not result.ok:
+            message = result.error or "сбор не удался"
+            status.show_error(message)
+            feedback.notify(f"{ip}: {message}"[:150], Level.ERROR, parent=self)
+            return
+
+        parts = [f"{result.archive.name} — {human_size(result.total_bytes)}"]
+        if result.total_files:
+            parts.append(f"файлов: {result.total_files}")
+        worst = largest_source(result.size_report)
+        if worst:
+            size, path = worst
+            parts.append(f"крупнейший: {size} {path}")
+        if result.warnings:
+            parts.append(f"предупреждение: {result.warnings[0][:80]}")
+
+        folder = result.archive.parent
+        status.show_done(" · ".join(parts), folder)
+        feedback.notify(
+            f"{ip}: сбор завершён, {human_size(result.total_bytes)}",
+            Level.SUCCESS,
+            parent=self,
+        )
+        # папка с архивом открывается сразу: результат нужен для разбора
+        open_in_explorer(folder)
+
+    def _on_postgres(self) -> None:
+        p    = self._config.settings.programs
+        conn = self._config.settings.connection
+
+        if not p.db_client_path or not p.db_client_path.strip():
+            session_widget = self._get_active_session_widget()
+            if not session_widget:
+                self._notify_no_active_tab()
+                return
+
+            try:
+                import psycopg2  # noqa: F401
+            except ImportError:
+                feedback.notify(
+                    "Отсутствует модуль psycopg2: Выполните в терминале: pip install psycopg2-binary",
+                    Level.ERROR,
+                    parent=self,
+                )
+                logger.error("[DB] psycopg2 not installed")
+                return
+
+            try:
+                from cashcontrol.builtin.db_viewer import PostgresToolWindow
+                from cashcontrol.core.security.password_manager import PasswordManager
+            except ImportError as e:
+                feedback.notify(
+                    f"Ошибка загрузки DB Viewer: {e!s}", Level.ERROR, parent=self
+                )
+                logger.error(f"[DB] Import error: {e}")
+                return
+
+            pm = PasswordManager()
+            passwords = list(pm.get_passwords_for_ip(session_widget.ip, "db"))
+
+            if not passwords:
+                feedback.notify(
+                    f"Пароли для {session_widget.ip} не найдены: Добавьте пароль в Настройки -> Подключение",
+                    Level.WARNING,
+                    parent=self,
+                )
+
+            win = PostgresToolWindow(
+                host=session_widget.ip,
+                port=conn.db_port,
+                user=conn.db_login,
+                passwords=passwords,
+                database=None,
+                parent=self,
+            )
+            win.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+            win.show()
+            feedback.notify(
+                f"DB Viewer: {session_widget.ip}: порт {conn.db_port}",
+                Level.INFO,
+                parent=self,
+            )
+            logger.info(f"[DB] Opened built-in DB Viewer for {session_widget.ip}")
+            return
+
+        self._launch_program(p.db_client_path, p.db_args_template, "PostgreSQL Клиент")
+
+    # ── Commands ────────────────────────────────────────────
+
+    def commands_btn_center(self) -> QPoint:
+        """Глобальная точка под центром кнопки «Команды» — для меню."""
+        btn = self._commands_btn
+        return btn.mapToGlobal(QPoint(btn.width() // 2, btn.height()))
+
+    def _on_commands_clicked(self) -> None:
+        session = self._get_active_session_widget()
+        if not session:
+            self._notify_no_active_tab()
+            return
+
+        mw = self._get_main_window()
+        if not mw:
+            return
+
+        mw.registry.reload_commands()
+
+        from PySide6.QtWidgets import QMenu
+
+        menu = QMenu(self)
+        menu.setToolTipsVisible(True)
+
+        actions = sorted(
+            mw.registry.get_all_actions(),
+            key=lambda a: a.description.lower()
+        )
+
+        if not actions:
+            no_act = menu.addAction("Нет команд — создайте в редакторе команд")
+            no_act.setEnabled(False)
+        else:
+            for action in actions:
+                act = menu.addAction(action.name)
+                act.setToolTip(action.description or action.name)
+                act.setData(action.name)
+
+        menu.addSeparator()
+        act_manual = menu.addAction("Тип кассы: выбрать вручную…")
+        act_manual.setData("__select_cash_type__")
+
+        chosen = menu.exec(self.commands_btn_center())
+
+        if chosen and chosen.data() == "__select_cash_type__":
+            self._on_select_cash_type(session)
+            return
+
+        if chosen and chosen.data():
+            action_name = chosen.data()
+            action_obj = mw.registry.get_action(action_name)
+            needs_confirm = action_obj and action_obj.requires_confirmation
+            if needs_confirm and not feedback.confirm(
+                "Подтверждение",
+                f"Выполнить {action_obj.description} на кассе {session.ip}?",
+                parent=self,
+            ):
+                return
+            spawn(
+                self._exec_action(session.ip, action_name, title=action_obj.description if action_obj else action_name)
+            )
+
+    def _on_refresh_info(self) -> None:
+        session_widget = self._get_active_session_widget()
+        if not session_widget:
+            return
+        ip = session_widget.ip
+        logger.info(f"Refresh requested for {ip}, doing full reconnect")
+        spawn(session_widget.reconnect_to(ip))
+
+    def _on_select_cash_type(self, session_widget) -> None:
+        """Ручной выбор типа кассы (когда автоопределение дало unknown)."""
+        from PySide6.QtWidgets import QInputDialog
+
+        registry = get_cash_type_registry()
+        registry.reload()
+        definitions = sorted(registry.all(), key=lambda d: d.id)
+        items = [f"{d.id} — {d.name}" for d in definitions]
+        choice, ok = QInputDialog.getItem(
+            self, "Тип кассы", "Выберите тип (сохранится вручную):", items, 0, False
+        )
+        if not ok:
+            return
+
+        selected = next(
+            (d for d in definitions if f"{d.id} — {d.name}" == choice), None
+        )
+        resolved = selected.id if selected else None
+        if not resolved or session_widget.session is None:
+            return
+
+        session_widget.session.cash_type = resolved
+        session_widget.session.cash_type_source = "manual"
+        logger.info(f"Manual cash type for {session_widget.ip}: {resolved}")
+        spawn(session_widget.load_info(force=True))
+
+    # ── Action execution ────────────────────────────────────
+
+    def _add_history(self, ip: str, action_name: str, success: bool,
+                     details: str = "") -> None:
+        from datetime import datetime
+
+        from cashcontrol.gui.history_manager import HistoryEntry, get_history_manager
+        try:
+            get_history_manager().add(ip, HistoryEntry(
+                timestamp=datetime.now(), action_name=action_name,
+                result="success" if success else "error",
+                details=(details or "")[:200], ip=ip))
+        except Exception:
+            logger.exception("history add failed")
+
+    def _set_toolbar_busy(self, busy: bool, message: str = "") -> None:
+        self.set_busy(busy)
+        mw = self._get_main_window()
+        if mw:
+            mw.set_status(message if busy else "Готово")
+
+    async def _exec_action(self, ip: str, action_name: str, title: str = "Результат") -> None:
+        from cashcontrol.gui.dialogs.command_result_dialog import CommandResultDialog
+
+        session_widget = self._session_mgr.get_session(ip)
+        if not session_widget or not session_widget.session:
+            feedback.notify(
+                "Касса не подключена", Level.ERROR, title="Ошибка", parent=self
+            )
+            return
+
+        mw = self._get_main_window()
+        if not mw:
+            return
+
+        action_obj = mw.registry.get_action(action_name)
+        extra_kwargs: dict = {}
+        if action_obj and action_obj.input_prompt:
+            from PySide6.QtWidgets import QInputDialog
+            value, ok = QInputDialog.getText(self, title, action_obj.input_prompt)
+            if not ok:
+                return
+            extra_kwargs["user_input"] = value.strip()
+
+        self._set_toolbar_busy(True, f"{title} — {ip}…")
+
+        ping_was_active = self._session_mgr.active_ip == ip
+        if ping_was_active:
+            self._session_mgr.stop_ping(ip)
+
+        try:
+            result = await mw.registry.execute_action(action_name, session_widget.session, **extra_kwargs)
+            show_output = getattr(action_obj, "show_output", True)
+            if show_output:
+                dlg = CommandResultDialog(result, parent=self, title=title)
+                dlg.exec()
+            else:
+                if not result.success:
+                    feedback.notify(
+                        result.message,
+                        Level.ERROR,
+                        title="Ошибка команды",
+                        parent=self,
+                    )
+            self._add_history(ip, title, result.success, result.message)
+        except Exception as e:
+            logger.error(f"Action '{action_name}' exception: {e}")
+            feedback.notify(
+                f"Неожиданная ошибка: {e}",
+                Level.ERROR,
+                title="Ошибка",
+                parent=self,
+            )
+            self._add_history(ip, title, False, str(e))
+        finally:
+            self._set_toolbar_busy(False)
+            if ping_was_active:
+                self._session_mgr.start_ping(ip)
+
+    # ── Keyboard handlers ───────────────────────────────────
+
+    def _resolve_keyboard_layout(self, ip: str, keyboard_model: str | None) -> str:
+        """Выбор шаблона: модель → ручной выбор по IP → предупреждение + дефолт."""
+        from cashcontrol.gui.widgets.virtual_keyboard import LAYOUTS, find_layout_for_keyboard
+        logger.warning(f"[Toolbar] _resolve_keyboard_layout: ip={ip}, model={keyboard_model!r}")
+
+        if keyboard_model:
+            stem = find_layout_for_keyboard(keyboard_model)
+            if stem:
+                self._kb_layout_by_ip[ip] = stem
+                return stem
+            logger.warning(
+                f"[Keyboard] unrecognized model '{keyboard_model}' for {ip}"
+            )
+
+        remembered = self._kb_layout_by_ip.get(ip)
+        if remembered in LAYOUTS:
+            return remembered
+
+        stem = next(iter(LAYOUTS))
+        self._kb_layout_by_ip[ip] = stem
+        model_txt = keyboard_model or "не определена"
+        feedback.notify(
+            (
+                f"Модель «{model_txt}» не распознана. Открыт шаблон "
+                f"«{LAYOUTS[stem][2]}». Переключить можно в конструкторе "
+                "клавиатуры или в самом окне."
+            ),
+            Level.WARNING,
+            title="Шаблон клавиатуры",
+            parent=self,
+        )
+        return stem
+
+    def _remember_keyboard_layout(self, ip: str, stem: str) -> None:
+        if ip:
+            self._kb_layout_by_ip[ip] = stem
+
+    def _on_keyboard(self) -> None:
+        ip = self._session_mgr.active_ip
+        if not ip:
+            self._notify_no_active_tab(title="Клавиатура")
+            return
+        session = self._session_mgr.get_session(ip)
+        if not session:
+            feedback.notify(
+                "Сессия не найдена",
+                Level.ERROR,
+                title="Клавиатура",
+                parent=self,
+            )
+            return
+
+        from cashcontrol.gui.widgets.virtual_keyboard import (
+            VirtualKeyboardWindow,
+        )
+
+        cash_session = session.session
+        if not cash_session:
+            feedback.notify(
+                f"У кассы {ip} нет активного подключения",
+                Level.WARNING,
+                title="Клавиатура",
+                parent=self,
+            )
+            return
+
+        try:
+            layout_stem = self._resolve_keyboard_layout(ip, session.keyboard_model)
+            kb = VirtualKeyboardWindow(
+                session=cash_session,
+                layout_stem=layout_stem,
+                parent=self,
+                layout_changed=lambda s, i=ip: self._remember_keyboard_layout(i, s),
+            )
+            kb.show()
+            kb.raise_()
+        except Exception as e:
+            import traceback
+            logger.error(f"[Keyboard] VirtualKeyboardWindow creation failed: {e}")
+            traceback.print_exc()
+            feedback.notify(
+                f"Ошибка: {e}",
+                Level.ERROR,
+                title="Клавиатура",
+                parent=self,
+            )
+
+    def _on_keyboard_editor(self) -> None:
+        ip = self._session_mgr.active_ip
+        keyboard_model = None
+        if ip:
+            session = self._session_mgr.get_session(ip)
+            if session:
+                keyboard_model = session.keyboard_model
+
+        from cashcontrol.gui.widgets.virtual_keyboard import (
+            KeyboardEditorWindow,
+        )
+
+        layout_stem = self._resolve_keyboard_layout(ip, keyboard_model)
+
+        editor = KeyboardEditorWindow(
+            layout_stem=layout_stem,
+            parent=self,
+            layout_changed=lambda s, i=ip: self._remember_keyboard_layout(i, s),
+        )
+        editor.show()
+        editor.raise_()
